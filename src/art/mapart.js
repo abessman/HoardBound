@@ -12,6 +12,7 @@
   const WATER_INK = 'rgba(48,78,118,0.78)';
 
   const J = (rng, a) => (rng.next() - 0.5) * 2 * a;
+  let P = null; // the procedural drawings (set at the end); compositions inside this file call these, never the art-pack wrappers
 
   function wobblyLine(ctx, pts, rng, amp = 0.6) {
     ctx.beginPath();
@@ -158,24 +159,24 @@
       ctx.beginPath(); ctx.rect(x - s * 0.08, y - h * 0.6, s * 0.16, s * 0.28); ctx.fillStyle = INK; ctx.fill();
     },
     settlement(ctx, L, x, y, s, rng, opts = {}) {
-      A.setup(ctx);
+      P.setup(ctx);
       const state = L.state;
       const faded = state === 'abandoned' || state === 'ruin';
       ctx.save();
       if (faded) ctx.globalAlpha *= 0.6;
       switch (L.type) {
         case 'farm':
-          A.house(ctx, x, y, s * 0.9, rng, { chimney: true });
+          P.house(ctx, x, y, s * 0.9, rng, { chimney: true });
           // field furrows
           ctx.beginPath(); for (let i = 0; i < 3; i++) { ctx.moveTo(x + s * 0.9, y - s * 0.1 - i * s * 0.25); ctx.lineTo(x + s * 1.9, y - s * 0.1 - i * s * 0.25); } stroke(ctx, 0.7, INK_SOFT);
           break;
         case 'village':
-          A.house(ctx, x - s * 0.8, y, s * 0.85, rng); A.house(ctx, x + s * 0.7, y + s * 0.1, s * 0.8, rng, { chimney: true }); A.house(ctx, x, y - s * 0.55, s * 0.75, rng);
+          P.house(ctx, x - s * 0.8, y, s * 0.85, rng); P.house(ctx, x + s * 0.7, y + s * 0.1, s * 0.8, rng, { chimney: true }); P.house(ctx, x, y - s * 0.55, s * 0.75, rng);
           break;
         case 'town':
-          A.house(ctx, x - s * 1.2, y, s * 0.85, rng); A.house(ctx, x + s * 1.1, y, s * 0.85, rng, { chimney: true });
-          A.house(ctx, x - s * 0.5, y - s * 0.6, s * 0.8, rng); A.house(ctx, x + s * 0.5, y - s * 0.65, s * 0.8, rng);
-          A.towerGlyph(ctx, x, y, s * 0.9, rng, { cone: true, h: 2.1, w: 0.6 });
+          P.house(ctx, x - s * 1.2, y, s * 0.85, rng); P.house(ctx, x + s * 1.1, y, s * 0.85, rng, { chimney: true });
+          P.house(ctx, x - s * 0.5, y - s * 0.6, s * 0.8, rng); P.house(ctx, x + s * 0.5, y - s * 0.65, s * 0.8, rng);
+          P.towerGlyph(ctx, x, y, s * 0.9, rng, { cone: true, h: 2.1, w: 0.6 });
           break;
         case 'city': {
           const big = L.tier >= 4;
@@ -186,15 +187,15 @@
           // gate
           ctx.beginPath(); ctx.moveTo(x - s * 0.22, y); ctx.lineTo(x - s * 0.22, y - s * 0.35); ctx.arc(x, y - s * 0.35, s * 0.22, Math.PI, 0); ctx.lineTo(x + s * 0.22, y); ctx.fillStyle = INK; ctx.fill();
           // inner buildings
-          A.house(ctx, x - s * 1.1, y - s * 0.75, s * 0.75, rng); A.house(ctx, x + s * 1.0, y - s * 0.75, s * 0.75, rng, { chimney: true }); A.house(ctx, x - s * 0.1, y - s * 0.95, s * 0.7, rng);
-          A.towerGlyph(ctx, x + s * 0.35, y - s * 0.7, s * 0.9, rng, { cone: true, h: 2.2, w: 0.55, flag: true, flagColor: opts.flagColor });
-          if (big) { A.towerGlyph(ctx, x - s * 1.7, y - s * 0.7, s * 0.8, rng, { h: 1.6, w: 0.6 }); A.towerGlyph(ctx, x + s * 1.75, y - s * 0.7, s * 0.8, rng, { h: 1.6, w: 0.6 }); }
+          P.house(ctx, x - s * 1.1, y - s * 0.75, s * 0.75, rng); P.house(ctx, x + s * 1.0, y - s * 0.75, s * 0.75, rng, { chimney: true }); P.house(ctx, x - s * 0.1, y - s * 0.95, s * 0.7, rng);
+          P.towerGlyph(ctx, x + s * 0.35, y - s * 0.7, s * 0.9, rng, { cone: true, h: 2.2, w: 0.55, flag: true, flagColor: opts.flagColor });
+          if (big) { P.towerGlyph(ctx, x - s * 1.7, y - s * 0.7, s * 0.8, rng, { h: 1.6, w: 0.6 }); P.towerGlyph(ctx, x + s * 1.75, y - s * 0.7, s * 0.8, rng, { h: 1.6, w: 0.6 }); }
           break;
         }
         case 'castle':
           ctx.beginPath(); ctx.rect(x - s * 1.3, y - s * 0.9, s * 2.6, s * 0.9); ctx.fillStyle = FILL_DARK; ctx.fill(); stroke(ctx, 1.1);
-          A.towerGlyph(ctx, x - s * 1.1, y, s, rng, { h: 1.7, w: 0.65 }); A.towerGlyph(ctx, x + s * 1.1, y, s, rng, { h: 1.7, w: 0.65 });
-          A.towerGlyph(ctx, x, y - s * 0.3, s * 1.1, rng, { h: 2.3, w: 0.85, flag: true, flagColor: opts.flagColor });
+          P.towerGlyph(ctx, x - s * 1.1, y, s, rng, { h: 1.7, w: 0.65 }); P.towerGlyph(ctx, x + s * 1.1, y, s, rng, { h: 1.7, w: 0.65 });
+          P.towerGlyph(ctx, x, y - s * 0.3, s * 1.1, rng, { h: 2.3, w: 0.85, flag: true, flagColor: opts.flagColor });
           ctx.beginPath(); ctx.moveTo(x - s * 0.18, y); ctx.lineTo(x - s * 0.18, y - s * 0.3); ctx.arc(x, y - s * 0.3, s * 0.18, Math.PI, 0); ctx.lineTo(x + s * 0.18, y); ctx.fillStyle = INK; ctx.fill();
           break;
         case 'camp': {
@@ -214,23 +215,23 @@
           ctx.beginPath(); ctx.moveTo(x + s * 0.9, y - s * 1.3); ctx.lineTo(x + s * 1.6, y - s * 0.3); stroke(ctx, 1); ctx.beginPath(); ctx.moveTo(x + s * 0.7, y - s * 1.1); ctx.quadraticCurveTo(x + s * 1.1, y - s * 1.6, x + s * 1.4, y - s * 1.35); stroke(ctx, 1.2);
           break;
         case 'hold':
-          A.mountain(ctx, x, y, s * 3.6, s * 2.6, rng, { big: true });
+          P.mountain(ctx, x, y, s * 3.6, s * 2.6, rng, { big: true });
           ctx.beginPath(); ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x - s * 0.5, y - s * 0.7); ctx.arc(x, y - s * 0.7, s * 0.5, Math.PI, 0); ctx.lineTo(x + s * 0.5, y); ctx.fillStyle = INK; ctx.fill();
           ctx.beginPath(); ctx.rect(x - s * 0.8, y - s * 1.1, s * 0.2, s * 1.1); ctx.rect(x + s * 0.6, y - s * 1.1, s * 0.2, s * 1.1); ctx.fillStyle = FILL; ctx.fill(); stroke(ctx, 0.9);
           break;
         case 'glade':
-          for (const [dx, hh] of [[-1.1, 2.6], [0, 3.2], [1.1, 2.5]]) { ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + dx * s, y - hh * s); stroke(ctx, 1.1); A.treeRound(ctx, x + dx * s, y - hh * s + s * 0.8, s * 0.7, rng); }
+          for (const [dx, hh] of [[-1.1, 2.6], [0, 3.2], [1.1, 2.5]]) { ctx.beginPath(); ctx.moveTo(x + dx * s, y); ctx.lineTo(x + dx * s, y - hh * s); stroke(ctx, 1.1); P.treeRound(ctx, x + dx * s, y - hh * s + s * 0.8, s * 0.7, rng); }
           ctx.beginPath(); ctx.arc(x, y - s * 1.1, s * 0.22, 0, Math.PI * 2); ctx.fillStyle = '#e9c45a'; ctx.fill(); stroke(ctx, 0.7);
           break;
         case 'monastery':
-          A.house(ctx, x + s * 0.4, y, s * 1.1, rng, { w: 1.6, h: 0.9 });
-          A.towerGlyph(ctx, x - s * 0.9, y, s * 0.9, rng, { cone: true, h: 2.2, w: 0.6 });
+          P.house(ctx, x + s * 0.4, y, s * 1.1, rng, { w: 1.6, h: 0.9 });
+          P.towerGlyph(ctx, x - s * 0.9, y, s * 0.9, rng, { cone: true, h: 2.2, w: 0.6 });
           ctx.beginPath(); ctx.arc(x - s * 0.9, y - s * 1.4, s * 0.14, 0, Math.PI * 2); ctx.fillStyle = FILL; ctx.fill(); stroke(ctx, 0.7);
           break;
         case 'shrine':
           ctx.beginPath(); ctx.rect(x - s * 0.5, y - s * 0.9, s, s * 0.9); ctx.fillStyle = FILL_DARK; ctx.fill(); stroke(ctx, 1);
           ctx.beginPath(); ctx.moveTo(x - s * 0.65, y - s * 0.9); ctx.lineTo(x + s * 0.65, y - s * 0.9); stroke(ctx, 1.1);
-          A.star(ctx, x, y - s * 1.35, s * 0.35, rng);
+          P.star(ctx, x, y - s * 1.35, s * 0.35, rng);
           break;
         case 'ruin':
           ctx.beginPath(); ctx.rect(x - s * 1.0, y - s * 1.1, s * 0.3, s * 1.1); ctx.rect(x - s * 0.1, y - s * 0.7, s * 0.3, s * 0.7); ctx.rect(x + s * 0.7, y - s * 1.5, s * 0.3, s * 1.5); ctx.fillStyle = FILL_DARK; ctx.fill(); stroke(ctx, 1);
@@ -243,21 +244,21 @@
           ctx.beginPath(); ctx.moveTo(x + s * 1.3, y); ctx.lineTo(x + s * 1.3, y - s * 1.5); stroke(ctx, 0.9); ctx.beginPath(); ctx.arc(x + s * 1.3, y - s * 1.65, s * 0.22, 0, Math.PI * 2); ctx.fillStyle = FILL; ctx.fill(); stroke(ctx, 0.8);
           break;
         case 'tower':
-          A.towerGlyph(ctx, x, y, s * 1.1, rng, { cone: true, h: 3, w: 0.6 });
+          P.towerGlyph(ctx, x, y, s * 1.1, rng, { cone: true, h: 3, w: 0.6 });
           ctx.beginPath(); ctx.arc(x, y - s * 2.2, s * 0.2, 0, Math.PI * 2); ctx.fillStyle = '#e9c45a'; ctx.fill();
           break;
         case 'lair':
-          A.hill(ctx, x, y, s * 3.2, s * 1.1, rng);
+          P.hill(ctx, x, y, s * 3.2, s * 1.1, rng);
           ctx.beginPath(); ctx.moveTo(x - s * 0.6, y); ctx.lineTo(x - s * 0.6, y - s * 0.6); ctx.arc(x, y - s * 0.6, s * 0.6, Math.PI, 0); ctx.lineTo(x + s * 0.6, y); ctx.fillStyle = INK; ctx.fill();
           break;
         case 'rivalLair':
-          A.mountain(ctx, x, y, s * 3.4, s * 2.6, rng, { big: true });
+          P.mountain(ctx, x, y, s * 3.4, s * 2.6, rng, { big: true });
           ctx.beginPath(); ctx.moveTo(x - s * 0.6, y); ctx.lineTo(x - s * 0.6, y - s * 0.6); ctx.arc(x, y - s * 0.6, s * 0.6, Math.PI, 0); ctx.lineTo(x + s * 0.6, y); ctx.fillStyle = INK; ctx.fill();
           ctx.beginPath(); for (let i = 0; i < 3; i++) ctx.arc(x + s * 0.3 + i * s * 0.25, y - s * 2.8 - i * s * 0.45, s * (0.18 + i * 0.1), 0, Math.PI * 2); stroke(ctx, 0.8, INK_SOFT);
           ctx.beginPath(); ctx.moveTo(x - s * 1.5, y + s * 0.3); ctx.lineTo(x - s * 1.0, y + s * 0.3); ctx.moveTo(x - s * 1.25, y + s * 0.05); ctx.lineTo(x - s * 1.25, y + s * 0.55); stroke(ctx, 0.9);
           break;
         case 'battlefield':
-          A.crossedSwords(ctx, x, y - s * 0.6, s * 1.1);
+          P.crossedSwords(ctx, x, y - s * 0.6, s * 1.1);
           break;
         // ---- the great struggle
         case 'fortress': {
@@ -272,8 +273,8 @@
             ctx.beginPath(); ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x - s * 0.3, y - s * 3.2); ctx.lineTo(x, y - s * 3.8); ctx.lineTo(x + s * 0.3, y - s * 3.2); ctx.lineTo(x + s * 0.5, y); ctx.closePath(); ctx.fillStyle = '#2e2a38'; ctx.fill(); stroke(ctx, 1.1, '#100c18');
             ctx.beginPath(); ctx.arc(x, y - s * 3.3, s * 0.18, 0, Math.PI * 2); ctx.fillStyle = '#9a6ad0'; ctx.fill();
           } else if (L.lieutenant === 'blightmother') {
-            A.swampTuft(ctx, x - s * 1.2, y + s * 0.2, s * 0.5, rng); A.swampTuft(ctx, x + s * 1.3, y + s * 0.3, s * 0.5, rng);
-            A.house(ctx, x, y, s * 0.8, rng, { fill: '#9a8a6a' }); A.treeBare(ctx, x + s * 1.0, y, s * 0.7, rng);
+            P.swampTuft(ctx, x - s * 1.2, y + s * 0.2, s * 0.5, rng); P.swampTuft(ctx, x + s * 1.3, y + s * 0.3, s * 0.5, rng);
+            P.house(ctx, x, y, s * 0.8, rng, { fill: '#9a8a6a' }); P.treeBare(ctx, x + s * 1.0, y, s * 0.7, rng);
           } else {
             const tent = (tx, ts) => { ctx.beginPath(); ctx.moveTo(tx - ts, y); ctx.lineTo(tx, y - ts * 1.3); ctx.lineTo(tx + ts, y); ctx.closePath(); ctx.fillStyle = '#8a7a5a'; ctx.fill(); stroke(ctx, 1); };
             tent(x - s * 1.1, s * 0.7); tent(x + s * 0.9, s * 0.75); tent(x - s * 0.1, s * 0.9);
@@ -287,16 +288,21 @@
           if (L.state !== 'ruin') { ctx.beginPath(); ctx.moveTo(x, y - s * 1.5); ctx.lineTo(x + s * 0.3, y - s * 0.95); ctx.lineTo(x, y - s * 0.45); ctx.lineTo(x - s * 0.3, y - s * 0.95); ctx.closePath(); ctx.fillStyle = '#7ac08a'; ctx.fill(); stroke(ctx, 0.8); }
           break;
         default:
-          A.house(ctx, x, y, s, rng);
+          P.house(ctx, x, y, s, rng);
       }
       ctx.restore();
-      if (state === 'burned') {
+      P.stateOverlay(ctx, L, x, y, s);
+    },
+    /** smoke and char over a burned place, swords beside a besieged one (also drawn over art-pack art that lacks the state) */
+    stateOverlay(ctx, L, x, y, s, only) {
+      const state = L.state;
+      if (state === 'burned' && only !== 'besieged') {
         ctx.save(); ctx.globalAlpha *= 0.85;
         ctx.beginPath(); for (let i = 0; i < 3; i++) { const sx = x - s + i * s; ctx.moveTo(sx, y - s * 1.2); ctx.quadraticCurveTo(sx + s * 0.4, y - s * 1.9, sx - s * 0.1, y - s * 2.5); ctx.quadraticCurveTo(sx + s * 0.3, y - s * 3, sx + s * 0.1, y - s * 3.4); } stroke(ctx, 1.1, '#4a3a2a');
         ctx.beginPath(); for (let i = 0; i < 5; i++) { ctx.moveTo(x - s * 1.4 + i * s * 0.7, y + s * 0.2); ctx.lineTo(x - s * 1.0 + i * s * 0.7, y - s * 0.4); } stroke(ctx, 1.4, '#1a1010');
         ctx.restore();
       }
-      if (state === 'besieged') { A.crossedSwords(ctx, x + s * 2.2, y - s * 0.5, s * 0.8); }
+      if (state === 'besieged') A.crossedSwords(ctx, x + s * 2.2, y - s * 0.5, s * 0.8); // map.marker.crossedSwords if a pack has it
     },
     star(ctx, x, y, r, rng) {
       ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5; const rr = i % 2 ? r * 0.45 : r; const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr; if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py); } ctx.closePath(); ctx.fillStyle = '#e9c45a'; ctx.fill(); stroke(ctx, 0.7);
@@ -353,7 +359,7 @@
     },
     /** the settlement at the foot of the dragon's hill, drawn beside the lair glyph */
     homeSettlement(ctx, x, y, s, stage, path, rng) {
-      A.setup(ctx);
+      P.setup(ctx);
       const dark = path === 'tyrannical';
       const tent = (tx, ty, ts) => { ctx.beginPath(); ctx.moveTo(tx - ts, ty); ctx.lineTo(tx, ty - ts * 1.2); ctx.lineTo(tx + ts, ty); ctx.closePath(); ctx.fillStyle = dark ? '#c9b48c' : FILL; ctx.fill(); stroke(ctx, 0.9); };
       const darkTower = (tx, ty, ts, hh) => { ctx.beginPath(); ctx.moveTo(tx - ts * 0.4, ty); ctx.lineTo(tx - ts * 0.3, ty - ts * hh); ctx.lineTo(tx - ts * 0.45, ty - ts * hh); ctx.lineTo(tx, ty - ts * (hh + 0.9)); ctx.lineTo(tx + ts * 0.45, ty - ts * hh); ctx.lineTo(tx + ts * 0.3, ty - ts * hh); ctx.lineTo(tx + ts * 0.4, ty); ctx.closePath(); ctx.fillStyle = '#4a3a34'; ctx.fill(); stroke(ctx, 1, '#1a1010'); ctx.beginPath(); ctx.rect(tx - ts * 0.08, ty - ts * hh * 0.6, ts * 0.16, ts * 0.22); ctx.fillStyle = '#d9542a'; ctx.fill(); };
@@ -361,15 +367,15 @@
       const wallArc = (r, col) => { ctx.beginPath(); ctx.arc(x, y + s * 0.2, r, Math.PI * 1.05, Math.PI * 1.95); stroke(ctx, 1.3, col || INK); };
       if (!dark) {
         // a refuge of huts → a village with fields → a walled town → a castle and sanctuary
-        if (stage >= 2) { A.field(ctx, x - s * 2.6, y + s * 0.8, s * 0.8, rng); A.field(ctx, x + s * 2.4, y + s * 0.9, s * 0.8, rng); }
-        if (stage === 1) { tent(x - s * 0.9, y + s * 0.2, s * 0.55); A.house(ctx, x + s * 0.8, y + s * 0.3, s * 0.6, rng, { chimney: true }); }
-        if (stage >= 2) { A.house(ctx, x - s * 1.3, y + s * 0.2, s * 0.65, rng); A.house(ctx, x + s * 1.2, y + s * 0.25, s * 0.65, rng, { chimney: true }); A.house(ctx, x, y + s * 0.5, s * 0.6, rng); }
-        if (stage >= 3) { wallArc(s * 2.4); A.towerGlyph(ctx, x - s * 2.1, y + s * 0.3, s * 0.65, rng, { cone: true, h: 1.8, w: 0.6 }); A.house(ctx, x + s * 2.0, y + s * 0.4, s * 0.6, rng); }
-        if (stage >= 4) { A.towerGlyph(ctx, x + s * 2.6, y + s * 0.1, s * 0.85, rng, { h: 2.4, w: 0.8, flag: true, flagColor: '#c9a23a' }); A.star(ctx, x - s * 2.1, y - s * 1.9, s * 0.35, rng); }
+        if (stage >= 2) { P.field(ctx, x - s * 2.6, y + s * 0.8, s * 0.8, rng); P.field(ctx, x + s * 2.4, y + s * 0.9, s * 0.8, rng); }
+        if (stage === 1) { tent(x - s * 0.9, y + s * 0.2, s * 0.55); P.house(ctx, x + s * 0.8, y + s * 0.3, s * 0.6, rng, { chimney: true }); }
+        if (stage >= 2) { P.house(ctx, x - s * 1.3, y + s * 0.2, s * 0.65, rng); P.house(ctx, x + s * 1.2, y + s * 0.25, s * 0.65, rng, { chimney: true }); P.house(ctx, x, y + s * 0.5, s * 0.6, rng); }
+        if (stage >= 3) { wallArc(s * 2.4); P.towerGlyph(ctx, x - s * 2.1, y + s * 0.3, s * 0.65, rng, { cone: true, h: 1.8, w: 0.6 }); P.house(ctx, x + s * 2.0, y + s * 0.4, s * 0.6, rng); }
+        if (stage >= 4) { P.towerGlyph(ctx, x + s * 2.6, y + s * 0.1, s * 0.85, rng, { h: 2.4, w: 0.8, flag: true, flagColor: '#c9a23a' }); P.star(ctx, x - s * 2.1, y - s * 1.9, s * 0.35, rng); }
       } else {
         // a coerced camp → a palisade with watchtowers → a citadel with furnaces → a dark stronghold
         if (stage === 1) { tent(x - s * 1.0, y + s * 0.3, s * 0.55); tent(x + s * 0.9, y + s * 0.35, s * 0.5); ctx.beginPath(); for (let i = 0; i < 7; i++) { const px = x - s * 1.8 + i * s * 0.6; ctx.moveTo(px, y + s * 0.8); ctx.lineTo(px, y + s * 0.15); } stroke(ctx, 1); }
-        if (stage >= 2) { ctx.beginPath(); for (let i = 0; i < 11; i++) { const px = x - s * 2.6 + i * s * 0.52; ctx.moveTo(px, y + s * 0.9); ctx.lineTo(px, y + s * 0.1); ctx.lineTo(px + s * 0.12, y - s * 0.05); } stroke(ctx, 1); tent(x - s * 1.2, y + s * 0.4, s * 0.5); tent(x + s * 1.3, y + s * 0.45, s * 0.5); A.towerGlyph(ctx, x - s * 2.6, y + s * 0.9, s * 0.6, rng, { h: 2, w: 0.55 }); }
+        if (stage >= 2) { ctx.beginPath(); for (let i = 0; i < 11; i++) { const px = x - s * 2.6 + i * s * 0.52; ctx.moveTo(px, y + s * 0.9); ctx.lineTo(px, y + s * 0.1); ctx.lineTo(px + s * 0.12, y - s * 0.05); } stroke(ctx, 1); tent(x - s * 1.2, y + s * 0.4, s * 0.5); tent(x + s * 1.3, y + s * 0.45, s * 0.5); P.towerGlyph(ctx, x - s * 2.6, y + s * 0.9, s * 0.6, rng, { h: 2, w: 0.55 }); }
         if (stage >= 3) { darkTower(x + s * 2.3, y + s * 0.8, s * 0.9, 2.2); smoke(x + s * 2.3, y - s * 1.6, s); darkTower(x - s * 0.2, y + s * 0.8, s * 0.7, 1.6); smoke(x - s * 0.2, y - s * 0.8, s * 0.8); }
         if (stage >= 4) { darkTower(x - s * 2.0, y + s * 0.8, s * 1.1, 2.8); darkTower(x + s * 3.2, y + s * 0.8, s * 0.8, 2); ctx.beginPath(); ctx.moveTo(x - s * 3.2, y + s * 0.9); ctx.lineTo(x + s * 3.8, y + s * 0.9); stroke(ctx, 1.6, '#1a1010'); }
       }
@@ -396,7 +402,7 @@
       ctx.beginPath(); ctx.moveTo(x - s * 1.4, y - s * 0.3); ctx.quadraticCurveTo(x - s * 0.6, y - s * 1.2, x, y - s * 0.2); ctx.quadraticCurveTo(x + s * 0.6, y - s * 1.2, x + s * 1.4, y - s * 0.3); ctx.quadraticCurveTo(x + s * 0.7, y - s * 0.2, x + s * 0.5, y + s * 0.3); ctx.lineTo(x, y + s * 0.1); ctx.lineTo(x - s * 0.5, y + s * 0.3); ctx.quadraticCurveTo(x - s * 0.7, y - s * 0.2, x - s * 1.4, y - s * 0.3); ctx.closePath(); ctx.fillStyle = color || '#3a2a2a'; ctx.fill(); stroke(ctx, 0.8);
     },
     compassRose(ctx, x, y, r) {
-      ctx.save(); A.setup(ctx);
+      ctx.save(); P.setup(ctx);
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); stroke(ctx, 1.2);
       ctx.beginPath(); ctx.arc(x, y, r * 0.78, 0, Math.PI * 2); stroke(ctx, 0.8);
       for (let i = 0; i < 8; i++) {
@@ -407,5 +413,93 @@
       HB.text.draw(ctx, 'N', x, y - r - 6, { size: r * 0.42, family: 'sc', align: 'center' });
       ctx.restore();
     },
+    /** a seal over a place; (x, y) is the seal's centre. kind: 'story' (red, !), 'locked' (red, ?: a crag or sealed door),
+     *  'shadow' (purple with a crown: the Hollow King's places), 'crystal' (green with a crystal: a sanctuary) */
+    seal(ctx, x, y, r, kind) {
+      const crystal = kind === 'crystal', shadow = kind === 'shadow';
+      ctx.save();
+      ctx.fillStyle = crystal ? '#3f6d3a' : shadow ? '#3a1e48' : '#8f2b1f'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+      if (crystal || shadow) {
+        ctx.strokeStyle = crystal ? '#d9c66a' : '#c9541e'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#f6ecd2'; ctx.beginPath();
+        if (crystal) { ctx.moveTo(x, y - r * 0.6); ctx.lineTo(x + r * 0.4, y); ctx.lineTo(x, y + r * 0.6); ctx.lineTo(x - r * 0.4, y); }
+        else { const yb = y + r * 0.4, w = r * 0.6; ctx.moveTo(x - w, yb); ctx.lineTo(x - w, yb - r * 0.6); ctx.lineTo(x - w * 0.4, yb - r * 0.3); ctx.lineTo(x, yb - r * 0.8); ctx.lineTo(x + w * 0.4, yb - r * 0.3); ctx.lineTo(x + w, yb - r * 0.6); ctx.lineTo(x + w, yb); }
+        ctx.closePath(); ctx.fill();
+      } else HB.text.draw(ctx, kind === 'locked' ? '?' : '!', x, y + r * 0.55, { size: Math.max(11, r * 1.5), family: 'sc', align: 'center', color: '#f6ecd2' });
+      ctx.restore();
+    },
+    /** red crossed swords over a place under outlaw attack; (x, y) is the centre */
+    threatMark(ctx, x, y, s) {
+      ctx.save(); ctx.translate(x, y);
+      ctx.strokeStyle = '#8f2b1f'; ctx.lineWidth = Math.max(1.5, s * 0.18); ctx.lineCap = 'round';
+      for (const sgn of [1, -1]) { ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn, s * 0.7); ctx.lineTo(s * 0.7 * sgn, -s * 0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn + s * 0.25, s * 0.7 - s * 0.05 * sgn); ctx.lineTo(-s * 0.7 * sgn + s * 0.05, s * 0.45); ctx.stroke(); }
+      ctx.restore();
+    },
+    /** a dotted ring with a question mark: a place known only by rumour; (x, y) is its base */
+    rumorMark(ctx, x, y, s) {
+      ctx.save(); ctx.strokeStyle = HB.palette.ink; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(x, y - s * 0.6, s * 0.9, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+      HB.text.draw(ctx, '?', x, y - s * 0.6 + s * 0.45, { size: s * 1.4, align: 'center', color: HB.palette.ink });
+      ctx.restore();
+    },
+    /** a small faction flag, drawn over art-pack settlement art at its attach.flag point */
+    flag(ctx, x, y, s, color) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s * 0.8); stroke(ctx, 0.9);
+      ctx.beginPath(); ctx.moveTo(x, y - s * 0.8); ctx.lineTo(x + s * 0.55, y - s * 0.62); ctx.lineTo(x, y - s * 0.44); ctx.closePath(); ctx.fillStyle = color || '#8f2b1f'; ctx.fill(); stroke(ctx, 0.7);
+    },
+  };
+
+  // ---------- art packs (src/art/mapassets.js, ids in src/data/mapspec.js)
+  // Every public glyph first asks HB.mapAssets for external art and draws procedurally when there is none.
+  // Compositions inside this file (a castle's towers, a hold's mountain) always use the procedural versions (P).
+  P = A.proc = {};
+  for (const k in A) if (typeof A[k] === 'function') P[k] = A[k];
+  const MA = () => HB.mapAssets;
+  const wrap = (name, req) => {
+    A[name] = function () {
+      const m = MA();
+      if (m && m.entries.size) { const q = req.apply(null, arguments); if (q && m.draw(arguments[0], q.ids, q.x, q.y, q.param, q)) return; }
+      return P[name].apply(A, arguments);
+    };
+  };
+  const simple = (name, id) => wrap(name, (ctx, x, y, s, rng, key) => ({ ids: [id], x, y, param: s, key }));
+  wrap('mountain', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.big ? ['map.terrain.mountain.peak', 'map.terrain.mountain.snow', 'map.terrain.mountain'] : o.snow ? ['map.terrain.mountain.snow', 'map.terrain.mountain'] : ['map.terrain.mountain'], x, y, param: w, paramY: h, key: o.key }));
+  wrap('mountainJagged', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.deep ? ['map.terrain.mountain.jagged.deep', 'map.terrain.mountain.jagged'] : ['map.terrain.mountain.jagged'], x, y, param: w, paramY: h, key: o.key }));
+  wrap('hill', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.terrain.hill'], x, y, param: w, paramY: h, key }));
+  simple('treeRound', 'map.terrain.tree.round'); simple('treePine', 'map.terrain.tree.pine');
+  simple('treeBare', 'map.terrain.tree.bare'); simple('treeBurned', 'map.terrain.tree.burned');
+  simple('grassTuft', 'map.terrain.grass'); simple('swampTuft', 'map.terrain.swamp'); simple('dune', 'map.terrain.dune'); simple('snowDots', 'map.terrain.snow');
+  simple('field', 'map.terrain.field'); simple('ash', 'map.terrain.ash');
+  wrap('blossom', (ctx, x, y, s, key) => ({ ids: ['map.terrain.blossom'], x, y, param: s, key }));
+  wrap('wave', (ctx, x, y, len, rng, alpha, key) => ({ ids: ['map.terrain.wave'], x, y, param: len, key }));
+  wrap('cloud', (ctx, x, y, r, rng, o = {}) => ({ ids: o.storm ? ['map.fog.cloud.storm', 'map.fog.cloud'] : ['map.fog.cloud'], x, y, param: r, key: o.key }));
+  wrap('lightning', (ctx, x, y, s, rng, key) => ({ ids: ['map.fog.lightning'], x, y, param: s, key }));
+  wrap('homeSettlement', (ctx, x, y, s, stage, path) => ({ ids: [`map.home.${path}.${stage}`], x, y, param: s, key: 'home' }));
+  wrap('pennant', (ctx, x, y, s, color, mark, status) => status ? { ids: [`map.marker.pennant.${status}`], x, y, param: s, key: status } : null);
+  wrap('crossedSwords', (ctx, x, y, s) => ({ ids: ['map.marker.crossedSwords'], x, y, param: s, key: 'swords' }));
+  wrap('wagon', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.wagon.rich', 'map.marker.wagon'] : ['map.marker.wagon'], x, y, param: s, key }));
+  wrap('banner', (ctx, x, y, s, color, key) => ({ ids: ['map.marker.banner'], x, y, param: s, key, tint: color }));
+  wrap('walker', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.walker.hunter', 'map.marker.walker'] : ['map.marker.walker'], x, y, param: s, key }));
+  wrap('compassRose', (ctx, x, y, r) => ({ ids: ['map.decoration.compass'], x, y, param: r, key: 'compass' }));
+  wrap('seal', (ctx, x, y, r, kind, key) => ({ ids: kind === 'locked' ? ['map.marker.seal.story.locked', 'map.marker.seal.story'] : [`map.marker.seal.${kind}`], x, y, param: r, key }));
+  wrap('threatMark', (ctx, x, y, s, key) => ({ ids: ['map.marker.threat'], x, y, param: s, key }));
+  wrap('rumorMark', (ctx, x, y, s, key) => ({ ids: ['map.marker.rumor'], x, y, param: s, key }));
+  // places: the most specific art wins (sub-kind and state, sub-kind, state, kind); a missing state is still shown
+  // (faded for ruins, smoke and char for burned), besieged swords are always drawn, and a faction flag goes at attach.flag
+  A.settlement = function (ctx, L, x, y, s, rng, opts = {}) {
+    const m = MA();
+    if (m && m.entries.size) {
+      const { ids, state } = m.placeIds(L), r = m.resolve(ids, 'loc' + L.id);
+      if (r) {
+        const hasState = state && r.id.endsWith('.' + state);
+        ctx.save(); if (state === 'ruin' && !hasState) ctx.globalAlpha *= 0.6;
+        const d = m.drawResolved(ctx, r, x, y, s, { key: 'loc' + L.id });
+        ctx.restore();
+        if (r.v.attach && Array.isArray(r.v.attach.flag) && opts.flagColor) { const fx = d.flip ? 2 * x - (d.dx + r.v.attach.flag[0] * d.sx) : d.dx + r.v.attach.flag[0] * d.sx; P.setup(ctx); P.flag(ctx, fx, d.dy + r.v.attach.flag[1] * d.sy, s, opts.flagColor); }
+        P.stateOverlay(ctx, L, x, y, s, state === 'burned' && hasState ? 'besieged' : undefined);
+        return;
+      }
+    }
+    return P.settlement(ctx, L, x, y, s, rng, opts);
   };
 })();

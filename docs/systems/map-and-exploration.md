@@ -45,10 +45,17 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   beside the lair; blighted or flourishing glyphs near your rule. The chunk cache is cleared when the domain changes.
   See [domain-and-influence](domain-and-influence.md).
 
+### Rendering and art packs (0.10)
+- Terrain sits in cached chunks of 16×16 cells with a 2-cell margin (both levels of detail), at 22 px per cell
+  (7 px below zoom 0.55); places, markers, fog and labels are drawn every frame. Glyph placement uses the cell's seed;
+  each glyph draws with its own seed and stable key, so swapping its art never moves another glyph.
+- Every symbol can be replaced by PNG art from a map art pack, with procedural fallback: see
+  [art-and-sprites](art-and-sprites.md) and `docs/map-art/README.md`. Preview: `?scene=mappreview`.
+
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).
 - Fog / knowledge / rumours / gating / sight: `src/world/world.js`.
-- Map rendering (chunk cache, ink glyphs, cloud fog, labels, previews, tap-to-explore, HUD): `src/views/mapview.js`, `src/art/mapart.js`.
+- Map rendering (chunk cache, ink glyphs, cloud fog, labels, previews, tap-to-explore, HUD): `src/views/mapview.js`, `src/art/mapart.js`; art packs `src/art/mapassets.js`, contract `src/data/mapspec.js`.
 - Place previews: `src/game/preview.js`.
 - Changing generation breaks old saves: bump `GEN_VERSION` in `src/core/save.js` and say so.
 
@@ -59,6 +66,7 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - Labels can crowd at mid zoom in dense kingdoms; the whole-continent zoom is costly (a low-res overview canvas
   would help). See [FEATURE_STATUS](../FEATURE_STATUS.md).
 - One seed in many lacks a rival lair (test "rival lairs exist" is seed-dependent).
+- The home settlement's name is drawn without label collision and can overlap "Your lair" at close zoom.
 
 ## Related
 [travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [art-and-sprites](art-and-sprites.md) · [domain-and-influence](domain-and-influence.md)

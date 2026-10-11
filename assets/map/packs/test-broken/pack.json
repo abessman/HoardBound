@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "name": "test-broken",
+  "comment": "Deliberate mistakes for the fallback check (docs/map-art/REPLACING.md). Only map.terrain.tree.pine is valid; everything else must warn and fall back to the hand-drawn glyph.",
+  "assets": [
+    {
+      "id": "map.terrain.tree.pine",
+      "variants": [
+        {
+          "id": "ok",
+          "src": "pine-ok@4x.png",
+          "sourceSize": [
+            28,
+            52
+          ],
+          "logicalSize": [
+            7,
+            13
+          ],
+          "anchorPx": [
+            14,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.terrain.tree.pine",
+      "variants": [
+        {
+          "id": "dup",
+          "src": "pine-ok@4x.png",
+          "sourceSize": [
+            28,
+            52
+          ],
+          "logicalSize": [
+            7,
+            13
+          ],
+          "anchorPx": [
+            14,
+            50
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.terrain.volcano",
+      "variants": [
+        {
+          "id": "a",
+          "src": "small-32.png",
+          "sourceSize": [
+            32,
+            32
+          ],
+          "logicalSize": [
+            20,
+            20
+          ],
+          "anchorPx": [
+            16,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.place.village",
+      "variants": [
+        {
+          "id": "missing",
+          "src": "no-such-file.png",
+          "sourceSize": [
+            64,
+            64
+          ],
+          "logicalSize": [
+            30,
+            30
+          ],
+          "anchorPx": [
+            32,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.place.town",
+      "variants": [
+        {
+          "id": "wrong-size",
+          "src": "small-32.png",
+          "sourceSize": [
+            64,
+            64
+          ],
+          "logicalSize": [
+            30,
+            30
+          ],
+          "anchorPx": [
+            32,
+            60
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.place.castle",
+      "variants": [
+        {
+          "id": "bad-anchor",
+          "src": "small-32.png",
+          "sourceSize": [
+            32,
+            32
+          ],
+          "logicalSize": [
+            30,
+            30
+          ],
+          "anchorPx": [
+            40,
+            30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.terrain.mountain",
+      "variants": [
+        {
+          "id": "too-big",
+          "src": "small-32.png",
+          "sourceSize": [
+            32,
+            32
+          ],
+          "logicalSize": [
+            120,
+            120
+          ],
+          "anchorPx": [
+            16,
+            31
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.place.farm",
+      "variants": [
+        {
+          "id": "bad-rect",
+          "src": "small-32.png",
+          "rect": [
+            16,
+            16,
+            32,
+            32
+          ],
+          "logicalSize": [
+            20,
+            20
+          ],
+          "anchorPx": [
+            16,
+            30
+          ]
+        }
+      ]
+    }
+  ]
+}

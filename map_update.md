@@ -1,6 +1,6 @@
 # Map art replacement handoff
 
-Status: implementation brief for Claude; no engine changes made by this document.
+Status: **implemented in 0.10.0** (2026-10-11). The handoff package is [docs/map-art/README.md](docs/map-art/README.md); what was built and checked: [docs/map-art/IMPLEMENTATION.md](docs/map-art/IMPLEMENTATION.md). The brief below is kept as written.
 Requested by the owner, 2026-10-11. Scope: HoardBound's parchment overworld map.
 
 ## Goal and art direction

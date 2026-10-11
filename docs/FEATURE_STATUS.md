@@ -68,6 +68,17 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Test starts for the later game | Functional | `?scene=map&preset=adult-kind` (and adult-cruel, young-kind, young-cruel); saved to a separate test slot. |
 | Debug tools | Functional | Menu → Debug tools: infinite gold, invincible, endless stamina, safe sleep, instant building; grow, age, benevolence, settlement, struggle, reveal, calm. Marked on the map and in the chronicle. |
 
+## Map art (0.10.0)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Map symbols replaceable by PNG art, partial packs | Functional | Semantic ids for every terrain glyph, place and state, home stage, pennant, moving piece, seal, fog and the compass; procedural fallback for anything missing, broken or loading; Settings → Map art or `?mappack=`; works from `file://`. |
+| Stable variants, resolution independence, states | Functional | Variant from the symbol's stable key; footprint from `logicalSize`; exact state → base → hand-drawn, with smoke or fade when art lacks the state. |
+| Handoff package for an artist | Functional | `docs/map-art/`: measured catalog, contact sheets, art spec, replacement steps, implementation summary; `sample` and `test-broken` packs; validator and exporter. |
+| Map preview scene | Functional | `?scene=mappreview` (fixed seed and camera, every domain state, `&chunks=1`). |
+| Roads, rivers, coasts and washes as art | Simplified | Stay procedural so they join; restylable via a pack's `style`. Parchment, labels and selection are not in packs. |
+| Real map artwork | Deferred | Only test art ships; terrain art is cached at 1× (no sharper than the ink at high zoom). |
+
 ## Encounters and travel
 
 | Requirement | Status | Notes |

@@ -4,6 +4,23 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.10.0 — 2026-10-11 · Swappable map art
+- **Map art packs** (`map_update.md`): every symbol on the parchment map (terrain, places in each state, your
+  settlement's stages, pennants, caravans, armies, seals, fog, compass) has a semantic id and can be replaced by a PNG
+  in `assets/map/packs/<name>/` with a small manifest, one symbol at a time. Anything missing, broken or still loading
+  is drawn by hand exactly as before. Choose a pack in Settings → Map art or with `?mappack=<name>`; works from
+  `file://` too.
+- Variants are chosen by each symbol's stable identity (never reshuffle); different resolutions keep the same
+  footprint; burned and ruined places still show their state when the art lacks it; flags, pennants, washes and
+  labels stay separate; roads, rivers, coasts and washes stay procedural and can be restyled.
+- The **handoff package** for an artist: `docs/map-art/` (measured catalog, contact sheets at zoom 1, 2.5 and 4×,
+  art spec, replacement steps, implementation summary), a working `sample` pack and a `test-broken` pack, the
+  validator `node tools/mappack.js <pack>` and the exporter `node tools/mapart-export.mjs`.
+- **Map preview scene** `?scene=mappreview` (fixed seed and camera, every domain state, a burned town, a raid, the
+  dragon circling; `&chunks=1` shows chunk edges; saves only to the test slot).
+- Rendering only: no world generation or save change. Terrain glyph wobble now has its own seed per glyph, so stroke
+  jitter and coastal waves moved slightly once; positions and sizes are unchanged.
+
 ## 0.9.1 — 2026-10-11
 - **Debug tools** (Menu → Debug tools) for testing: infinite gold, invincible, endless stamina, safe sleep, instant
   building; and do-it-now buttons: gold, grow one stage, age 10 years, heal, benevolence ±25, grow your settlement,

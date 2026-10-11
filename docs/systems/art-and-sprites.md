@@ -1,6 +1,6 @@
 # Art and sprites
 
-Generated pixel art, the dragon's evolving look, map glyphs, and how real sprites will replace them.
+Generated pixel art, the dragon's evolving look, map glyphs, and how real sprites and map art packs replace them.
 
 ## Intent
 - Appearance is earned: size from age, palette and horns from tyranny or benevolence, mutations from artifacts
@@ -15,6 +15,22 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
   layers per tier, pose, alignment and mutation (`src/art/dragon.js`, sheet at `?scene=dragons`).
 - The map is Tolkien-style ink: glyphs, cloud fog and parchment (`src/art/mapart.js`, `src/art/parchment.js`).
 
+### Map art packs (0.10)
+- Every map drawing function in `HB.mapart` is a wrapper: it asks `HB.mapAssets` for art by semantic id (the
+  contract is `src/data/mapspec.js`) and otherwise calls the procedural original in `HB.mapart.proc`.
+- A pack is `assets/map/packs/<name>/pack.json` + `pack.js` (the same JSON as a classic script, for `file://`) and
+  PNGs. Chosen in Settings → Map art (`HB.settings.mapPack`, list in `assets/map/packs.js`) or `?mappack=<name>`.
+- Draw rule: `k = param / ref`, `scale = logicalSize / sourceSize × k`, origin = anchor − anchorPx × scale; aspect
+  kept unless `allowStretch`. Fallback: exact state → base id → procedural; places sub-kind + state → sub-kind →
+  state → type, with the hand-drawn smoke or fade when the art lacks the state.
+- Variant = hash of the symbol's stable key (terrain: seed, cell and glyph index; places: `loc<id>`). Terrain
+  glyphs get their own drawing seed, so art never shifts placements. Terrain art may reach 2.2 cells from its anchor
+  (the chunk margin, checked at both levels of detail); larger is refused.
+- Images decode once; `HB.mapAssets.revision` bumps when one is ready or the pack changes, and the map redraws
+  chunks built with older art, a few per frame. Problems are logged once with `[map art]` and fall back.
+- Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps, summary). Manifest fields:
+  `assets/map/README.md`.
+
 ### Replacing generated art
 Sprites are registered by id in `HB.sprites`. Drop a PNG sheet and a JSON atlas (`{ "id": {x,y,w,h,
 ax,ay} }`, `ax`/`ay` the anchor pixel) into `assets/sprites/` and list them in `assets/sprites/manifest.json`; matching ids
@@ -23,12 +39,22 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 
 ## Code
 - `src/art/` (palette, pixel helpers + sprite registry, sprites, dragon, mapart, parchment, illustrations).
+- Map art: `src/data/mapspec.js` (contract), `src/art/mapassets.js` (loader, resolver), the wrappers at the end of
+  `src/art/mapart.js`; `tools/mappack.js` (validator), `tools/mapart-export.mjs` + `tools/mapart-page.js` (handoff
+  exporter); preview `?scene=mappreview` (`HB.debug.mapPreview` in `src/main.js`, `HB.presets.preview`).
 
 ## Tests
 - Visual only: `node tools/screenshot.mjs` and `node tools/playthrough.mjs` (look at the shots).
+- *map art* in `tools/test.js`: the contract is complete, every id the drawing asks for exists, the reach limit,
+  the validator on the sample and broken packs, the preview campaign. `node tools/mapart-export.mjs --only=check`
+  proves in Chromium that placements, hit areas and saves are identical with and without a pack.
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
+- Map terrain is cached at 22 px per cell and scaled with the map, so terrain art is no sharper than 1× (as the ink).
+- Still hand-coded on the map: parchment, roads, rivers, coasts, washes (restylable via a pack's `style`), labels,
+  selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
+- The sample pack's art is deliberate test art, not a style proposal.
 
 ## Related
 [map-and-exploration](map-and-exploration.md) · [raids-and-encounters](raids-and-encounters.md)

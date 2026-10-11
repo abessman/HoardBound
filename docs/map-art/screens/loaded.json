@@ -1,0 +1,105 @@
+{
+ "preview-none.jpg": {
+  "pack": "none",
+  "ids": 0,
+  "drawing": [],
+  "images": 0,
+  "decodedBytes": 0,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-sample.jpg": {
+  "pack": "sample",
+  "ids": 6,
+  "drawing": [
+   "map.terrain.mountain",
+   "map.terrain.tree.round",
+   "map.place.village",
+   "map.place.castle",
+   "map.place.town.burned",
+   "map.marker.wagon"
+  ],
+  "images": 7,
+  "decodedBytes": 239664,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-sample-chunks.jpg": {
+  "pack": "sample",
+  "ids": 6,
+  "drawing": [
+   "map.terrain.mountain",
+   "map.terrain.tree.round",
+   "map.place.village",
+   "map.place.castle",
+   "map.place.town.burned",
+   "map.marker.wagon"
+  ],
+  "images": 7,
+  "decodedBytes": 239664,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-sample-close.jpg": {
+  "pack": "sample",
+  "ids": 6,
+  "drawing": [
+   "map.terrain.mountain",
+   "map.terrain.tree.round",
+   "map.place.village",
+   "map.place.castle",
+   "map.place.town.burned",
+   "map.marker.wagon"
+  ],
+  "images": 7,
+  "decodedBytes": 239664,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-none-close.jpg": {
+  "pack": "none",
+  "ids": 0,
+  "drawing": [],
+  "images": 0,
+  "decodedBytes": 0,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-sample-far.jpg": {
+  "pack": "sample",
+  "ids": 6,
+  "drawing": [
+   "map.terrain.mountain",
+   "map.terrain.tree.round",
+   "map.place.village",
+   "map.place.castle",
+   "map.place.town.burned",
+   "map.marker.wagon"
+  ],
+  "images": 7,
+  "decodedBytes": 239664,
+  "loading": 0,
+  "warnings": []
+ },
+ "preview-broken.jpg": {
+  "pack": "test-broken",
+  "ids": 4,
+  "drawing": [
+   "map.terrain.tree.pine"
+  ],
+  "images": 1,
+  "decodedBytes": 5824,
+  "loading": 0,
+  "warnings": [
+   "duplicate id map.terrain.tree.pine: the first one is used",
+   "unknown id map.terrain.volcano (not in src/data/mapspec.js); ignored",
+   "map.place.castle variant bad-anchor: \"anchorPx\" must be [x, y] inside the 32×32 frame",
+   "map.place.castle: no usable variants; procedural art is used",
+   "map.terrain.mountain variant too-big: reaches 8.47 cells from its anchor at its largest size (145.3 px at zoom 1; terrain may reach 2.2 cells); refused, procedural art is used",
+   "map.terrain.mountain: no usable variants; procedural art is used",
+   "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused",
+   "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused",
+   "map.place.village variant missing: could not load assets/map/packs/test-broken/no-such-file.png"
+  ]
+ }
+}

@@ -1,0 +1,7290 @@
+{
+ "generated": "node tools/mapart-export.mjs",
+ "game": "0.10.0",
+ "spec": {
+  "schemaVersion": 1,
+  "cell": 22,
+  "lod1Cell": 7,
+  "marginCells": 2
+ },
+ "units": "logical px = screen px at zoom 1 when the size parameter equals ref (k = 1). Bounds are [left, top, right, bottom] from the anchor.",
+ "assets": [
+  {
+   "id": "map.terrain.mountain",
+   "family": "map.terrain.mountain",
+   "state": null,
+   "sub": false,
+   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 26.4,
+   "refY": 20.9,
+   "maxK": 1.25,
+   "lod1K": 0.51,
+   "familyStates": [
+    "snow",
+    "peak"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": "w = 26.4·k, h = 20.9·k (cells: w 1.05–1.4 cell, h 0.75–1.2 cell)",
+   "measured": {
+    "boundsFromAnchor": [
+     -14,
+     -21.7,
+     14,
+     0.8
+    ],
+    "typicalSize": [
+     28,
+     22.3
+    ],
+    "reach": 21.8
+   },
+   "recommended": {
+    "logicalSize": [
+     30,
+     25
+    ],
+    "anchorLogical": [
+     15,
+     22.7
+    ],
+    "sourceSizeAt4x": [
+     120,
+     100
+    ],
+    "anchorPxAt4x": [
+     60,
+     91
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     30,
+     25
+    ],
+    "zoom2_5": [
+     75,
+     62.5
+    ],
+    "maxZoom3_2": [
+     96,
+     80
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 1.6540000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 30.2
+   }
+  },
+  {
+   "id": "map.terrain.mountain.snow",
+   "family": "map.terrain.mountain",
+   "state": "snow",
+   "sub": false,
+   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 26.4,
+   "refY": 20.9,
+   "maxK": 1.25,
+   "lod1K": 0.51,
+   "familyStates": [
+    "snow",
+    "peak"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": "cold mountains",
+   "measured": {
+    "boundsFromAnchor": [
+     -14,
+     -21.7,
+     14,
+     0.8
+    ],
+    "typicalSize": [
+     28,
+     22.3
+    ],
+    "reach": 21.8
+   },
+   "recommended": {
+    "logicalSize": [
+     30,
+     25
+    ],
+    "anchorLogical": [
+     15,
+     22.7
+    ],
+    "sourceSizeAt4x": [
+     120,
+     100
+    ],
+    "anchorPxAt4x": [
+     60,
+     91
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     30,
+     25
+    ],
+    "zoom2_5": [
+     75,
+     62.5
+    ],
+    "maxZoom3_2": [
+     96,
+     80
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 1.6540000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 30.2
+   }
+  },
+  {
+   "id": "map.terrain.mountain.peak",
+   "family": "map.terrain.mountain",
+   "state": "peak",
+   "sub": false,
+   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 26.4,
+   "refY": 20.9,
+   "maxK": 1.25,
+   "lod1K": 0.51,
+   "familyStates": [
+    "snow",
+    "peak"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": "peaks: w 1.5 cell (k 1.25), h 1.45 cell",
+   "measured": {
+    "boundsFromAnchor": [
+     -14,
+     -26.5,
+     14,
+     1
+    ],
+    "typicalSize": [
+     28,
+     27.5
+    ],
+    "reach": 26.5
+   },
+   "recommended": {
+    "logicalSize": [
+     30,
+     30
+    ],
+    "anchorLogical": [
+     15,
+     27.5
+    ],
+    "sourceSizeAt4x": [
+     120,
+     120
+    ],
+    "anchorPxAt4x": [
+     60,
+     110
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     30,
+     30
+    ],
+    "zoom2_5": [
+     75,
+     75
+    ],
+    "maxZoom3_2": [
+     96,
+     96
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 2.004,
+    "limitCells": 2.2,
+    "maxReachAtK1": 30.2
+   }
+  },
+  {
+   "id": "map.terrain.mountain.jagged",
+   "family": "map.terrain.mountain.jagged",
+   "state": null,
+   "sub": false,
+   "purpose": "A mountain drawn as jagged ash-dark teeth near a cruel ruler",
+   "builder": "HB.mapart.mountainJagged(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 29.7,
+   "refY": 24.2,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "deep"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -15.5,
+     -25,
+     15.5,
+     0.8
+    ],
+    "typicalSize": [
+     31,
+     25.8
+    ],
+    "reach": 25
+   },
+   "recommended": {
+    "logicalSize": [
+     33,
+     28
+    ],
+    "anchorLogical": [
+     16.5,
+     26
+    ],
+    "sourceSizeAt4x": [
+     132,
+     112
+    ],
+    "anchorPxAt4x": [
+     66,
+     104
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     33,
+     28
+    ],
+    "zoom2_5": [
+     82.5,
+     70
+    ],
+    "maxZoom3_2": [
+     105.6,
+     89.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountainJagged(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 1.4180000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 40.3
+   }
+  },
+  {
+   "id": "map.terrain.mountain.jagged.deep",
+   "family": "map.terrain.mountain.jagged",
+   "state": "deep",
+   "sub": false,
+   "purpose": "A mountain drawn as jagged ash-dark teeth near a cruel ruler",
+   "builder": "HB.mapart.mountainJagged(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 29.7,
+   "refY": 24.2,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "deep"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -15.5,
+     -25,
+     15.5,
+     0.8
+    ],
+    "typicalSize": [
+     31,
+     25.8
+    ],
+    "reach": 25
+   },
+   "recommended": {
+    "logicalSize": [
+     33,
+     28
+    ],
+    "anchorLogical": [
+     16.5,
+     26
+    ],
+    "sourceSizeAt4x": [
+     132,
+     112
+    ],
+    "anchorPxAt4x": [
+     66,
+     104
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     33,
+     28
+    ],
+    "zoom2_5": [
+     82.5,
+     70
+    ],
+    "maxZoom3_2": [
+     105.6,
+     89.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountainJagged(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 1.4180000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 40.3
+   }
+  },
+  {
+   "id": "map.terrain.hill",
+   "family": "map.terrain.hill",
+   "state": null,
+   "sub": false,
+   "purpose": "A hill on hill cells (one or two per cell)",
+   "builder": "HB.mapart.hill(ctx, x, y, w, h, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 18.7,
+   "refY": 5.9,
+   "maxK": 1.3,
+   "lod1K": 0.41,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -10,
+     -6.5,
+     10,
+     0.8
+    ],
+    "typicalSize": [
+     20,
+     7.3
+    ],
+    "reach": 10
+   },
+   "recommended": {
+    "logicalSize": [
+     22,
+     10
+    ],
+    "anchorLogical": [
+     11,
+     7.5
+    ],
+    "sourceSizeAt4x": [
+     88,
+     40
+    ],
+    "anchorPxAt4x": [
+     44,
+     30
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     22,
+     10
+    ],
+    "zoom2_5": [
+     55,
+     25
+    ],
+    "maxZoom3_2": [
+     70.4,
+     32
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.hill(ctx, x, y, w, h, rng)",
+   "terrainReach": {
+    "cells": 0.65,
+    "limitCells": 2.2,
+    "maxReachAtK1": 37.2
+   }
+  },
+  {
+   "id": "map.terrain.tree.round",
+   "family": "map.terrain.tree.round",
+   "state": null,
+   "sub": false,
+   "purpose": "A broadleaf tree (forests: one to three per cell)",
+   "builder": "HB.mapart.treeRound(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 3.7,
+   "refY": null,
+   "maxK": 1.35,
+   "lod1K": 0.49,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5,
+     -8.7,
+     5.5,
+     3.3
+    ],
+    "typicalSize": [
+     9.8,
+     11
+    ],
+    "reach": 8.8
+   },
+   "recommended": {
+    "logicalSize": [
+     13,
+     14
+    ],
+    "anchorLogical": [
+     6,
+     9.7
+    ],
+    "sourceSizeAt4x": [
+     52,
+     56
+    ],
+    "anchorPxAt4x": [
+     24,
+     39
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     13,
+     14
+    ],
+    "zoom2_5": [
+     32.5,
+     35
+    ],
+    "maxZoom3_2": [
+     41.6,
+     44.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.treeRound(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.679,
+    "limitCells": 2.2,
+    "maxReachAtK1": 31.4
+   }
+  },
+  {
+   "id": "map.terrain.tree.pine",
+   "family": "map.terrain.tree.pine",
+   "state": null,
+   "sub": false,
+   "purpose": "A pine (pine forests)",
+   "builder": "HB.mapart.treePine(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 3.3,
+   "refY": null,
+   "maxK": 1.35,
+   "lod1K": 0.45,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -3,
+     -9.7,
+     3,
+     2.5
+    ],
+    "typicalSize": [
+     6,
+     11.5
+    ],
+    "reach": 9.8
+   },
+   "recommended": {
+    "logicalSize": [
+     8,
+     15
+    ],
+    "anchorLogical": [
+     4,
+     10.7
+    ],
+    "sourceSizeAt4x": [
+     32,
+     60
+    ],
+    "anchorPxAt4x": [
+     16,
+     43
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     8,
+     15
+    ],
+    "zoom2_5": [
+     20,
+     37.5
+    ],
+    "maxZoom3_2": [
+     25.6,
+     48
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.treePine(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.688,
+    "limitCells": 2.2,
+    "maxReachAtK1": 34.2
+   }
+  },
+  {
+   "id": "map.terrain.tree.bare",
+   "family": "map.terrain.tree.bare",
+   "state": null,
+   "sub": false,
+   "purpose": "A dead tree at the edge of a cruel ruler’s land",
+   "builder": "HB.mapart.treeBare(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 3.7,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": 0.49,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -3.5,
+     -10,
+     3.5,
+     2.5
+    ],
+    "typicalSize": [
+     6.3,
+     11.5
+    ],
+    "reach": 10
+   },
+   "recommended": {
+    "logicalSize": [
+     9,
+     15
+    ],
+    "anchorLogical": [
+     4.5,
+     11
+    ],
+    "sourceSizeAt4x": [
+     36,
+     60
+    ],
+    "anchorPxAt4x": [
+     18,
+     44
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     9,
+     15
+    ],
+    "zoom2_5": [
+     22.5,
+     37.5
+    ],
+    "maxZoom3_2": [
+     28.8,
+     48
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.treeBare(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.77,
+    "limitCells": 2.2,
+    "maxReachAtK1": 31.4
+   }
+  },
+  {
+   "id": "map.terrain.tree.burned",
+   "family": "map.terrain.tree.burned",
+   "state": null,
+   "sub": false,
+   "purpose": "A burned husk deep in a cruel ruler’s land",
+   "builder": "HB.mapart.treeBurned(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 3.7,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": 0.49,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -1.2,
+     -6.7,
+     2.5,
+     2.5
+    ],
+    "typicalSize": [
+     3.8,
+     8.5
+    ],
+    "reach": 6.8
+   },
+   "recommended": {
+    "logicalSize": [
+     6,
+     12
+    ],
+    "anchorLogical": [
+     2.2,
+     7.7
+    ],
+    "sourceSizeAt4x": [
+     24,
+     48
+    ],
+    "anchorPxAt4x": [
+     9,
+     31
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     6,
+     12
+    ],
+    "zoom2_5": [
+     15,
+     30
+    ],
+    "maxZoom3_2": [
+     19.2,
+     38.4
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.treeBurned(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.539,
+    "limitCells": 2.2,
+    "maxReachAtK1": 31.4
+   }
+  },
+  {
+   "id": "map.terrain.grass",
+   "family": "map.terrain.grass",
+   "state": null,
+   "sub": false,
+   "purpose": "A grass tuft on some plains cells",
+   "builder": "HB.mapart.grassTuft(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 3.1,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -2,
+     -4.2,
+     2.3,
+     0.5
+    ],
+    "typicalSize": [
+     4.3,
+     4.8
+    ],
+    "reach": 4.3
+   },
+   "recommended": {
+    "logicalSize": [
+     7,
+     7
+    ],
+    "anchorLogical": [
+     3,
+     5.2
+    ],
+    "sourceSizeAt4x": [
+     28,
+     28
+    ],
+    "anchorPxAt4x": [
+     12,
+     21
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     7,
+     7
+    ],
+    "zoom2_5": [
+     17.5,
+     17.5
+    ],
+    "maxZoom3_2": [
+     22.4,
+     22.4
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.grassTuft(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.284,
+    "limitCells": 2.2,
+    "maxReachAtK1": 40.3
+   }
+  },
+  {
+   "id": "map.terrain.swamp",
+   "family": "map.terrain.swamp",
+   "state": null,
+   "sub": false,
+   "purpose": "A marsh tuft with water strokes",
+   "builder": "HB.mapart.swampTuft(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 4,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": 0.44,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -6,
+     -5,
+     6.8,
+     1.5
+    ],
+    "typicalSize": [
+     12.8,
+     6.5
+    ],
+    "reach": 6.8
+   },
+   "recommended": {
+    "logicalSize": [
+     15,
+     9
+    ],
+    "anchorLogical": [
+     7,
+     6
+    ],
+    "sourceSizeAt4x": [
+     60,
+     36
+    ],
+    "anchorPxAt4x": [
+     28,
+     24
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     15,
+     9
+    ],
+    "zoom2_5": [
+     37.5,
+     22.5
+    ],
+    "maxZoom3_2": [
+     48,
+     28.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.swampTuft(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.503,
+    "limitCells": 2.2,
+    "maxReachAtK1": 35
+   }
+  },
+  {
+   "id": "map.terrain.dune",
+   "family": "map.terrain.dune",
+   "state": null,
+   "sub": false,
+   "purpose": "A dune stroke on desert cells",
+   "builder": "HB.mapart.dune(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.8,
+   "refY": null,
+   "maxK": 1.1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -9.2,
+     -3.5,
+     5,
+     0.5
+    ],
+    "typicalSize": [
+     14.3,
+     4
+    ],
+    "reach": 9.3
+   },
+   "recommended": {
+    "logicalSize": [
+     17,
+     6
+    ],
+    "anchorLogical": [
+     10.2,
+     4.5
+    ],
+    "sourceSizeAt4x": [
+     68,
+     24
+    ],
+    "anchorPxAt4x": [
+     41,
+     18
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     17,
+     6
+    ],
+    "zoom2_5": [
+     42.5,
+     15
+    ],
+    "maxZoom3_2": [
+     54.4,
+     19.2
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.dune(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.51,
+    "limitCells": 2.2,
+    "maxReachAtK1": 44
+   }
+  },
+  {
+   "id": "map.terrain.snow",
+   "family": "map.terrain.snow",
+   "state": null,
+   "sub": false,
+   "purpose": "Snow dots on snowfields",
+   "builder": "HB.mapart.snowDots(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.7,
+   "refY": null,
+   "maxK": 1.1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -8.2,
+     -5.2,
+     8.3,
+     5
+    ],
+    "typicalSize": [
+     10,
+     6.3
+    ],
+    "reach": 8.3
+   },
+   "recommended": {
+    "logicalSize": [
+     19,
+     13
+    ],
+    "anchorLogical": [
+     9.2,
+     6.2
+    ],
+    "sourceSizeAt4x": [
+     76,
+     52
+    ],
+    "anchorPxAt4x": [
+     37,
+     25
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     19,
+     13
+    ],
+    "zoom2_5": [
+     47.5,
+     32.5
+    ],
+    "maxZoom3_2": [
+     60.8,
+     41.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.snowDots(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.49,
+    "limitCells": 2.2,
+    "maxReachAtK1": 44
+   }
+  },
+  {
+   "id": "map.terrain.field",
+   "family": "map.terrain.field",
+   "state": null,
+   "sub": false,
+   "purpose": "A cultivated field near a kind ruler’s settlement",
+   "builder": "HB.mapart.field(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 6.2,
+   "refY": null,
+   "maxK": 1.1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the field",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7,
+     -4.7,
+     7,
+     4.8
+    ],
+    "typicalSize": [
+     14,
+     8
+    ],
+    "reach": 7
+   },
+   "recommended": {
+    "logicalSize": [
+     16,
+     12
+    ],
+    "anchorLogical": [
+     8,
+     5.7
+    ],
+    "sourceSizeAt4x": [
+     64,
+     48
+    ],
+    "anchorPxAt4x": [
+     32,
+     23
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     16,
+     12
+    ],
+    "zoom2_5": [
+     40,
+     30
+    ],
+    "maxZoom3_2": [
+     51.2,
+     38.4
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.field(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.4,
+    "limitCells": 2.2,
+    "maxReachAtK1": 44
+   }
+  },
+  {
+   "id": "map.terrain.ash",
+   "family": "map.terrain.ash",
+   "state": null,
+   "sub": false,
+   "purpose": "Scattered ash near a cruel ruler",
+   "builder": "HB.mapart.ash(ctx, x, y, s, rng)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 6.6,
+   "refY": null,
+   "maxK": 1.1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the scatter",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7.5,
+     -5.2,
+     7.8,
+     5
+    ],
+    "typicalSize": [
+     11,
+     6.8
+    ],
+    "reach": 7.8
+   },
+   "recommended": {
+    "logicalSize": [
+     18,
+     13
+    ],
+    "anchorLogical": [
+     8.5,
+     6.2
+    ],
+    "sourceSizeAt4x": [
+     72,
+     52
+    ],
+    "anchorPxAt4x": [
+     34,
+     25
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     18,
+     13
+    ],
+    "zoom2_5": [
+     45,
+     32.5
+    ],
+    "maxZoom3_2": [
+     57.6,
+     41.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.ash(ctx, x, y, s, rng)",
+   "terrainReach": {
+    "cells": 0.475,
+    "limitCells": 2.2,
+    "maxReachAtK1": 44
+   }
+  },
+  {
+   "id": "map.terrain.blossom",
+   "family": "map.terrain.blossom",
+   "state": null,
+   "sub": false,
+   "purpose": "A gold fleck in a flourishing grove",
+   "builder": "HB.mapart.blossom(ctx, x, y, s)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 4.2,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the fleck",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -1,
+     -1,
+     1,
+     1
+    ],
+    "typicalSize": [
+     2,
+     2
+    ],
+    "reach": 1
+   },
+   "recommended": {
+    "logicalSize": [
+     4,
+     4
+    ],
+    "anchorLogical": [
+     2,
+     2
+    ],
+    "sourceSizeAt4x": [
+     16,
+     16
+    ],
+    "anchorPxAt4x": [
+     8,
+     8
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     4,
+     4
+    ],
+    "zoom2_5": [
+     10,
+     10
+    ],
+    "maxZoom3_2": [
+     12.8,
+     12.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.blossom(ctx, x, y, s)",
+   "terrainReach": {
+    "cells": 0.11800000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 37.2
+   }
+  },
+  {
+   "id": "map.terrain.wave",
+   "family": "map.terrain.wave",
+   "state": null,
+   "sub": false,
+   "purpose": "A wave stroke near coasts",
+   "builder": "HB.mapart.wave(ctx, x, y, len, rng, alpha)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "len",
+   "ref": 16.5,
+   "refY": null,
+   "maxK": 1.4,
+   "lod1K": 0.42,
+   "familyStates": [],
+   "anchor": "left end of the wave, on its centre line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -0.5,
+     -1.2,
+     17,
+     1.3
+    ],
+    "typicalSize": [
+     17.5,
+     2.5
+    ],
+    "reach": 17
+   },
+   "recommended": {
+    "logicalSize": [
+     20,
+     5
+    ],
+    "anchorLogical": [
+     1.5,
+     2.2
+    ],
+    "sourceSizeAt4x": [
+     80,
+     20
+    ],
+    "anchorPxAt4x": [
+     6,
+     9
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     20,
+     5
+    ],
+    "zoom2_5": [
+     50,
+     12.5
+    ],
+    "maxZoom3_2": [
+     64,
+     16
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.wave(ctx, x, y, len, rng, alpha)",
+   "terrainReach": {
+    "cells": 1.177,
+    "limitCells": 2.2,
+    "maxReachAtK1": 34.6
+   }
+  },
+  {
+   "id": "map.place.farm",
+   "family": "map.place.farm",
+   "state": null,
+   "sub": false,
+   "purpose": "A farmstead",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5.7,
+     -11.7,
+     14.8,
+     0.5
+    ],
+    "typicalSize": [
+     20.5,
+     12.3
+    ],
+    "reach": 14.8
+   },
+   "recommended": {
+    "logicalSize": [
+     23,
+     15
+    ],
+    "anchorLogical": [
+     6.7,
+     12.7
+    ],
+    "sourceSizeAt4x": [
+     92,
+     60
+    ],
+    "anchorPxAt4x": [
+     27,
+     51
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     23,
+     15
+    ],
+    "zoom2_5": [
+     27.6,
+     18
+    ],
+    "maxZoom3_2": [
+     27.6,
+     18
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.farm.burned",
+   "family": "map.place.farm",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A farmstead",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -11.2,
+     -26.2,
+     14.8,
+     2.3
+    ],
+    "typicalSize": [
+     26,
+     28.5
+    ],
+    "reach": 26.3
+   },
+   "recommended": {
+    "logicalSize": [
+     28,
+     31
+    ],
+    "anchorLogical": [
+     12.2,
+     27.2
+    ],
+    "sourceSizeAt4x": [
+     112,
+     124
+    ],
+    "anchorPxAt4x": [
+     49,
+     109
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     28,
+     31
+    ],
+    "zoom2_5": [
+     33.6,
+     37.2
+    ],
+    "maxZoom3_2": [
+     33.6,
+     37.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.farm.ruin",
+   "family": "map.place.farm",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A farmstead",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5.7,
+     -11.7,
+     14.8,
+     0.5
+    ],
+    "typicalSize": [
+     20.5,
+     12.3
+    ],
+    "reach": 14.8
+   },
+   "recommended": {
+    "logicalSize": [
+     23,
+     15
+    ],
+    "anchorLogical": [
+     6.7,
+     12.7
+    ],
+    "sourceSizeAt4x": [
+     92,
+     60
+    ],
+    "anchorPxAt4x": [
+     27,
+     51
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     23,
+     15
+    ],
+    "zoom2_5": [
+     27.6,
+     18
+    ],
+    "maxZoom3_2": [
+     27.6,
+     18
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.village",
+   "family": "map.place.village",
+   "state": null,
+   "sub": false,
+   "purpose": "A village",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -15.2,
+     -18.5,
+     13.8,
+     1.5
+    ],
+    "typicalSize": [
+     29,
+     20
+    ],
+    "reach": 18.5
+   },
+   "recommended": {
+    "logicalSize": [
+     31,
+     22
+    ],
+    "anchorLogical": [
+     16.2,
+     19.5
+    ],
+    "sourceSizeAt4x": [
+     124,
+     88
+    ],
+    "anchorPxAt4x": [
+     65,
+     78
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     31,
+     22
+    ],
+    "zoom2_5": [
+     37.2,
+     26.4
+    ],
+    "maxZoom3_2": [
+     37.2,
+     26.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.village.burned",
+   "family": "map.place.village",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A village",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -15.2,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     34,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     40
+    ],
+    "anchorLogical": [
+     16.2,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     144,
+     160
+    ],
+    "anchorPxAt4x": [
+     65,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     40
+    ],
+    "zoom2_5": [
+     43.2,
+     48
+    ],
+    "maxZoom3_2": [
+     43.2,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.village.ruin",
+   "family": "map.place.village",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A village",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -15.2,
+     -18.5,
+     13.8,
+     1.5
+    ],
+    "typicalSize": [
+     29,
+     20
+    ],
+    "reach": 18.5
+   },
+   "recommended": {
+    "logicalSize": [
+     31,
+     22
+    ],
+    "anchorLogical": [
+     16.2,
+     19.5
+    ],
+    "sourceSizeAt4x": [
+     124,
+     88
+    ],
+    "anchorPxAt4x": [
+     65,
+     78
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     31,
+     22
+    ],
+    "zoom2_5": [
+     37.2,
+     26.4
+    ],
+    "maxZoom3_2": [
+     37.2,
+     26.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.town",
+   "family": "map.place.town",
+   "state": null,
+   "sub": false,
+   "purpose": "A town",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.2,
+     -27.5,
+     18.3,
+     0.5
+    ],
+    "typicalSize": [
+     37.5,
+     28
+    ],
+    "reach": 27.5
+   },
+   "recommended": {
+    "logicalSize": [
+     40,
+     30
+    ],
+    "anchorLogical": [
+     20.2,
+     28.5
+    ],
+    "sourceSizeAt4x": [
+     160,
+     120
+    ],
+    "anchorPxAt4x": [
+     81,
+     114
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     40,
+     30
+    ],
+    "zoom2_5": [
+     48,
+     36
+    ],
+    "maxZoom3_2": [
+     48,
+     36
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.town.burned",
+   "family": "map.place.town",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A town",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.2,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     38,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     40,
+     40
+    ],
+    "anchorLogical": [
+     20.2,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     160,
+     160
+    ],
+    "anchorPxAt4x": [
+     81,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     40,
+     40
+    ],
+    "zoom2_5": [
+     48,
+     48
+    ],
+    "maxZoom3_2": [
+     48,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.town.ruin",
+   "family": "map.place.town",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A town",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.2,
+     -27.5,
+     18.3,
+     0.5
+    ],
+    "typicalSize": [
+     37.5,
+     28
+    ],
+    "reach": 27.5
+   },
+   "recommended": {
+    "logicalSize": [
+     40,
+     30
+    ],
+    "anchorLogical": [
+     20.2,
+     28.5
+    ],
+    "sourceSizeAt4x": [
+     160,
+     120
+    ],
+    "anchorPxAt4x": [
+     81,
+     114
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     40,
+     30
+    ],
+    "zoom2_5": [
+     48,
+     36
+    ],
+    "maxZoom3_2": [
+     48,
+     36
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.city",
+   "family": "map.place.city",
+   "state": null,
+   "sub": false,
+   "purpose": "A city (state \"great\": a great city, tier 4+)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin",
+    "great"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.2,
+     -48,
+     20.3,
+     0.8
+    ],
+    "typicalSize": [
+     40.5,
+     48.8
+    ],
+    "reach": 48
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     51
+    ],
+    "anchorLogical": [
+     21.2,
+     49
+    ],
+    "sourceSizeAt4x": [
+     172,
+     204
+    ],
+    "anchorPxAt4x": [
+     85,
+     196
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     51
+    ],
+    "zoom2_5": [
+     51.6,
+     61.2
+    ],
+    "maxZoom3_2": [
+     51.6,
+     61.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.city.burned",
+   "family": "map.place.city",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A city (state \"great\": a great city, tier 4+)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin",
+    "great"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.2,
+     -48,
+     21.5,
+     3.3
+    ],
+    "typicalSize": [
+     41.8,
+     51.3
+    ],
+    "reach": 48
+   },
+   "recommended": {
+    "logicalSize": [
+     44,
+     54
+    ],
+    "anchorLogical": [
+     21.2,
+     49
+    ],
+    "sourceSizeAt4x": [
+     176,
+     216
+    ],
+    "anchorPxAt4x": [
+     85,
+     196
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     44,
+     54
+    ],
+    "zoom2_5": [
+     52.8,
+     64.8
+    ],
+    "maxZoom3_2": [
+     52.8,
+     64.8
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.city.ruin",
+   "family": "map.place.city",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A city (state \"great\": a great city, tier 4+)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin",
+    "great"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.2,
+     -48,
+     20.3,
+     0.8
+    ],
+    "typicalSize": [
+     40.5,
+     48.8
+    ],
+    "reach": 48
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     51
+    ],
+    "anchorLogical": [
+     21.2,
+     49
+    ],
+    "sourceSizeAt4x": [
+     172,
+     204
+    ],
+    "anchorPxAt4x": [
+     85,
+     196
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     51
+    ],
+    "zoom2_5": [
+     51.6,
+     61.2
+    ],
+    "maxZoom3_2": [
+     51.6,
+     61.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.city.great",
+   "family": "map.place.city",
+   "state": "great",
+   "sub": true,
+   "purpose": "A city (state \"great\": a great city, tier 4+)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin",
+    "great"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -24.7,
+     -48,
+     24.8,
+     0.8
+    ],
+    "typicalSize": [
+     49.5,
+     48.8
+    ],
+    "reach": 48
+   },
+   "recommended": {
+    "logicalSize": [
+     52,
+     51
+    ],
+    "anchorLogical": [
+     25.7,
+     49
+    ],
+    "sourceSizeAt4x": [
+     208,
+     204
+    ],
+    "anchorPxAt4x": [
+     103,
+     196
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     52,
+     51
+    ],
+    "zoom2_5": [
+     62.4,
+     61.2
+    ],
+    "maxZoom3_2": [
+     62.4,
+     61.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.castle",
+   "family": "map.place.castle",
+   "state": null,
+   "sub": false,
+   "purpose": "A castle (the faction flag is drawn by the engine at attach.flag if given)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -39.2,
+     14.8,
+     0.8
+    ],
+    "typicalSize": [
+     29.5,
+     40
+    ],
+    "reach": 39.3
+   },
+   "recommended": {
+    "logicalSize": [
+     32,
+     42
+    ],
+    "anchorLogical": [
+     15.7,
+     40.2
+    ],
+    "sourceSizeAt4x": [
+     128,
+     168
+    ],
+    "anchorPxAt4x": [
+     63,
+     161
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     32,
+     42
+    ],
+    "zoom2_5": [
+     38.4,
+     50.4
+    ],
+    "maxZoom3_2": [
+     38.4,
+     50.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.castle.burned",
+   "family": "map.place.castle",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A castle (the faction flag is drawn by the engine at attach.flag if given)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -39.2,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     42
+    ],
+    "reach": 39.3
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     44
+    ],
+    "anchorLogical": [
+     15.7,
+     40.2
+    ],
+    "sourceSizeAt4x": [
+     144,
+     176
+    ],
+    "anchorPxAt4x": [
+     63,
+     161
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     44
+    ],
+    "zoom2_5": [
+     43.2,
+     52.8
+    ],
+    "maxZoom3_2": [
+     43.2,
+     52.8
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.castle.ruin",
+   "family": "map.place.castle",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A castle (the faction flag is drawn by the engine at attach.flag if given)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -39.2,
+     14.8,
+     0.8
+    ],
+    "typicalSize": [
+     29.5,
+     40
+    ],
+    "reach": 39.3
+   },
+   "recommended": {
+    "logicalSize": [
+     32,
+     42
+    ],
+    "anchorLogical": [
+     15.7,
+     40.2
+    ],
+    "sourceSizeAt4x": [
+     128,
+     168
+    ],
+    "anchorPxAt4x": [
+     63,
+     161
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     32,
+     42
+    ],
+    "zoom2_5": [
+     38.4,
+     50.4
+    ],
+    "maxZoom3_2": [
+     38.4,
+     50.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp",
+   "family": "map.place.camp",
+   "state": null,
+   "sub": false,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -12.7,
+     16,
+     5.5
+    ],
+    "typicalSize": [
+     32.5,
+     18.3
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     21
+    ],
+    "anchorLogical": [
+     17.5,
+     13.7
+    ],
+    "sourceSizeAt4x": [
+     140,
+     84
+    ],
+    "anchorPxAt4x": [
+     70,
+     55
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     21
+    ],
+    "zoom2_5": [
+     42,
+     25.2
+    ],
+    "maxZoom3_2": [
+     42,
+     25.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.burned",
+   "family": "map.place.camp",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -34.7,
+     18.8,
+     5.5
+    ],
+    "typicalSize": [
+     35.3,
+     40.3
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     38,
+     43
+    ],
+    "anchorLogical": [
+     17.5,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     152,
+     172
+    ],
+    "anchorPxAt4x": [
+     70,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     38,
+     43
+    ],
+    "zoom2_5": [
+     45.6,
+     51.6
+    ],
+    "maxZoom3_2": [
+     45.6,
+     51.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.ruin",
+   "family": "map.place.camp",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -12.7,
+     16,
+     5.5
+    ],
+    "typicalSize": [
+     32.5,
+     18.3
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     21
+    ],
+    "anchorLogical": [
+     17.5,
+     13.7
+    ],
+    "sourceSizeAt4x": [
+     140,
+     84
+    ],
+    "anchorPxAt4x": [
+     70,
+     55
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     21
+    ],
+    "zoom2_5": [
+     42,
+     25.2
+    ],
+    "maxZoom3_2": [
+     42,
+     25.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.mine",
+   "family": "map.place.mine",
+   "state": null,
+   "sub": false,
+   "purpose": "A mine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -9.7,
+     -15,
+     16.5,
+     0.8
+    ],
+    "typicalSize": [
+     26.3,
+     15.8
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     29,
+     18
+    ],
+    "anchorLogical": [
+     10.7,
+     16
+    ],
+    "sourceSizeAt4x": [
+     116,
+     72
+    ],
+    "anchorPxAt4x": [
+     43,
+     64
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     29,
+     18
+    ],
+    "zoom2_5": [
+     34.8,
+     21.6
+    ],
+    "maxZoom3_2": [
+     34.8,
+     21.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.mine.burned",
+   "family": "map.place.mine",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A mine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     40
+    ],
+    "anchorLogical": [
+     15.7,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     144,
+     160
+    ],
+    "anchorPxAt4x": [
+     63,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     40
+    ],
+    "zoom2_5": [
+     43.2,
+     48
+    ],
+    "maxZoom3_2": [
+     43.2,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.mine.ruin",
+   "family": "map.place.mine",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A mine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -9.7,
+     -15,
+     16.5,
+     0.8
+    ],
+    "typicalSize": [
+     26.3,
+     15.8
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     29,
+     18
+    ],
+    "anchorLogical": [
+     10.7,
+     16
+    ],
+    "sourceSizeAt4x": [
+     116,
+     72
+    ],
+    "anchorPxAt4x": [
+     43,
+     64
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     29,
+     18
+    ],
+    "zoom2_5": [
+     34.8,
+     21.6
+    ],
+    "maxZoom3_2": [
+     34.8,
+     21.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.hold",
+   "family": "map.place.hold",
+   "state": null,
+   "sub": false,
+   "purpose": "A dwarven hold",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.7,
+     -29.5,
+     20.8,
+     1
+    ],
+    "typicalSize": [
+     41.5,
+     30.5
+    ],
+    "reach": 29.5
+   },
+   "recommended": {
+    "logicalSize": [
+     44,
+     33
+    ],
+    "anchorLogical": [
+     21.7,
+     30.5
+    ],
+    "sourceSizeAt4x": [
+     176,
+     132
+    ],
+    "anchorPxAt4x": [
+     87,
+     122
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     44,
+     33
+    ],
+    "zoom2_5": [
+     52.8,
+     39.6
+    ],
+    "maxZoom3_2": [
+     52.8,
+     39.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.hold.burned",
+   "family": "map.place.hold",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A dwarven hold",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.7,
+     -38,
+     20.8,
+     3
+    ],
+    "typicalSize": [
+     41.5,
+     41
+    ],
+    "reach": 38
+   },
+   "recommended": {
+    "logicalSize": [
+     44,
+     43
+    ],
+    "anchorLogical": [
+     21.7,
+     39
+    ],
+    "sourceSizeAt4x": [
+     176,
+     172
+    ],
+    "anchorPxAt4x": [
+     87,
+     156
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     44,
+     43
+    ],
+    "zoom2_5": [
+     52.8,
+     51.6
+    ],
+    "maxZoom3_2": [
+     52.8,
+     51.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.hold.ruin",
+   "family": "map.place.hold",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A dwarven hold",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20.7,
+     -29.5,
+     20.8,
+     1
+    ],
+    "typicalSize": [
+     41.5,
+     30.5
+    ],
+    "reach": 29.5
+   },
+   "recommended": {
+    "logicalSize": [
+     44,
+     33
+    ],
+    "anchorLogical": [
+     21.7,
+     30.5
+    ],
+    "sourceSizeAt4x": [
+     176,
+     132
+    ],
+    "anchorPxAt4x": [
+     87,
+     122
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     44,
+     33
+    ],
+    "zoom2_5": [
+     52.8,
+     39.6
+    ],
+    "maxZoom3_2": [
+     52.8,
+     39.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.glade",
+   "family": "map.place.glade",
+   "state": null,
+   "sub": false,
+   "purpose": "An elven glade",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20,
+     -39.5,
+     20.8,
+     0.8
+    ],
+    "typicalSize": [
+     38,
+     39.3
+    ],
+    "reach": 39.5
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     43
+    ],
+    "anchorLogical": [
+     21,
+     40.5
+    ],
+    "sourceSizeAt4x": [
+     172,
+     172
+    ],
+    "anchorPxAt4x": [
+     84,
+     162
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     43
+    ],
+    "zoom2_5": [
+     51.6,
+     51.6
+    ],
+    "maxZoom3_2": [
+     51.6,
+     51.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.glade.burned",
+   "family": "map.place.glade",
+   "state": "burned",
+   "sub": false,
+   "purpose": "An elven glade",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20,
+     -39.5,
+     20.8,
+     2.8
+    ],
+    "typicalSize": [
+     38.3,
+     41.3
+    ],
+    "reach": 39.5
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     45
+    ],
+    "anchorLogical": [
+     21,
+     40.5
+    ],
+    "sourceSizeAt4x": [
+     172,
+     180
+    ],
+    "anchorPxAt4x": [
+     84,
+     162
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     45
+    ],
+    "zoom2_5": [
+     51.6,
+     54
+    ],
+    "maxZoom3_2": [
+     51.6,
+     54
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.glade.ruin",
+   "family": "map.place.glade",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "An elven glade",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -20,
+     -39.5,
+     20.8,
+     0.8
+    ],
+    "typicalSize": [
+     38,
+     39.3
+    ],
+    "reach": 39.5
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     43
+    ],
+    "anchorLogical": [
+     21,
+     40.5
+    ],
+    "sourceSizeAt4x": [
+     172,
+     172
+    ],
+    "anchorPxAt4x": [
+     84,
+     162
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     43
+    ],
+    "zoom2_5": [
+     51.6,
+     51.6
+    ],
+    "maxZoom3_2": [
+     51.6,
+     51.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.monastery",
+   "family": "map.place.monastery",
+   "state": null,
+   "sub": false,
+   "purpose": "A monastery",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -13.2,
+     -28.5,
+     14.8,
+     0.5
+    ],
+    "typicalSize": [
+     28,
+     29
+    ],
+    "reach": 28.5
+   },
+   "recommended": {
+    "logicalSize": [
+     30,
+     31
+    ],
+    "anchorLogical": [
+     14.2,
+     29.5
+    ],
+    "sourceSizeAt4x": [
+     120,
+     124
+    ],
+    "anchorPxAt4x": [
+     57,
+     118
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     30,
+     31
+    ],
+    "zoom2_5": [
+     36,
+     37.2
+    ],
+    "maxZoom3_2": [
+     36,
+     37.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.monastery.burned",
+   "family": "map.place.monastery",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A monastery",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     40
+    ],
+    "anchorLogical": [
+     15.7,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     144,
+     160
+    ],
+    "anchorPxAt4x": [
+     63,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     40
+    ],
+    "zoom2_5": [
+     43.2,
+     48
+    ],
+    "maxZoom3_2": [
+     43.2,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.monastery.ruin",
+   "family": "map.place.monastery",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A monastery",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -13.2,
+     -28.5,
+     14.8,
+     0.5
+    ],
+    "typicalSize": [
+     28,
+     29
+    ],
+    "reach": 28.5
+   },
+   "recommended": {
+    "logicalSize": [
+     30,
+     31
+    ],
+    "anchorLogical": [
+     14.2,
+     29.5
+    ],
+    "sourceSizeAt4x": [
+     120,
+     124
+    ],
+    "anchorPxAt4x": [
+     57,
+     118
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     30,
+     31
+    ],
+    "zoom2_5": [
+     36,
+     37.2
+    ],
+    "maxZoom3_2": [
+     36,
+     37.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.shrine",
+   "family": "map.place.shrine",
+   "state": null,
+   "sub": false,
+   "purpose": "A shrine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7.2,
+     -17.5,
+     7.3,
+     0.5
+    ],
+    "typicalSize": [
+     14.5,
+     18
+    ],
+    "reach": 17.5
+   },
+   "recommended": {
+    "logicalSize": [
+     17,
+     20
+    ],
+    "anchorLogical": [
+     8.2,
+     18.5
+    ],
+    "sourceSizeAt4x": [
+     68,
+     80
+    ],
+    "anchorPxAt4x": [
+     33,
+     74
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     17,
+     20
+    ],
+    "zoom2_5": [
+     20.4,
+     24
+    ],
+    "maxZoom3_2": [
+     20.4,
+     24
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.shrine.burned",
+   "family": "map.place.shrine",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A shrine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     40
+    ],
+    "anchorLogical": [
+     15.7,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     144,
+     160
+    ],
+    "anchorPxAt4x": [
+     63,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     40
+    ],
+    "zoom2_5": [
+     43.2,
+     48
+    ],
+    "maxZoom3_2": [
+     43.2,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.shrine.ruin",
+   "family": "map.place.shrine",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A shrine",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7,
+     -17.5,
+     7,
+     0.5
+    ],
+    "typicalSize": [
+     14,
+     18
+    ],
+    "reach": 17.5
+   },
+   "recommended": {
+    "logicalSize": [
+     16,
+     20
+    ],
+    "anchorLogical": [
+     8,
+     18.5
+    ],
+    "sourceSizeAt4x": [
+     64,
+     80
+    ],
+    "anchorPxAt4x": [
+     32,
+     74
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     16,
+     20
+    ],
+    "zoom2_5": [
+     19.2,
+     24
+    ],
+    "maxZoom3_2": [
+     19.2,
+     24
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.ruin",
+   "family": "map.place.ruin",
+   "state": null,
+   "sub": false,
+   "purpose": "A ruin (a place to explore, not a burned settlement)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.2,
+     -15.5,
+     17,
+     0.5
+    ],
+    "typicalSize": [
+     25,
+     16
+    ],
+    "reach": 17
+   },
+   "recommended": {
+    "logicalSize": [
+     34,
+     18
+    ],
+    "anchorLogical": [
+     15.2,
+     16.5
+    ],
+    "sourceSizeAt4x": [
+     136,
+     72
+    ],
+    "anchorPxAt4x": [
+     61,
+     66
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     34,
+     18
+    ],
+    "zoom2_5": [
+     40.8,
+     21.6
+    ],
+    "maxZoom3_2": [
+     40.8,
+     21.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.warren",
+   "family": "map.place.warren",
+   "state": null,
+   "sub": false,
+   "purpose": "A goblin warren",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -12.7,
+     -19.2,
+     15.8,
+     0.8
+    ],
+    "typicalSize": [
+     28.5,
+     20
+    ],
+    "reach": 19.3
+   },
+   "recommended": {
+    "logicalSize": [
+     31,
+     22
+    ],
+    "anchorLogical": [
+     13.7,
+     20.2
+    ],
+    "sourceSizeAt4x": [
+     124,
+     88
+    ],
+    "anchorPxAt4x": [
+     55,
+     81
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     31,
+     22
+    ],
+    "zoom2_5": [
+     37.2,
+     26.4
+    ],
+    "maxZoom3_2": [
+     37.2,
+     26.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.warren.burned",
+   "family": "map.place.warren",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A goblin warren",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -34.7,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     37.5
+    ],
+    "reach": 34.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     40
+    ],
+    "anchorLogical": [
+     15.7,
+     35.7
+    ],
+    "sourceSizeAt4x": [
+     144,
+     160
+    ],
+    "anchorPxAt4x": [
+     63,
+     143
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     40
+    ],
+    "zoom2_5": [
+     43.2,
+     48
+    ],
+    "maxZoom3_2": [
+     43.2,
+     48
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.warren.ruin",
+   "family": "map.place.warren",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A goblin warren",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -12.7,
+     -19.2,
+     15.8,
+     0.8
+    ],
+    "typicalSize": [
+     28.5,
+     20
+    ],
+    "reach": 19.3
+   },
+   "recommended": {
+    "logicalSize": [
+     31,
+     22
+    ],
+    "anchorLogical": [
+     13.7,
+     20.2
+    ],
+    "sourceSizeAt4x": [
+     124,
+     88
+    ],
+    "anchorPxAt4x": [
+     55,
+     81
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     31,
+     22
+    ],
+    "zoom2_5": [
+     37.2,
+     26.4
+    ],
+    "maxZoom3_2": [
+     37.2,
+     26.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.tower",
+   "family": "map.place.tower",
+   "state": null,
+   "sub": false,
+   "purpose": "A sage’s tower",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5,
+     -43.5,
+     5,
+     0.5
+    ],
+    "typicalSize": [
+     10,
+     44
+    ],
+    "reach": 43.5
+   },
+   "recommended": {
+    "logicalSize": [
+     12,
+     46
+    ],
+    "anchorLogical": [
+     6,
+     44.5
+    ],
+    "sourceSizeAt4x": [
+     48,
+     184
+    ],
+    "anchorPxAt4x": [
+     24,
+     178
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     12,
+     46
+    ],
+    "zoom2_5": [
+     14.4,
+     55.2
+    ],
+    "maxZoom3_2": [
+     14.4,
+     55.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.tower.burned",
+   "family": "map.place.tower",
+   "state": "burned",
+   "sub": false,
+   "purpose": "A sage’s tower",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -14.7,
+     -43.5,
+     18.8,
+     2.8
+    ],
+    "typicalSize": [
+     33.5,
+     46.3
+    ],
+    "reach": 43.5
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     49
+    ],
+    "anchorLogical": [
+     15.7,
+     44.5
+    ],
+    "sourceSizeAt4x": [
+     144,
+     196
+    ],
+    "anchorPxAt4x": [
+     63,
+     178
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     49
+    ],
+    "zoom2_5": [
+     43.2,
+     58.8
+    ],
+    "maxZoom3_2": [
+     43.2,
+     58.8
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.tower.ruin",
+   "family": "map.place.tower",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A sage’s tower",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5,
+     -43.5,
+     5,
+     0.5
+    ],
+    "typicalSize": [
+     10,
+     44
+    ],
+    "reach": 43.5
+   },
+   "recommended": {
+    "logicalSize": [
+     12,
+     46
+    ],
+    "anchorLogical": [
+     6,
+     44.5
+    ],
+    "sourceSizeAt4x": [
+     48,
+     184
+    ],
+    "anchorPxAt4x": [
+     24,
+     178
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     12,
+     46
+    ],
+    "zoom2_5": [
+     14.4,
+     55.2
+    ],
+    "maxZoom3_2": [
+     14.4,
+     55.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.lair",
+   "family": "map.place.lair",
+   "state": null,
+   "sub": false,
+   "purpose": "Your lair (the settlement at your hill is map.home.*)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.7,
+     -12,
+     16.8,
+     0.8
+    ],
+    "typicalSize": [
+     33.5,
+     12.8
+    ],
+    "reach": 16.8
+   },
+   "recommended": {
+    "logicalSize": [
+     36,
+     15
+    ],
+    "anchorLogical": [
+     17.7,
+     13
+    ],
+    "sourceSizeAt4x": [
+     144,
+     60
+    ],
+    "anchorPxAt4x": [
+     71,
+     52
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     36,
+     15
+    ],
+    "zoom2_5": [
+     43.2,
+     18
+    ],
+    "maxZoom3_2": [
+     43.2,
+     18
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.rivalLair",
+   "family": "map.place.rivalLair",
+   "state": null,
+   "sub": false,
+   "purpose": "Another dragon’s lair",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.5,
+     -45.2,
+     19.5,
+     6.5
+    ],
+    "typicalSize": [
+     39,
+     51.8
+    ],
+    "reach": 45.3
+   },
+   "recommended": {
+    "logicalSize": [
+     41,
+     54
+    ],
+    "anchorLogical": [
+     20.5,
+     46.2
+    ],
+    "sourceSizeAt4x": [
+     164,
+     216
+    ],
+    "anchorPxAt4x": [
+     82,
+     185
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     41,
+     54
+    ],
+    "zoom2_5": [
+     49.2,
+     64.8
+    ],
+    "maxZoom3_2": [
+     49.2,
+     64.8
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.rivalLair.ruin",
+   "family": "map.place.rivalLair",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "Another dragon’s lair",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 11,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.5,
+     -45.2,
+     19.5,
+     6.5
+    ],
+    "typicalSize": [
+     39,
+     51.8
+    ],
+    "reach": 45.3
+   },
+   "recommended": {
+    "logicalSize": [
+     41,
+     54
+    ],
+    "anchorLogical": [
+     20.5,
+     46.2
+    ],
+    "sourceSizeAt4x": [
+     164,
+     216
+    ],
+    "anchorPxAt4x": [
+     82,
+     185
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     41,
+     54
+    ],
+    "zoom2_5": [
+     49.2,
+     64.8
+    ],
+    "maxZoom3_2": [
+     49.2,
+     64.8
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.battlefield",
+   "family": "map.place.battlefield",
+   "state": null,
+   "sub": false,
+   "purpose": "A battlefield",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -12,
+     -18,
+     12,
+     6
+    ],
+    "typicalSize": [
+     24,
+     24
+    ],
+    "reach": 18
+   },
+   "recommended": {
+    "logicalSize": [
+     26,
+     26
+    ],
+    "anchorLogical": [
+     13,
+     19
+    ],
+    "sourceSizeAt4x": [
+     104,
+     104
+    ],
+    "anchorPxAt4x": [
+     52,
+     76
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     26,
+     26
+    ],
+    "zoom2_5": [
+     31.2,
+     31.2
+    ],
+    "maxZoom3_2": [
+     31.2,
+     31.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.fortress",
+   "family": "map.place.fortress",
+   "state": null,
+   "sub": false,
+   "purpose": "The Hollow King’s fortress (the great struggle)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -22.7,
+     -39.7,
+     22.8,
+     0.8
+    ],
+    "typicalSize": [
+     45.5,
+     40.5
+    ],
+    "reach": 39.8
+   },
+   "recommended": {
+    "logicalSize": [
+     48,
+     43
+    ],
+    "anchorLogical": [
+     23.7,
+     40.7
+    ],
+    "sourceSizeAt4x": [
+     192,
+     172
+    ],
+    "anchorPxAt4x": [
+     95,
+     163
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     48,
+     43
+    ],
+    "zoom2_5": [
+     57.6,
+     51.6
+    ],
+    "maxZoom3_2": [
+     57.6,
+     51.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.stronghold",
+   "family": "map.place.stronghold",
+   "state": null,
+   "sub": false,
+   "purpose": "A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -18.5,
+     -22.7,
+     30.5,
+     0.8
+    ],
+    "typicalSize": [
+     49,
+     23.5
+    ],
+    "reach": 30.5
+   },
+   "recommended": {
+    "logicalSize": [
+     51,
+     26
+    ],
+    "anchorLogical": [
+     19.5,
+     23.7
+    ],
+    "sourceSizeAt4x": [
+     204,
+     104
+    ],
+    "anchorPxAt4x": [
+     78,
+     95
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     51,
+     26
+    ],
+    "zoom2_5": [
+     61.2,
+     31.2
+    ],
+    "maxZoom3_2": [
+     61.2,
+     31.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.stronghold.ruin",
+   "family": "map.place.stronghold",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -18.5,
+     -22.7,
+     30.5,
+     0.8
+    ],
+    "typicalSize": [
+     49,
+     23.5
+    ],
+    "reach": 30.5
+   },
+   "recommended": {
+    "logicalSize": [
+     51,
+     26
+    ],
+    "anchorLogical": [
+     19.5,
+     23.7
+    ],
+    "sourceSizeAt4x": [
+     204,
+     104
+    ],
+    "anchorPxAt4x": [
+     78,
+     95
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     51,
+     26
+    ],
+    "zoom2_5": [
+     61.2,
+     31.2
+    ],
+    "maxZoom3_2": [
+     61.2,
+     31.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.sanctuary",
+   "family": "map.place.sanctuary",
+   "state": null,
+   "sub": false,
+   "purpose": "A sanctuary of a Crystal of Life (state \"ruin\": the crystal was taken)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.2,
+     -15.5,
+     16.3,
+     0.5
+    ],
+    "typicalSize": [
+     32.5,
+     16
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     18
+    ],
+    "anchorLogical": [
+     17.2,
+     16.5
+    ],
+    "sourceSizeAt4x": [
+     140,
+     72
+    ],
+    "anchorPxAt4x": [
+     69,
+     66
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     18
+    ],
+    "zoom2_5": [
+     42,
+     21.6
+    ],
+    "maxZoom3_2": [
+     42,
+     21.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.sanctuary.ruin",
+   "family": "map.place.sanctuary",
+   "state": "ruin",
+   "sub": false,
+   "purpose": "A sanctuary of a Crystal of Life (state \"ruin\": the crystal was taken)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.2,
+     -15.5,
+     16.3,
+     0.5
+    ],
+    "typicalSize": [
+     32.5,
+     16
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     18
+    ],
+    "anchorLogical": [
+     17.2,
+     16.5
+    ],
+    "sourceSizeAt4x": [
+     140,
+     72
+    ],
+    "anchorPxAt4x": [
+     69,
+     66
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     18
+    ],
+    "zoom2_5": [
+     42,
+     21.6
+    ],
+    "maxZoom3_2": [
+     42,
+     21.6
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.bandit",
+   "family": "map.place.camp",
+   "state": null,
+   "sub": true,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -12.7,
+     16,
+     5.5
+    ],
+    "typicalSize": [
+     32.5,
+     18.3
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     21
+    ],
+    "anchorLogical": [
+     17.5,
+     13.7
+    ],
+    "sourceSizeAt4x": [
+     140,
+     84
+    ],
+    "anchorPxAt4x": [
+     70,
+     55
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     21
+    ],
+    "zoom2_5": [
+     42,
+     25.2
+    ],
+    "maxZoom3_2": [
+     42,
+     25.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.goblin",
+   "family": "map.place.camp",
+   "state": null,
+   "sub": true,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -18.2,
+     18.8,
+     5.5
+    ],
+    "typicalSize": [
+     35.3,
+     23.8
+    ],
+    "reach": 18.8
+   },
+   "recommended": {
+    "logicalSize": [
+     38,
+     26
+    ],
+    "anchorLogical": [
+     17.5,
+     19.2
+    ],
+    "sourceSizeAt4x": [
+     152,
+     104
+    ],
+    "anchorPxAt4x": [
+     70,
+     77
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     38,
+     26
+    ],
+    "zoom2_5": [
+     45.6,
+     31.2
+    ],
+    "maxZoom3_2": [
+     45.6,
+     31.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.hunter",
+   "family": "map.place.camp",
+   "state": null,
+   "sub": true,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -18.5,
+     -12.5,
+     16,
+     5.5
+    ],
+    "typicalSize": [
+     34.5,
+     18
+    ],
+    "reach": 18.5
+   },
+   "recommended": {
+    "logicalSize": [
+     37,
+     20
+    ],
+    "anchorLogical": [
+     19.5,
+     13.5
+    ],
+    "sourceSizeAt4x": [
+     148,
+     80
+    ],
+    "anchorPxAt4x": [
+     78,
+     54
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     37,
+     20
+    ],
+    "zoom2_5": [
+     44.4,
+     24
+    ],
+    "maxZoom3_2": [
+     44.4,
+     24
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.camp.military",
+   "family": "map.place.camp",
+   "state": null,
+   "sub": true,
+   "purpose": "A camp (sub-ids: map.place.camp.bandit, .goblin, .hunter, .military)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "burned",
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16.5,
+     -12.7,
+     16,
+     5.5
+    ],
+    "typicalSize": [
+     32.5,
+     18.3
+    ],
+    "reach": 16.5
+   },
+   "recommended": {
+    "logicalSize": [
+     35,
+     21
+    ],
+    "anchorLogical": [
+     17.5,
+     13.7
+    ],
+    "sourceSizeAt4x": [
+     140,
+     84
+    ],
+    "anchorPxAt4x": [
+     70,
+     55
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     35,
+     21
+    ],
+    "zoom2_5": [
+     42,
+     25.2
+    ],
+    "maxZoom3_2": [
+     42,
+     25.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.stronghold.warlord",
+   "family": "map.place.stronghold",
+   "state": null,
+   "sub": true,
+   "purpose": "A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -18.5,
+     -22.7,
+     30.5,
+     0.8
+    ],
+    "typicalSize": [
+     49,
+     23.5
+    ],
+    "reach": 30.5
+   },
+   "recommended": {
+    "logicalSize": [
+     51,
+     26
+    ],
+    "anchorLogical": [
+     19.5,
+     23.7
+    ],
+    "sourceSizeAt4x": [
+     204,
+     104
+    ],
+    "anchorPxAt4x": [
+     78,
+     95
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     51,
+     26
+    ],
+    "zoom2_5": [
+     61.2,
+     31.2
+    ],
+    "maxZoom3_2": [
+     61.2,
+     31.2
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.stronghold.sorcerer",
+   "family": "map.place.stronghold",
+   "state": null,
+   "sub": true,
+   "purpose": "A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -5.7,
+     -38.7,
+     5.8,
+     0.8
+    ],
+    "typicalSize": [
+     11.5,
+     39.5
+    ],
+    "reach": 38.8
+   },
+   "recommended": {
+    "logicalSize": [
+     14,
+     42
+    ],
+    "anchorLogical": [
+     6.7,
+     39.7
+    ],
+    "sourceSizeAt4x": [
+     56,
+     168
+    ],
+    "anchorPxAt4x": [
+     27,
+     159
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     14,
+     42
+    ],
+    "zoom2_5": [
+     16.8,
+     50.4
+    ],
+    "maxZoom3_2": [
+     16.8,
+     50.4
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.place.stronghold.blightmother",
+   "family": "map.place.stronghold",
+   "state": null,
+   "sub": true,
+   "purpose": "A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)",
+   "builder": "HB.mapart.settlement(ctx, L, x, y, s)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 10,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [
+    "ruin"
+   ],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -19.5,
+     -17.7,
+     21.5,
+     4.5
+    ],
+    "typicalSize": [
+     41,
+     21
+    ],
+    "reach": 21.5
+   },
+   "recommended": {
+    "logicalSize": [
+     43,
+     25
+    ],
+    "anchorLogical": [
+     20.5,
+     18.7
+    ],
+    "sourceSizeAt4x": [
+     172,
+     100
+    ],
+    "anchorPxAt4x": [
+     82,
+     75
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     43,
+     25
+    ],
+    "zoom2_5": [
+     51.6,
+     30
+    ],
+    "maxZoom3_2": [
+     51.6,
+     30
+    ]
+   },
+   "label": "centred under the anchor; text baseline 3.3·zoom px + font size (11.5–15·√zoom) below it; art may move it with labelOffset",
+   "fallback": "procedural: HB.mapart.settlement(ctx, L, x, y, s)"
+  },
+  {
+   "id": "map.home.benevolent.1",
+   "family": "map.home.benevolent.1",
+   "state": null,
+   "sub": false,
+   "purpose": "Kind home settlement, stage 1: a refuge",
+   "builder": "HB.mapart.homeSettlement(ctx, x, y, s, stage, path)",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -12.7,
+     -6.5,
+     11.3,
+     3.3
+    ],
+    "typicalSize": [
+     24,
+     9.8
+    ],
+    "reach": 12.8
+   },
+   "recommended": {
+    "logicalSize": [
+     26,
+     12
+    ],
+    "anchorLogical": [
+     13.7,
+     7.5
+    ],
+    "sourceSizeAt4x": [
+     104,
+     48
+    ],
+    "anchorPxAt4x": [
+     55,
+     30
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     26,
+     12
+    ],
+    "zoom2_5": [
+     31.2,
+     14.4
+    ],
+    "maxZoom3_2": [
+     31.2,
+     14.4
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement(ctx, x, y, s, stage, path)"
+  },
+  {
+   "id": "map.home.benevolent.2",
+   "family": "map.home.benevolent.2",
+   "state": null,
+   "sub": false,
+   "purpose": "Kind home settlement, stage 2: a village",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -29.7,
+     -8,
+     28.3,
+     12.8
+    ],
+    "typicalSize": [
+     57.5,
+     20
+    ],
+    "reach": 29.8
+   },
+   "recommended": {
+    "logicalSize": [
+     60,
+     23
+    ],
+    "anchorLogical": [
+     30.7,
+     9
+    ],
+    "sourceSizeAt4x": [
+     240,
+     92
+    ],
+    "anchorPxAt4x": [
+     123,
+     36
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     60,
+     23
+    ],
+    "zoom2_5": [
+     72,
+     27.6
+    ],
+    "maxZoom3_2": [
+     72,
+     27.6
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.benevolent.3",
+   "family": "map.home.benevolent.3",
+   "state": null,
+   "sub": false,
+   "purpose": "Kind home settlement, stage 3: a flourishing town",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -29.7,
+     -19.5,
+     28.3,
+     12.8
+    ],
+    "typicalSize": [
+     57.5,
+     31.5
+    ],
+    "reach": 29.8
+   },
+   "recommended": {
+    "logicalSize": [
+     60,
+     35
+    ],
+    "anchorLogical": [
+     30.7,
+     20.5
+    ],
+    "sourceSizeAt4x": [
+     240,
+     140
+    ],
+    "anchorPxAt4x": [
+     123,
+     82
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     60,
+     35
+    ],
+    "zoom2_5": [
+     72,
+     42
+    ],
+    "maxZoom3_2": [
+     72,
+     42
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.benevolent.4",
+   "family": "map.home.benevolent.4",
+   "state": null,
+   "sub": false,
+   "purpose": "Kind home settlement, stage 4: a castle and sanctuary",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -29.7,
+     -24,
+     28.3,
+     12.8
+    ],
+    "typicalSize": [
+     57.5,
+     36
+    ],
+    "reach": 29.8
+   },
+   "recommended": {
+    "logicalSize": [
+     60,
+     39
+    ],
+    "anchorLogical": [
+     30.7,
+     25
+    ],
+    "sourceSizeAt4x": [
+     240,
+     156
+    ],
+    "anchorPxAt4x": [
+     123,
+     100
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     60,
+     39
+    ],
+    "zoom2_5": [
+     72,
+     46.8
+    ],
+    "maxZoom3_2": [
+     72,
+     46.8
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.tyrannical.1",
+   "family": "map.home.tyrannical.1",
+   "state": null,
+   "sub": false,
+   "purpose": "Cruel home settlement, stage 1: a coerced camp",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -16,
+     -3.7,
+     16,
+     7.5
+    ],
+    "typicalSize": [
+     32,
+     11.3
+    ],
+    "reach": 16
+   },
+   "recommended": {
+    "logicalSize": [
+     34,
+     14
+    ],
+    "anchorLogical": [
+     17,
+     4.7
+    ],
+    "sourceSizeAt4x": [
+     136,
+     56
+    ],
+    "anchorPxAt4x": [
+     68,
+     19
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     34,
+     14
+    ],
+    "zoom2_5": [
+     40.8,
+     16.8
+    ],
+    "maxZoom3_2": [
+     40.8,
+     16.8
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.tyrannical.2",
+   "family": "map.home.tyrannical.2",
+   "state": null,
+   "sub": false,
+   "purpose": "Cruel home settlement, stage 2: a fortified settlement",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -24,
+     -4.2,
+     23.8,
+     8.3
+    ],
+    "typicalSize": [
+     47.8,
+     12.5
+    ],
+    "reach": 24
+   },
+   "recommended": {
+    "logicalSize": [
+     50,
+     15
+    ],
+    "anchorLogical": [
+     25,
+     5.2
+    ],
+    "sourceSizeAt4x": [
+     200,
+     60
+    ],
+    "anchorPxAt4x": [
+     100,
+     21
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     50,
+     15
+    ],
+    "zoom2_5": [
+     60,
+     18
+    ],
+    "maxZoom3_2": [
+     60,
+     18
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.tyrannical.3",
+   "family": "map.home.tyrannical.3",
+   "state": null,
+   "sub": false,
+   "purpose": "Cruel home settlement, stage 3: a citadel",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -24,
+     -33,
+     23.8,
+     8.3
+    ],
+    "typicalSize": [
+     47.8,
+     41.3
+    ],
+    "reach": 33
+   },
+   "recommended": {
+    "logicalSize": [
+     50,
+     44
+    ],
+    "anchorLogical": [
+     25,
+     34
+    ],
+    "sourceSizeAt4x": [
+     200,
+     176
+    ],
+    "anchorPxAt4x": [
+     100,
+     136
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     50,
+     44
+    ],
+    "zoom2_5": [
+     60,
+     52.8
+    ],
+    "maxZoom3_2": [
+     60,
+     52.8
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.home.tyrannical.4",
+   "family": "map.home.tyrannical.4",
+   "state": null,
+   "sub": false,
+   "purpose": "Cruel home settlement, stage 4: a dark stronghold",
+   "builder": "HB.mapart.homeSettlement",
+   "layer": "places",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.5,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base (the ground under the symbol)",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -28,
+     -33,
+     33.3,
+     8.5
+    ],
+    "typicalSize": [
+     61.3,
+     41.5
+    ],
+    "reach": 33.3
+   },
+   "recommended": {
+    "logicalSize": [
+     64,
+     44
+    ],
+    "anchorLogical": [
+     29,
+     34
+    ],
+    "sourceSizeAt4x": [
+     256,
+     176
+    ],
+    "anchorPxAt4x": [
+     116,
+     136
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     64,
+     44
+    ],
+    "zoom2_5": [
+     76.8,
+     52.8
+    ],
+    "maxZoom3_2": [
+     76.8,
+     52.8
+    ]
+   },
+   "label": "name centred 2.2·s below the anchor",
+   "fallback": "procedural: HB.mapart.homeSettlement"
+  },
+  {
+   "id": "map.marker.pennant.protected",
+   "family": "map.marker.pennant.protected",
+   "state": null,
+   "sub": false,
+   "purpose": "Pennant beside a settlement under your protection",
+   "builder": "HB.mapart.pennant(ctx, x, y, s, color, mark, status)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "foot of the pole",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -0.5,
+     -16.2,
+     10.3,
+     0.5
+    ],
+    "typicalSize": [
+     10.8,
+     16.8
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     13,
+     19
+    ],
+    "anchorLogical": [
+     1.5,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     52,
+     76
+    ],
+    "anchorPxAt4x": [
+     6,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     13,
+     19
+    ],
+    "zoom2_5": [
+     15.6,
+     22.8
+    ],
+    "maxZoom3_2": [
+     15.6,
+     22.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.pennant(ctx, x, y, s, color, mark, status)"
+  },
+  {
+   "id": "map.marker.pennant.allied",
+   "family": "map.marker.pennant.allied",
+   "state": null,
+   "sub": false,
+   "purpose": "Pennant beside a settlement sworn to you",
+   "builder": "HB.mapart.pennant",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "foot of the pole",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -0.5,
+     -16.2,
+     10.3,
+     0.5
+    ],
+    "typicalSize": [
+     10.8,
+     16.8
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     13,
+     19
+    ],
+    "anchorLogical": [
+     1.5,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     52,
+     76
+    ],
+    "anchorPxAt4x": [
+     6,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     13,
+     19
+    ],
+    "zoom2_5": [
+     15.6,
+     22.8
+    ],
+    "maxZoom3_2": [
+     15.6,
+     22.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.pennant"
+  },
+  {
+   "id": "map.marker.pennant.tributary",
+   "family": "map.marker.pennant.tributary",
+   "state": null,
+   "sub": false,
+   "purpose": "Pennant beside a settlement paying you tribute",
+   "builder": "HB.mapart.pennant",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "foot of the pole",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -0.5,
+     -16.2,
+     10.3,
+     0.5
+    ],
+    "typicalSize": [
+     10.8,
+     16.8
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     13,
+     19
+    ],
+    "anchorLogical": [
+     1.5,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     52,
+     76
+    ],
+    "anchorPxAt4x": [
+     6,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     13,
+     19
+    ],
+    "zoom2_5": [
+     15.6,
+     22.8
+    ],
+    "maxZoom3_2": [
+     15.6,
+     22.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.pennant"
+  },
+  {
+   "id": "map.marker.pennant.occupied",
+   "family": "map.marker.pennant.occupied",
+   "state": null,
+   "sub": false,
+   "purpose": "Pennant beside a settlement you occupy",
+   "builder": "HB.mapart.pennant",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "foot of the pole",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -0.5,
+     -16.2,
+     10.3,
+     0.5
+    ],
+    "typicalSize": [
+     10.8,
+     16.8
+    ],
+    "reach": 16.3
+   },
+   "recommended": {
+    "logicalSize": [
+     13,
+     19
+    ],
+    "anchorLogical": [
+     1.5,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     52,
+     76
+    ],
+    "anchorPxAt4x": [
+     6,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     13,
+     19
+    ],
+    "zoom2_5": [
+     15.6,
+     22.8
+    ],
+    "maxZoom3_2": [
+     15.6,
+     22.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.pennant"
+  },
+  {
+   "id": "map.marker.crossedSwords",
+   "family": "map.marker.crossedSwords",
+   "state": null,
+   "sub": false,
+   "purpose": "Crossed swords: a settlement in revolt",
+   "builder": "HB.mapart.crossedSwords(ctx, x, y, s)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 5.5,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -6.5,
+     -6.5,
+     6.5,
+     6.5
+    ],
+    "typicalSize": [
+     13,
+     13
+    ],
+    "reach": 6.5
+   },
+   "recommended": {
+    "logicalSize": [
+     15,
+     15
+    ],
+    "anchorLogical": [
+     7.5,
+     7.5
+    ],
+    "sourceSizeAt4x": [
+     60,
+     60
+    ],
+    "anchorPxAt4x": [
+     30,
+     30
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(10·√zoom, 4, 12) × type scale",
+    "zoom1": [
+     15,
+     15
+    ],
+    "zoom2_5": [
+     18,
+     18
+    ],
+    "maxZoom3_2": [
+     18,
+     18
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.crossedSwords(ctx, x, y, s)"
+  },
+  {
+   "id": "map.marker.wagon",
+   "family": "map.marker.wagon",
+   "state": null,
+   "sub": false,
+   "purpose": "A caravan on the road (state \"rich\": a rich caravan)",
+   "builder": "HB.mapart.wagon(ctx, x, y, s, color)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "rich"
+   ],
+   "anchor": "centre of the wheels’ ground line",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -6.2,
+     -9,
+     11,
+     1.8
+    ],
+    "typicalSize": [
+     17.3,
+     10.8
+    ],
+    "reach": 11
+   },
+   "recommended": {
+    "logicalSize": [
+     20,
+     13
+    ],
+    "anchorLogical": [
+     7.2,
+     10
+    ],
+    "sourceSizeAt4x": [
+     80,
+     52
+    ],
+    "anchorPxAt4x": [
+     29,
+     40
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     20,
+     13
+    ],
+    "zoom2_5": [
+     25.7,
+     16.7
+    ],
+    "maxZoom3_2": [
+     25.7,
+     16.7
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.wagon(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.wagon.rich",
+   "family": "map.marker.wagon",
+   "state": "rich",
+   "sub": false,
+   "purpose": "A caravan on the road (state \"rich\": a rich caravan)",
+   "builder": "HB.mapart.wagon(ctx, x, y, s, color)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "rich"
+   ],
+   "anchor": "centre of the wheels’ ground line",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -6.2,
+     -9,
+     11,
+     1.8
+    ],
+    "typicalSize": [
+     17.3,
+     10.8
+    ],
+    "reach": 11
+   },
+   "recommended": {
+    "logicalSize": [
+     20,
+     13
+    ],
+    "anchorLogical": [
+     7.2,
+     10
+    ],
+    "sourceSizeAt4x": [
+     80,
+     52
+    ],
+    "anchorPxAt4x": [
+     29,
+     40
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     20,
+     13
+    ],
+    "zoom2_5": [
+     25.7,
+     16.7
+    ],
+    "maxZoom3_2": [
+     25.7,
+     16.7
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.wagon(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.banner",
+   "family": "map.marker.banner",
+   "state": null,
+   "sub": false,
+   "purpose": "An army (the faction colour is applied through tintMask if given)",
+   "builder": "HB.mapart.banner(ctx, x, y, s, color)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "foot of the pole",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -8.2,
+     -16,
+     9,
+     0.8
+    ],
+    "typicalSize": [
+     17.3,
+     16.8
+    ],
+    "reach": 16
+   },
+   "recommended": {
+    "logicalSize": [
+     20,
+     19
+    ],
+    "anchorLogical": [
+     9.2,
+     17
+    ],
+    "sourceSizeAt4x": [
+     80,
+     76
+    ],
+    "anchorPxAt4x": [
+     37,
+     68
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     20,
+     19
+    ],
+    "zoom2_5": [
+     25.7,
+     24.4
+    ],
+    "maxZoom3_2": [
+     25.7,
+     24.4
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.banner(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.walker",
+   "family": "map.marker.walker",
+   "state": null,
+   "sub": false,
+   "purpose": "A wandering hero (state \"hunter\": a hunting party or slayer, drawn in red)",
+   "builder": "HB.mapart.walker(ctx, x, y, s, color)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "hunter"
+   ],
+   "anchor": "between the feet",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -3.5,
+     -13.5,
+     3.8,
+     1.3
+    ],
+    "typicalSize": [
+     7.3,
+     14.8
+    ],
+    "reach": 13.5
+   },
+   "recommended": {
+    "logicalSize": [
+     10,
+     17
+    ],
+    "anchorLogical": [
+     4.5,
+     14.5
+    ],
+    "sourceSizeAt4x": [
+     40,
+     68
+    ],
+    "anchorPxAt4x": [
+     18,
+     58
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     10,
+     17
+    ],
+    "zoom2_5": [
+     12.9,
+     21.9
+    ],
+    "maxZoom3_2": [
+     12.9,
+     21.9
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.walker(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.walker.hunter",
+   "family": "map.marker.walker",
+   "state": "hunter",
+   "sub": false,
+   "purpose": "A wandering hero (state \"hunter\": a hunting party or slayer, drawn in red)",
+   "builder": "HB.mapart.walker(ctx, x, y, s, color)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "hunter"
+   ],
+   "anchor": "between the feet",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -3.5,
+     -13.5,
+     3.8,
+     1.3
+    ],
+    "typicalSize": [
+     7.3,
+     14.8
+    ],
+    "reach": 13.5
+   },
+   "recommended": {
+    "logicalSize": [
+     10,
+     17
+    ],
+    "anchorLogical": [
+     4.5,
+     14.5
+    ],
+    "sourceSizeAt4x": [
+     40,
+     68
+    ],
+    "anchorPxAt4x": [
+     18,
+     58
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     10,
+     17
+    ],
+    "zoom2_5": [
+     12.9,
+     21.9
+    ],
+    "maxZoom3_2": [
+     12.9,
+     21.9
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.walker(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.seal.story",
+   "family": "map.marker.seal.story",
+   "state": null,
+   "sub": false,
+   "purpose": "Red seal over a place in a local story (state \"locked\": a ? over a crag or sealed door)",
+   "builder": "HB.mapart.seal(ctx, x, y, r, kind)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "locked"
+   ],
+   "anchor": "centre of the seal",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7,
+     -7,
+     7,
+     7
+    ],
+    "typicalSize": [
+     14,
+     14
+    ],
+    "reach": 7
+   },
+   "recommended": {
+    "logicalSize": [
+     16,
+     16
+    ],
+    "anchorLogical": [
+     8,
+     8
+    ],
+    "sourceSizeAt4x": [
+     64,
+     64
+    ],
+    "anchorPxAt4x": [
+     32,
+     32
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = clamp(7.04·zoom, 5, 9)",
+    "zoom1": [
+     16.1,
+     16.1
+    ],
+    "zoom2_5": [
+     20.6,
+     20.6
+    ],
+    "maxZoom3_2": [
+     20.6,
+     20.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.seal(ctx, x, y, r, kind)"
+  },
+  {
+   "id": "map.marker.seal.story.locked",
+   "family": "map.marker.seal.story",
+   "state": "locked",
+   "sub": false,
+   "purpose": "Red seal over a place in a local story (state \"locked\": a ? over a crag or sealed door)",
+   "builder": "HB.mapart.seal(ctx, x, y, r, kind)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 7,
+   "refY": null,
+   "maxK": 1.3,
+   "lod1K": null,
+   "familyStates": [
+    "locked"
+   ],
+   "anchor": "centre of the seal",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -7,
+     -7,
+     7,
+     7
+    ],
+    "typicalSize": [
+     14,
+     14
+    ],
+    "reach": 7
+   },
+   "recommended": {
+    "logicalSize": [
+     16,
+     16
+    ],
+    "anchorLogical": [
+     8,
+     8
+    ],
+    "sourceSizeAt4x": [
+     64,
+     64
+    ],
+    "anchorPxAt4x": [
+     32,
+     32
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = clamp(7.04·zoom, 5, 9)",
+    "zoom1": [
+     16.1,
+     16.1
+    ],
+    "zoom2_5": [
+     20.6,
+     20.6
+    ],
+    "maxZoom3_2": [
+     20.6,
+     20.6
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.seal(ctx, x, y, r, kind)"
+  },
+  {
+   "id": "map.marker.seal.shadow",
+   "family": "map.marker.seal.shadow",
+   "state": null,
+   "sub": false,
+   "purpose": "Purple seal over a place of the Hollow King",
+   "builder": "HB.mapart.seal(ctx, x, y, r, \"shadow\")",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.35,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the seal",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -8.2,
+     -8.2,
+     8.3,
+     8.3
+    ],
+    "typicalSize": [
+     16.5,
+     16.5
+    ],
+    "reach": 8.3
+   },
+   "recommended": {
+    "logicalSize": [
+     19,
+     19
+    ],
+    "anchorLogical": [
+     9.2,
+     9.2
+    ],
+    "sourceSizeAt4x": [
+     76,
+     76
+    ],
+    "anchorPxAt4x": [
+     37,
+     37
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = clamp(7.48·zoom, 6, 10)",
+    "zoom1": [
+     18.9,
+     18.9
+    ],
+    "zoom2_5": [
+     25.3,
+     25.3
+    ],
+    "maxZoom3_2": [
+     25.3,
+     25.3
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.seal(ctx, x, y, r, \"shadow\")"
+  },
+  {
+   "id": "map.marker.seal.crystal",
+   "family": "map.marker.seal.crystal",
+   "state": null,
+   "sub": false,
+   "purpose": "Green seal over a sanctuary of a Crystal of Life",
+   "builder": "HB.mapart.seal(ctx, x, y, r, \"crystal\")",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 7.5,
+   "refY": null,
+   "maxK": 1.35,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the seal",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -8.2,
+     -8.2,
+     8.3,
+     8.3
+    ],
+    "typicalSize": [
+     16.5,
+     16.5
+    ],
+    "reach": 8.3
+   },
+   "recommended": {
+    "logicalSize": [
+     19,
+     19
+    ],
+    "anchorLogical": [
+     9.2,
+     9.2
+    ],
+    "sourceSizeAt4x": [
+     76,
+     76
+    ],
+    "anchorPxAt4x": [
+     37,
+     37
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = clamp(7.48·zoom, 6, 10)",
+    "zoom1": [
+     18.9,
+     18.9
+    ],
+    "zoom2_5": [
+     25.3,
+     25.3
+    ],
+    "maxZoom3_2": [
+     25.3,
+     25.3
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.seal(ctx, x, y, r, \"crystal\")"
+  },
+  {
+   "id": "map.marker.threat",
+   "family": "map.marker.threat",
+   "state": null,
+   "sub": false,
+   "purpose": "Red crossed swords over a place under outlaw attack (drawn pulsing)",
+   "builder": "HB.mapart.threatMark(ctx, x, y, s)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 12,
+   "refY": null,
+   "maxK": 1.2,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -9.5,
+     -9.5,
+     12.5,
+     10.3
+    ],
+    "typicalSize": [
+     22,
+     19.8
+    ],
+    "reach": 12.5
+   },
+   "recommended": {
+    "logicalSize": [
+     24,
+     22
+    ],
+    "anchorLogical": [
+     10.5,
+     10.5
+    ],
+    "sourceSizeAt4x": [
+     96,
+     88
+    ],
+    "anchorPxAt4x": [
+     42,
+     42
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(12.1·zoom, 7, 14)",
+    "zoom1": [
+     24.2,
+     22.2
+    ],
+    "zoom2_5": [
+     28,
+     25.7
+    ],
+    "maxZoom3_2": [
+     28,
+     25.7
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.threatMark(ctx, x, y, s)"
+  },
+  {
+   "id": "map.marker.rumor",
+   "family": "map.marker.rumor",
+   "state": null,
+   "sub": false,
+   "purpose": "Dotted ring with a question mark: a place known only by rumour",
+   "builder": "HB.mapart.rumorMark(ctx, x, y, s)",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 9,
+   "refY": null,
+   "maxK": 1.25,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -8.7,
+     -14.2,
+     8.8,
+     3.5
+    ],
+    "typicalSize": [
+     17.5,
+     17.8
+    ],
+    "reach": 14.3
+   },
+   "recommended": {
+    "logicalSize": [
+     20,
+     20
+    ],
+    "anchorLogical": [
+     9.7,
+     15.2
+    ],
+    "sourceSizeAt4x": [
+     80,
+     80
+    ],
+    "anchorPxAt4x": [
+     39,
+     61
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(9·√zoom, 4, 11)",
+    "zoom1": [
+     20,
+     20
+    ],
+    "zoom2_5": [
+     24.4,
+     24.4
+    ],
+    "maxZoom3_2": [
+     24.4,
+     24.4
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.rumorMark(ctx, x, y, s)"
+  },
+  {
+   "id": "map.fog.cloud",
+   "family": "map.fog.cloud",
+   "state": null,
+   "sub": false,
+   "purpose": "A cloud puff of the fog (state \"storm\": over lands behind a storm wall)",
+   "builder": "HB.mapart.cloud(ctx, x, y, r, rng, opts)",
+   "layer": "fog",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 16.5,
+   "refY": null,
+   "maxK": 3.7,
+   "lod1K": null,
+   "familyStates": [
+    "storm"
+   ],
+   "anchor": "centre of the puff",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -22,
+     -16.2,
+     20.8,
+     16
+    ],
+    "typicalSize": [
+     38.3,
+     29.3
+    ],
+    "reach": 22
+   },
+   "recommended": {
+    "logicalSize": [
+     45,
+     35
+    ],
+    "anchorLogical": [
+     23,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     180,
+     140
+    ],
+    "anchorPxAt4x": [
+     92,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = 16.5·zoom × 0.75–1.15 (doubled below zoom 0.8)",
+    "zoom1": [
+     45,
+     35
+    ],
+    "zoom2_5": [
+     112.5,
+     87.5
+    ],
+    "maxZoom3_2": [
+     144,
+     112
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.cloud(ctx, x, y, r, rng, opts)"
+  },
+  {
+   "id": "map.fog.cloud.storm",
+   "family": "map.fog.cloud",
+   "state": "storm",
+   "sub": false,
+   "purpose": "A cloud puff of the fog (state \"storm\": over lands behind a storm wall)",
+   "builder": "HB.mapart.cloud(ctx, x, y, r, rng, opts)",
+   "layer": "fog",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 16.5,
+   "refY": null,
+   "maxK": 3.7,
+   "lod1K": null,
+   "familyStates": [
+    "storm"
+   ],
+   "anchor": "centre of the puff",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -22,
+     -16.2,
+     20.8,
+     16
+    ],
+    "typicalSize": [
+     38.3,
+     29.3
+    ],
+    "reach": 22
+   },
+   "recommended": {
+    "logicalSize": [
+     45,
+     35
+    ],
+    "anchorLogical": [
+     23,
+     17.2
+    ],
+    "sourceSizeAt4x": [
+     180,
+     140
+    ],
+    "anchorPxAt4x": [
+     92,
+     69
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = 16.5·zoom × 0.75–1.15 (doubled below zoom 0.8)",
+    "zoom1": [
+     45,
+     35
+    ],
+    "zoom2_5": [
+     112.5,
+     87.5
+    ],
+    "maxZoom3_2": [
+     144,
+     112
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.cloud(ctx, x, y, r, rng, opts)"
+  },
+  {
+   "id": "map.fog.lightning",
+   "family": "map.fog.lightning",
+   "state": null,
+   "sub": false,
+   "purpose": "Lightning in a storm wall",
+   "builder": "HB.mapart.lightning(ctx, x, y, s, rng)",
+   "layer": "fog",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 8.3,
+   "refY": null,
+   "maxK": 3.6,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "top of the bolt",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -3.2,
+     -9,
+     2.3,
+     7.3
+    ],
+    "typicalSize": [
+     5.5,
+     16.3
+    ],
+    "reach": 9
+   },
+   "recommended": {
+    "logicalSize": [
+     8,
+     19
+    ],
+    "anchorLogical": [
+     4.2,
+     10
+    ],
+    "sourceSizeAt4x": [
+     32,
+     76
+    ],
+    "anchorPxAt4x": [
+     17,
+     40
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "r = 16.5·zoom × 0.75–1.15 (doubled below zoom 0.8)",
+    "zoom1": [
+     8,
+     19
+    ],
+    "zoom2_5": [
+     20,
+     47.5
+    ],
+    "maxZoom3_2": [
+     25.6,
+     60.8
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.lightning(ctx, x, y, s, rng)"
+  },
+  {
+   "id": "map.decoration.compass",
+   "family": "map.decoration.compass",
+   "state": null,
+   "sub": false,
+   "purpose": "The compass rose (top right of the screen)",
+   "builder": "HB.mapart.compassRose(ctx, x, y, r)",
+   "layer": "ui",
+   "sampling": "smooth",
+   "param": "r",
+   "ref": 34,
+   "refY": null,
+   "maxK": 1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -34.7,
+     -49,
+     34.8,
+     34.8
+    ],
+    "typicalSize": [
+     69.5,
+     83.8
+    ],
+    "reach": 49
+   },
+   "recommended": {
+    "logicalSize": [
+     72,
+     86
+    ],
+    "anchorLogical": [
+     35.7,
+     50
+    ],
+    "sourceSizeAt4x": [
+     288,
+     344
+    ],
+    "anchorPxAt4x": [
+     143,
+     200
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "fixed: r = 34 at the top right",
+    "zoom1": [
+     72,
+     86
+    ],
+    "zoom2_5": [
+     72,
+     86
+    ],
+    "maxZoom3_2": [
+     72,
+     86
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.compassRose(ctx, x, y, r)"
+  }
+ ]
+}

@@ -219,10 +219,11 @@
         const p = map.worldToScreen(e.x + 0.5, e.y + 0.8);
         if (p.x < -40 || p.x > HB.W + 40 || p.y < -40 || p.y > HB.H + 40) continue;
         ctx.save(); A.setup(ctx);
-        if (e.kind === 'caravan') A.wagon(ctx, p.x, p.y, s, e.wealth > 500 ? '#6a4a85' : undefined);
-        else if (e.kind === 'hero') A.walker(ctx, p.x, p.y, s, e.lance ? '#7a2418' : undefined);
-        else if (e.kind === 'army') A.banner(ctx, p.x, p.y, s, e.color);
-        else if (e.kind === 'hunters') A.walker(ctx, p.x, p.y, s, '#7a2418');
+        const key = 'ent' + e.id; // stable art-pack variant per entity
+        if (e.kind === 'caravan') A.wagon(ctx, p.x, p.y, s, e.wealth > 500 ? '#6a4a85' : undefined, key);
+        else if (e.kind === 'hero') A.walker(ctx, p.x, p.y, s, e.lance ? '#7a2418' : undefined, key);
+        else if (e.kind === 'army') A.banner(ctx, p.x, p.y, s, e.color, key);
+        else if (e.kind === 'hunters') A.walker(ctx, p.x, p.y, s, '#7a2418', key);
         ctx.restore();
         if (map.cam.zoom > 0.8 && (map.hoverEntity === e || map.selected === e)) HB.text.draw(ctx, e.name, p.x, p.y - s * 2.6, { size: 12, italic: true, align: 'center', stroke: 'rgba(240,228,200,0.7)', strokeWidth: 2.5 });
       }

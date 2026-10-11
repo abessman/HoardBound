@@ -538,5 +538,33 @@ section('debug tools');
   ok(C.on(st2, 'invincible') && st2.flags.cheated, 'saves keep the toggles');
 }
 
+section('map art: the contract, the packs, the preview');
+{
+  const S = HB.MAP_SPEC, fam = HB.mapSpecFamily;
+  ok(S && S.schemaVersion === 1 && Object.keys(S.families).length >= 55, 'the map-art contract lists every family');
+  ok(fam('map.place.camp.goblin').id === 'map.place.camp' && fam('map.place.city.burned').id === 'map.place.city' && fam('map.terrain.mountain.jagged.deep').id === 'map.terrain.mountain.jagged' && !fam('map.terrain.volcano'), 'ids resolve to their family by longest prefix; unknown ids do not');
+  const fs = require('fs'), src = fs.readFileSync(require('path').join(__dirname, '../src/art/mapart.js'), 'utf8');
+  const used = [...src.matchAll(/'(map\.[a-z]+\.[A-Za-z.]+)'/g)].map(m => m[1]);
+  ok(used.length > 20 && used.every(id => fam(id)), 'every id the map drawing asks for is in the contract');
+  for (const [id, spec] of Object.entries(S.families)) if (!(spec.ref > 0 && spec.maxK > 0 && spec.layer && spec.anchor)) ok(false, 'family is complete: ' + id);
+  const mt = S.families['map.terrain.mountain'];
+  ok(HB.mapTerrainReach(mt, [30, 25], [120, 100], [60, 91], false).ok && !HB.mapTerrainReach(mt, [120, 120], [32, 32], [16, 31], false).ok, 'terrain art is refused when it would reach past the chunk margin');
+  const MP = require('./mappack.js');
+  const sample = MP.validate(require('path').join(__dirname, '../assets/map/packs/sample'));
+  ok(!sample.errors.length && sample.ok.length === 6, 'the sample pack validates: 6 ids, no errors' + (sample.errors.length ? ' ' + sample.errors.join('; ') : ''));
+  const broken = MP.validate(require('path').join(__dirname, '../assets/map/packs/test-broken'));
+  ok(broken.ok.length === 1 && broken.ok[0] === 'map.terrain.tree.pine' && broken.errors.length === 7, 'the broken test pack: only the pine survives, 7 errors are reported');
+  ok(MP.pngSize(require('path').join(__dirname, '../assets/map/packs/sample/terrain/mountain-b@2x.png')).join('x') === '64x54', 'the validator reads PNG sizes');
+  // the preview preset: every domain state near home, deterministic, saved like any campaign
+  const a = HB.game.newCampaign({ seed: 'ember-quill-42', name: 'P', keeper: false }), ra = HB.presets.preview(a);
+  const sts = Object.values(ra).filter(Boolean).map(L => HB.domain.statusOf(a, L));
+  ok(['tributary', 'occupied', 'resisting', 'ruined'].every(s => sts.includes(s)) && ra.threat && ra.threat.threat, 'the map preview shows each domain state, a burned place and a threat');
+  ok(HB.endgame.active(a) && a.flags.test, 'the preview begins the great struggle and saves to the test slot');
+  const b = HB.game.newCampaign({ seed: 'ember-quill-42', name: 'P', keeper: false }), rb = HB.presets.preview(b);
+  ok(Object.keys(ra).every(k => (ra[k] && ra[k].id) === (rb[k] && rb[k].id)), 'the preview picks the same places every time');
+  const c = HB.save.deserialize(HB.save.serialize(a));
+  ok(HB.domain.statusOf(c, c.world.locations[ra.resisting.id]) === 'resisting' && c.world.locations[ra.burned.id].state === 'burned', 'the preview campaign saves and loads');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

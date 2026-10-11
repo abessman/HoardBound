@@ -55,7 +55,9 @@ src/game/             state, stats, hoard, travel, preview, raid/ (engine + temp
                       factions, history, heat, worldsim, situations, keeper, sleep, petitions, renown, consequences, goals
 src/views/            title, newgame, settings, generating, intro, cardview, raidview, lairview, sleepview, consequenceview,
                       aimsview, menus, mapview
-src/data/             names, treasures (loot + artifacts), events (travel/roost), encounters (decision cards), upgrades/workers
+src/data/             names, treasures (loot + artifacts), events (travel/roost), encounters (decision cards), upgrades/workers,
+                      domain, endgame, mapspec (the map-art contract)
+assets/               fonts, sprites/ (pixel sprite overrides), map/ (map art packs)
 tools/                screenshot.mjs, playthrough.mjs (Playwright), headless.js, test.js, cyclebot.js, worldstats.js,
                       docscheck.js (Node)
 docs/                 systems/ (one doc per part of the game), ideas/ (not built yet), BRIEF.md, FEATURE_STATUS.md
@@ -73,11 +75,14 @@ CHANGELOG.md          version history (the version shows on the title screen)
 - `node tools/playthrough.mjs shots/` — scripted full run with screenshots at every stage.
 - `node tools/cyclebot.js [seed]` — a robber bot plays the opening cycle and reports pacing.
 - `node tools/docscheck.js` — doc size budgets and links.
+- `node tools/mappack.js <pack>` — validate a map art pack and write its `pack.js`; `node tools/mapart-export.mjs` — regenerate the map-art handoff (catalog, contact sheets, sample art, screens, browser checks).
 - `index.html?debug=1&scene=dragons` — dragon sprite review sheet. `?scene=map&seed=…` jumps straight into a world.
 
 ### Replacing the generated art
 
 All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/sprites/` (see `assets/sprites/README.md`); matching ids override generated sprites. Dragon layers are keyed `dragon.<tier>.<part>.<pose>`. Details: `docs/systems/art-and-sprites.md`.
+
+The parchment map's symbols are replaced by **map art packs** in `assets/map/packs/<name>/` (PNGs + a manifest; anything missing stays hand-drawn), chosen in Settings → Map art or with `?mappack=<name>`. The artist's handoff (measured catalog, contact sheets, art spec, steps): `docs/map-art/README.md`. Preview: `index.html?scene=mappreview&mappack=sample`; validate a pack with `node tools/mappack.js <name>`.
 
 ### Continuing development
 

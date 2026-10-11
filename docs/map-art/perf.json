@@ -1,0 +1,68 @@
+{
+ "note": "Headless Chromium on the build container, 1280×720 at 1×. Compare the columns; absolute numbers are not an iPad.",
+ "runs": {
+  "none": {
+   "chunkRebuild": {
+    "chunks": 12,
+    "ms": 52.6,
+    "msPerChunk": 4.39
+   },
+   "frame": {
+    "drawMedianMs": 2.4,
+    "drawP90Ms": 3.4,
+    "frameIntervalMedianMs": 33.3,
+    "fps": 30
+   },
+   "cache": {
+    "maxChunks": 90,
+    "lod0ChunkPx": "440×440",
+    "lod0ChunkBytes": 774400,
+    "lod1ChunkPx": "140×140",
+    "worstCaseMB": 66.5
+   },
+   "pack": {
+    "pack": "none",
+    "ids": 0,
+    "drawing": [],
+    "images": 0,
+    "decodedBytes": 0,
+    "loading": 0
+   }
+  },
+  "sample": {
+   "chunkRebuild": {
+    "chunks": 12,
+    "ms": 50.2,
+    "msPerChunk": 4.18
+   },
+   "frame": {
+    "drawMedianMs": 2.4,
+    "drawP90Ms": 3.5,
+    "frameIntervalMedianMs": 33.3,
+    "fps": 30
+   },
+   "cache": {
+    "maxChunks": 90,
+    "lod0ChunkPx": "440×440",
+    "lod0ChunkBytes": 774400,
+    "lod1ChunkPx": "140×140",
+    "worstCaseMB": 66.5
+   },
+   "pack": {
+    "pack": "sample",
+    "ids": 6,
+    "drawing": [
+     "map.terrain.mountain",
+     "map.terrain.tree.round",
+     "map.place.village",
+     "map.place.castle",
+     "map.place.town.burned",
+     "map.marker.wagon"
+    ],
+    "images": 7,
+    "decodedBytes": 239664,
+    "loading": 0
+   }
+  }
+ }
+}

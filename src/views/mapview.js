@@ -42,7 +42,8 @@
       const st = this.state, W = st.world, inf = HB.domain.influence(st);
       const c = document.createElement('canvas'); c.width = W.w; c.height = W.h;
       const g = c.getContext('2d'), img = g.createImageData(W.w, W.h), D = img.data;
-      const kind = [138, 150, 58], cruel = [122, 56, 32], reach = [128, 104, 70];
+      const WS = HB.mapAssets ? HB.mapAssets.style.wash : { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] };
+      const kind = WS.kind, cruel = WS.cruel, reach = WS.reach;
       for (let i = 0; i < W.w * W.h; i++) {
         if (!HB.isLand(W.terrain[i])) continue;
         const o = inf.subs.get(W.sub[i]); if (!o) continue;
@@ -75,7 +76,8 @@
       }
       if (!any) return;
       ctx.save(); ctx.setLineDash([2, 4]); ctx.lineWidth = 1.3;
-      for (const [k, col] of [[1, 'rgba(96,110,30,0.55)'], [2, 'rgba(110,36,20,0.55)'], [3, 'rgba(90,70,40,0.35)']]) { ctx.strokeStyle = col; ctx.stroke(paths[k]); }
+      const ES = HB.mapAssets ? HB.mapAssets.style.edge : { kind: 'rgba(96,110,30,0.55)', cruel: 'rgba(110,36,20,0.55)', reach: 'rgba(90,70,40,0.35)' };
+      for (const [k, col] of [[1, ES.kind], [2, ES.cruel], [3, ES.reach]]) { ctx.strokeStyle = col; ctx.stroke(paths[k]); }
       ctx.restore();
     }
     /** pennants showing what each settlement is to you; the settlement at your hill */
@@ -99,7 +101,7 @@
         const px = p.x + s * (L.type === 'farm' ? 1.9 : 2.4), mark = status === 'allied' || status === 'protected' ? 'sun' : status === 'occupied' ? 'eye' : null;
         ctx.save(); HB.mapart.setup(ctx);
         if (status === 'resisting') HB.mapart.crossedSwords(ctx, px + s * 0.4, p.y - s * 1.4, s * 0.55);
-        else HB.mapart.pennant(ctx, px, p.y, s * 0.75, S.color, mark);
+        else HB.mapart.pennant(ctx, px, p.y, s * 0.75, S.color, mark, status);
         ctx.restore();
         if (status === 'resisting' && cam.zoom > 0.7) HB.text.draw(ctx, 'in revolt', px + s * 0.4, p.y - s * 2.4, { size: 11, italic: true, align: 'center', color: '#8f2b1f', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
       }
@@ -111,7 +113,8 @@
       const rows = [];
       let kind = false, cruel = false, reach = false;
       for (const o of inf.subs.values()) { if (o.c > 0.2) kind = true; else if (o.c < -0.2) cruel = true; else reach = true; }
-      if (kind) rows.push(['rgba(138,150,58,0.6)', 'Ruled kindly']); if (cruel) rows.push(['rgba(122,56,32,0.55)', 'Ruled by fear']); if (reach) rows.push(['rgba(128,104,70,0.4)', 'Within your reach']);
+      const WS = HB.mapAssets ? HB.mapAssets.style.wash : { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] }, rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+      if (kind) rows.push([rgba(WS.kind, 0.6), 'Ruled kindly']); if (cruel) rows.push([rgba(WS.cruel, 0.55), 'Ruled by fear']); if (reach) rows.push([rgba(WS.reach, 0.4), 'Within your reach']);
       if (!rows.length) return;
       const b = this.btnTerritory, x = b.x, y = b.y + b.h + 4, w = b.w, hh = 8 + rows.length * 18;
       HB.parchment.panel(ctx, x, y, w, hh, { shadow: false, stains: false, vignette: 0.05, flourish: 0 });
@@ -292,18 +295,20 @@
     getChunk(cx, cy, lod, budget) {
       const key = this.chunkKey(cx, cy, lod);
       let c = this.chunks.get(key);
-      if (c) return c;
-      if (budget.n <= 0) return null;
+      // a chunk drawn before the art pack's latest image arrived is redrawn when the budget allows; until then the old one shows
+      if (c && (c.artRev === this._artRev || budget.n <= 0)) return c;
+      if (!c && budget.n <= 0) return null;
       budget.n--;
-      c = this.renderChunk(cx, cy, lod);
-      this.chunks.set(key, c); this.chunkOrder.push(key);
+      const fresh = !c;
+      c = this.renderChunk(cx, cy, lod); c.artRev = this._artRev;
+      this.chunks.set(key, c); if (fresh) this.chunkOrder.push(key);
       while (this.chunkOrder.length > this.maxChunks) { const k = this.chunkOrder.shift(); this.chunks.delete(k); }
       return c;
     }
     renderChunk(cx, cy, lod) {
       const st = this.state, W = st.world, A = HB.mapart;
       const cp = lod === 0 ? CELL : LOD1_CELL;
-      const m = lod === 0 ? MARGIN : 1;
+      const m = MARGIN; // both levels of detail keep a 2-cell margin so art that spills over a cell is not clipped
       const size = (CHUNK + 2 * m) * cp;
       const c = document.createElement('canvas'); c.width = size; c.height = size;
       const g = c.getContext('2d');
@@ -313,6 +318,8 @@
       const toPx = (wx, wy) => [(wx - x0 + m) * cp, (wy - y0 + m) * cp];
       const terrainAt = (x, y) => (x < 0 || y < 0 || x >= W.w || y >= W.h) ? T().DEEP : W.terrain[y * W.w + x];
       const land = (x, y) => HB.isLand(terrainAt(x, y));
+      // roads, rivers, coasts and water stay procedural so they join up; an art pack may restyle them (HB.mapAssets.style)
+      const SY = HB.mapAssets ? HB.mapAssets.style : { road: { color: A.INK, width: 1.2, laneWidth: 0.8, dash: [3, 3], alpha: 0.9, laneAlpha: 0.6 }, river: { color: A.WATER_INK, baseWidth: 0.8, perWidth: 0.6 }, coast: { color: A.INK, width: 1.5 }, water: { color: [105, 140, 170], alpha: 0.07, alphaPerDepth: 0.03 } };
       A.lineScale = lod === 0 ? 1 : 0.55;
       // --- water wash: painted at one pixel per cell and upscaled with smoothing so the edge follows the coast softly
       {
@@ -323,7 +330,7 @@
           const tt = terrainAt(x, y);
           if (HB.isLand(tt)) continue;
           const cd = (x < 0 || y < 0 || x >= W.w || y >= W.h) ? 6 : W.coastDist[y * W.w + x];
-          sg.fillStyle = `rgba(105,140,170,${0.07 + 0.03 * Math.min(cd, 5)})`;
+          sg.fillStyle = `rgba(${SY.water.color.join(',')},${SY.water.alpha + SY.water.alphaPerDepth * Math.min(cd, 5)})`;
           sg.fillRect(x - x0 + m, y - y0 + m, 1, 1);
         }
         // clip to the chunk core so overlapping margins do not double the wash
@@ -338,13 +345,13 @@
         const [pxx, pyy] = toPx(x, y);
         if (cd >= 1 && cd <= 5) {
           const n = lod === 0 ? (cd <= 2 ? 2 : cd <= 4 ? 1 : (rng.chance(0.5) ? 1 : 0)) : (cd <= 2 && rng.chance(0.4) ? 1 : 0);
-          for (let k = 0; k < n; k++) A.wave(g, pxx + rng.next() * cp * 0.4, pyy + (k + 0.5) * cp / (n + 0.2) + rng.next() * 2, cp * (0.5 + rng.next() * 0.5), rng, 0.55 + (5 - cd) * 0.07);
+          for (let k = 0; k < n; k++) { const wx = pxx + rng.next() * cp * 0.4, wy = pyy + (k + 0.5) * cp / (n + 0.2) + rng.next() * 2, wl = cp * (0.5 + rng.next() * 0.5), key = `w${x},${y}:${k}`; A.wave(g, wx, wy, wl, new HB.RNG(HB.hash32(`${st.seed}:${key}`)), 0.55 + (5 - cd) * 0.07, key); }
         }
       }
       // --- coastline via marching squares on corner samples (core cells only, with 1 cell margin for continuity)
       g.save(); g.beginPath(); g.rect(0, 0, size, size); g.clip();
       const corner = (x, y) => (land(x - 1, y - 1) + land(x, y - 1) + land(x - 1, y) + land(x, y)) >= 2 ? 1 : 0; // corner at top-left of cell (x,y)
-      g.lineWidth = lod === 0 ? 1.5 : 1; g.strokeStyle = A.INK;
+      g.lineWidth = lod === 0 ? SY.coast.width : SY.coast.width * 0.67; g.strokeStyle = SY.coast.color;
       for (let y = y0 - m; y < y0 + CHUNK + m; y++) for (let x = x0 - m; x < x0 + CHUNK + m; x++) {
         const tl = corner(x, y), tr = corner(x + 1, y), br = corner(x + 1, y + 1), bl = corner(x, y + 1);
         const code = tl * 8 + tr * 4 + br * 2 + bl;
@@ -367,7 +374,7 @@
       g.restore();
       // --- rivers (clipped to core)
       g.save(); g.beginPath(); g.rect(m * cp, m * cp, CHUNK * cp, CHUNK * cp); g.clip();
-      g.strokeStyle = A.WATER_INK; g.lineCap = 'round'; g.lineJoin = 'round';
+      g.strokeStyle = SY.river.color; g.lineCap = 'round'; g.lineJoin = 'round';
       for (const R of W.rivers) {
         let inside = false; for (const [rx, ry] of R.cells) if (rx >= x0 - 1 && rx < x0 + CHUNK + 1 && ry >= y0 - 1 && ry < y0 + CHUNK + 1) { inside = true; break; }
         if (!inside) continue;
@@ -375,16 +382,16 @@
           const [ax, ay] = R.cells[k], [bx, by] = R.cells[k + 1];
           const width = W.river[ay * W.w + ax] || 1;
           const [pax, pay] = toPx(ax + 0.5, ay + 0.5), [pbx, pby] = toPx(bx + 0.5, by + 0.5);
-          g.lineWidth = lod === 0 ? 0.8 + width * 0.6 : 0.6 + width * 0.3;
+          g.lineWidth = lod === 0 ? SY.river.baseWidth + width * SY.river.perWidth : (SY.river.baseWidth + width * SY.river.perWidth) * 0.6;
           g.beginPath(); g.moveTo(pax, pay); g.quadraticCurveTo((pax + pbx) / 2 + (rng.next() - 0.5) * cp * 0.5, (pay + pby) / 2 + (rng.next() - 0.5) * cp * 0.5, pbx, pby); g.stroke();
         }
       }
       // --- roads (dashed, clipped to core)
-      g.strokeStyle = A.INK; g.setLineDash(lod === 0 ? [3, 3] : [2, 2]);
+      g.strokeStyle = SY.road.color; g.setLineDash(lod === 0 ? SY.road.dash : SY.road.dash.map(v => v * 0.67));
       for (const R of W.roads) {
         let inside = false; for (const [rx, ry] of R.cells) if (rx >= x0 - 1 && rx < x0 + CHUNK + 1 && ry >= y0 - 1 && ry < y0 + CHUNK + 1) { inside = true; break; }
         if (!inside) continue;
-        g.lineWidth = R.lane ? 0.8 : 1.2; g.globalAlpha = R.lane ? 0.6 : 0.9;
+        g.lineWidth = R.lane ? SY.road.laneWidth : SY.road.width; g.globalAlpha = R.lane ? SY.road.laneAlpha : SY.road.alpha;
         g.beginPath();
         for (let k = 0; k < R.cells.length; k++) { const [ax, ay] = R.cells[k]; const [pax, pay] = toPx(ax + 0.5, ay + 0.5); if (k === 0) g.moveTo(pax, pay); else g.lineTo(pax, pay); }
         g.stroke();
@@ -400,33 +407,36 @@
         if (W.locAt[i] >= 0) continue; // keep the cell clear for its icon
         const [X, Y] = toPx(x, y);
         const cellRng = new HB.RNG(HB.hash32(`${st.seed}:${x},${y}`));
-        const push = (yy, fn) => glyphs.push({ y: yy, fn });
+        // each glyph gets its own drawing-only random stream and a stable key (art-pack variant choice): placement above
+        // uses cellRng; drawing never consumes it, so replacing one glyph's art cannot shift any other glyph
+        let gi = 0;
+        const push = (yy, fn) => { const key = `${x},${y}:${gi++}`; glyphs.push({ y: yy, fn, key, rng: new HB.RNG(HB.hash32(`${st.seed}:v:${key}`)) }); };
         const mk = this.mark ? this.mark[i] : 0; // < 0 blighted by tyranny, > 0 flourishing under a protector
         if (mk < 0 && lod === 0 && (tt === T().MOUNTAINS || tt === T().PEAKS)) {
           const w = cp * (tt === T().PEAKS ? 1.6 : 1.2 + cellRng.next() * 0.3), h = cp * (tt === T().PEAKS ? 1.5 : 0.9 + cellRng.next() * 0.4);
           const gx = X + cp * (0.5 + (cellRng.next() - 0.5) * 0.2), gy = Y + cp * 0.9;
-          push(gy, (g) => A.mountainJagged(g, gx, gy, w, h, cellRng, { deep: mk <= -2, big: tt === T().PEAKS }));
+          push(gy, (g, vr, key) => A.mountainJagged(g, gx, gy, w, h, vr, { key, deep: mk <= -2, big: tt === T().PEAKS }));
           continue;
         }
         if (mk < 0 && (tt === T().FOREST || tt === T().PINE)) {
           const n = lod === 0 ? 2 : 1;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6), s = cp * (lod === 0 ? 0.17 : 0.26); push(gy, (g) => (mk <= -2 || cellRng.chance(0.4) ? A.treeBurned : A.treeBare)(g, gx, gy, s, cellRng)); }
-          if (mk <= -2 && lod === 0) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; push(gy, (g) => A.ash(g, gx, gy, cp * 0.3, cellRng)); }
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6), s = cp * (lod === 0 ? 0.17 : 0.26); push(gy, (g, vr, key) => (mk <= -2 || vr.chance(0.4) ? A.treeBurned : A.treeBare)(g, gx, gy, s, vr, key)); }
+          if (mk <= -2 && lod === 0) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; push(gy, (g, vr, key) => A.ash(g, gx, gy, cp * 0.3, vr, key)); }
           continue;
         }
-        if (mk <= -2 && lod === 0 && (tt === T().PLAINS || tt === T().HILLS) && cellRng.chance(0.55)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g) => A.ash(g, gx, gy, cp * 0.3, cellRng)); if (tt === T().PLAINS) continue; }
-        if (mk > 0 && lod === 0 && tt === T().PLAINS && cellRng.chance(mk >= 2 ? 0.55 : 0.3)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g) => A.field(g, gx, gy, cp * 0.28, cellRng)); continue; }
+        if (mk <= -2 && lod === 0 && (tt === T().PLAINS || tt === T().HILLS) && cellRng.chance(0.55)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g, vr, key) => A.ash(g, gx, gy, cp * 0.3, vr, key)); if (tt === T().PLAINS) continue; }
+        if (mk > 0 && lod === 0 && tt === T().PLAINS && cellRng.chance(mk >= 2 ? 0.55 : 0.3)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g, vr, key) => A.field(g, gx, gy, cp * 0.28, vr, key)); continue; }
         if (mk > 0 && lod === 0 && (tt === T().FOREST || tt === T().PINE)) {
           const n = 3, pine = tt === T().PINE;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.16 : 0.19) * (0.9 + cellRng.next() * 0.3); const fleck = mk >= 2 && cellRng.chance(0.35); push(gy, (g) => { pine ? A.treePine(g, gx, gy, s, cellRng) : A.treeRound(g, gx, gy, s, cellRng); if (fleck) A.blossom(g, gx + s * 0.3, gy - s * (pine ? 1.4 : 1.1), s); }); }
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.16 : 0.19) * (0.9 + cellRng.next() * 0.3); const fleck = mk >= 2 && cellRng.chance(0.35); push(gy, (g, vr, key) => { pine ? A.treePine(g, gx, gy, s, vr, key) : A.treeRound(g, gx, gy, s, vr, key); if (fleck) A.blossom(g, gx + s * 0.3, gy - s * (pine ? 1.4 : 1.1), s, key + 'b'); }); }
           continue;
         }
         if (lod === 1) {
           // simplified overview glyphs: sparser and smaller
-          if (tt === T().PEAKS || (tt === T().MOUNTAINS && cellRng.chance(0.55))) { const gx = X + cp * 0.5, gy = Y + cp * 0.95; const w = cp * (tt === T().PEAKS ? 1.9 : 1.5), h = cp * (tt === T().PEAKS ? 1.7 : 1.1); push(gy, (g) => A.mountain(g, gx, gy, w, h, cellRng, { snow: tt === T().PEAKS })); }
-          else if (tt === T().HILLS && cellRng.chance(0.4)) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; push(gy, (g) => A.hill(g, gx, gy, cp * 1.1, cp * 0.3, cellRng)); }
-          else if ((tt === T().FOREST || tt === T().PINE) && cellRng.chance(0.42)) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; const s = cp * 0.26; push(gy, (g) => tt === T().PINE ? A.treePine(g, gx, gy, s * 0.8, cellRng) : A.treeRound(g, gx, gy, s, cellRng)); }
-          else if (tt === T().SWAMP && cellRng.chance(0.3)) { const gx = X + cp * 0.5, gy = Y + cp * 0.7; push(gy, (g) => A.swampTuft(g, gx, gy, cp * 0.25, cellRng)); }
+          if (tt === T().PEAKS || (tt === T().MOUNTAINS && cellRng.chance(0.55))) { const gx = X + cp * 0.5, gy = Y + cp * 0.95; const w = cp * (tt === T().PEAKS ? 1.9 : 1.5), h = cp * (tt === T().PEAKS ? 1.7 : 1.1); push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow: tt === T().PEAKS })); }
+          else if (tt === T().HILLS && cellRng.chance(0.4)) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; push(gy, (g, vr, key) => A.hill(g, gx, gy, cp * 1.1, cp * 0.3, vr, key)); }
+          else if ((tt === T().FOREST || tt === T().PINE) && cellRng.chance(0.42)) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; const s = cp * 0.26; push(gy, (g, vr, key) => tt === T().PINE ? A.treePine(g, gx, gy, s * 0.8, vr, key) : A.treeRound(g, gx, gy, s, vr, key)); }
+          else if (tt === T().SWAMP && cellRng.chance(0.3)) { const gx = X + cp * 0.5, gy = Y + cp * 0.7; push(gy, (g, vr, key) => A.swampTuft(g, gx, gy, cp * 0.25, vr, key)); }
           continue;
         }
         if (tt === T().MOUNTAINS || tt === T().PEAKS) {
@@ -435,28 +445,28 @@
             const w = cp * (tt === T().PEAKS ? 1.5 : 1.05 + cellRng.next() * 0.35), h = cp * (tt === T().PEAKS ? 1.45 : 0.75 + cellRng.next() * 0.45);
             const gx = X + cp * (0.5 + (peaks === 2 ? (k ? 0.3 : -0.3) : 0) + (cellRng.next() - 0.5) * 0.3), gy = Y + cp * (0.85 + (cellRng.next() - 0.5) * 0.4);
             const snow = tt === T().PEAKS || W.temp[i] < 0.3;
-            push(gy, (g) => A.mountain(g, gx, gy, w, h, cellRng, { snow, big: tt === T().PEAKS }));
+            push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, big: tt === T().PEAKS }));
           }
         } else if (tt === T().HILLS) {
           const n = cellRng.chance(0.6) ? 2 : 1;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.5 + (n === 2 ? (k ? 0.28 : -0.28) : 0)), gy = Y + cp * (0.7 + cellRng.next() * 0.3 + (k ? 0.15 : 0)); const w = cp * (0.7 + cellRng.next() * 0.3), h = cp * (0.22 + cellRng.next() * 0.1); push(gy, (g) => A.hill(g, gx, gy, w, h, cellRng)); }
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.5 + (n === 2 ? (k ? 0.28 : -0.28) : 0)), gy = Y + cp * (0.7 + cellRng.next() * 0.3 + (k ? 0.15 : 0)); const w = cp * (0.7 + cellRng.next() * 0.3), h = cp * (0.22 + cellRng.next() * 0.1); push(gy, (g, vr, key) => A.hill(g, gx, gy, w, h, vr, key)); }
         } else if (tt === T().FOREST || tt === T().PINE) {
           const n = cellRng.chance(0.25) ? 3 : cellRng.chance(0.8) ? 2 : 1;
           const pine = tt === T().PINE;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.15 : 0.17) * (0.85 + cellRng.next() * 0.3); push(gy, (g) => pine ? A.treePine(g, gx, gy, s, cellRng) : A.treeRound(g, gx, gy, s, cellRng)); }
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.15 : 0.17) * (0.85 + cellRng.next() * 0.3); push(gy, (g, vr, key) => pine ? A.treePine(g, gx, gy, s, vr, key) : A.treeRound(g, gx, gy, s, vr, key)); }
         } else if (tt === T().SWAMP) {
           const n = lod === 0 ? 2 : 1;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.3 + cellRng.next() * 0.6); push(gy, (g) => A.swampTuft(g, gx, gy, cp * 0.18, cellRng)); }
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.3 + cellRng.next() * 0.6); push(gy, (g, vr, key) => A.swampTuft(g, gx, gy, cp * 0.18, vr, key)); }
         } else if (tt === T().DESERT) {
-          if (cellRng.chance(0.6)) { const gx = X + cp * 0.5, gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g) => A.dune(g, gx, gy, cp * 0.4, cellRng)); }
+          if (cellRng.chance(0.6)) { const gx = X + cp * 0.5, gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g, vr, key) => A.dune(g, gx, gy, cp * 0.4, vr, key)); }
         } else if (tt === T().SNOW) {
-          if (cellRng.chance(0.5)) { const gx = X + cp * 0.5, gy = Y + cp * 0.5; push(gy, (g) => A.snowDots(g, gx, gy, cp * 0.35, cellRng)); }
+          if (cellRng.chance(0.5)) { const gx = X + cp * 0.5, gy = Y + cp * 0.5; push(gy, (g, vr, key) => A.snowDots(g, gx, gy, cp * 0.35, vr, key)); }
         } else if (tt === T().PLAINS) {
-          if (lod === 0 && cellRng.chance(0.14)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.5); push(gy, (g) => A.grassTuft(g, gx, gy, cp * 0.14, cellRng)); }
+          if (lod === 0 && cellRng.chance(0.14)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.5); push(gy, (g, vr, key) => A.grassTuft(g, gx, gy, cp * 0.14, vr, key)); }
         }
       }
       glyphs.sort((a, b) => a.y - b.y);
-      for (const gl of glyphs) gl.fn(g);
+      for (const gl of glyphs) gl.fn(g, gl.rng, gl.key);
       A.lineScale = 1;
       return c;
     }
@@ -467,8 +477,11 @@
       const z = CELL * cam.zoom;
       const lod = cam.zoom < 0.55 ? 1 : 0;
       const cp = lod === 0 ? CELL : LOD1_CELL;
-      const m = lod === 0 ? MARGIN : 1;
+      const m = MARGIN;
       HB.parchment.fill(ctx, 0, 0, HB.W, HB.H);
+      // an art pack finished loading an image (or changed): chunks drawn with the old art (or its fallback) are redrawn,
+      // a few per frame, showing the old ones meanwhile (no blank flash); the territory overlay takes the pack's colours
+      if (HB.mapAssets && this._artRev !== HB.mapAssets.revision) { this._artRev = HB.mapAssets.revision; this.overlay = null; }
       // visible cell range
       const tl = this.screenToWorld(0, 0), br = this.screenToWorld(HB.W, HB.H);
       const cx0 = Math.max(0, Math.floor(tl.x / CHUNK)), cx1 = Math.min(Math.ceil(W.w / CHUNK) - 1, Math.floor(br.x / CHUNK));
@@ -486,6 +499,7 @@
         ctx.drawImage(c, p.x, p.y, c.width * scale, c.height * scale);
       }
       ctx.restore();
+      if (this.showChunkEdges) this.drawChunkEdges(ctx, cx0, cx1, cy0, cy1);
       // world edge: beyond the map, waves
       this.drawWorldEdge(ctx);
       // the dragon's territory: a light wash, under the ink
@@ -520,7 +534,7 @@
       if (this.selected) this.drawPreview(ctx);
       this.ui.draw(ctx);
       if (this.toast) this.drawToast(ctx);
-      if (HB.debugMode) HB.text.draw(ctx, `fps ${HB.app.fps.toFixed(0)} zoom ${cam.zoom.toFixed(2)} cam ${cam.x.toFixed(1)},${cam.y.toFixed(1)} chunks ${this.chunks.size}`, 12, HB.H - 60, { size: 12, color: HB.palette.inkSoft });
+      if (HB.debugMode) HB.text.draw(ctx, `fps ${HB.app.fps.toFixed(0)} zoom ${cam.zoom.toFixed(2)} cam ${cam.x.toFixed(1)},${cam.y.toFixed(1)} chunks ${this.chunks.size}${HB.mapAssets ? ` · map art ${HB.mapAssets.packName} r${HB.mapAssets.revision} ${HB.mapAssets.entries.size} ids${HB.mapAssets.warnings.length ? `, ${HB.mapAssets.warnings.length} warnings (console)` : ''}` : ''}`, 12, HB.H - 60, { size: 12, color: HB.palette.inkSoft });
     }
     chunkFullyFogged(cx, cy) {
       const W = this.state.world, F = this.fogAlpha;
@@ -565,25 +579,32 @@
         if (L.knowledge.seen) { ctx.globalAlpha *= 0.75; HB.mapart.settlement(ctx, L, p.x, p.y, s, new HB.RNG(HB.hash32('loc' + L.id))); }
         else {
           ctx.globalAlpha *= 0.8;
-          ctx.strokeStyle = HB.palette.ink; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
-          ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.6, s * 0.9, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-          HB.text.draw(ctx, '?', p.x, p.y - s * 0.6 + s * 0.45, { size: s * 1.4, align: 'center', color: HB.palette.ink });
+          HB.mapart.rumorMark(ctx, p.x, p.y, s, 'loc' + L.id);
         }
         ctx.restore();
       }
     }
+    /** map-art preview (&chunks=1): thin lines on chunk edges, to check art crossing them for seams or cropping */
+    drawChunkEdges(ctx, cx0, cx1, cy0, cy1) {
+      ctx.save(); ctx.strokeStyle = 'rgba(30,120,170,0.55)'; ctx.lineWidth = 1; ctx.setLineDash([6, 4]);
+      for (let cx = cx0; cx <= cx1 + 1; cx++) { const p = this.worldToScreen(cx * CHUNK, 0); ctx.beginPath(); ctx.moveTo(p.x, 0); ctx.lineTo(p.x, HB.H); ctx.stroke(); }
+      for (let cy = cy0; cy <= cy1 + 1; cy++) { const p = this.worldToScreen(0, cy * CHUNK); ctx.beginPath(); ctx.moveTo(0, p.y); ctx.lineTo(HB.W, p.y); ctx.stroke(); }
+      ctx.restore();
+    }
     drawDragon(ctx) {
-      const st = this.state, d = st.dragon;
-      const p = this.worldToScreen(d.x + 0.5, d.y + 0.5);
+      const st = this.state, d = st.dragon, sc = this.showcase;
+      // the map-art preview flies the dragon in a circle (drawing only: the campaign's dragon stays at home)
+      const a = sc ? this.t * 0.35 : 0, facing = sc ? (Math.cos(a) <= 0 ? 1 : -1) : d.facing;
+      const p = sc ? this.worldToScreen(sc.x + Math.cos(a) * sc.r, sc.y + Math.sin(a) * sc.r * 0.6) : this.worldToScreen(d.x + 0.5, d.y + 0.5);
       const spec = HB.dragonArt.specOf(st);
-      const flying = st.phase === 'traveling' || st.phase === 'returning';
+      const flying = !!sc || st.phase === 'traveling' || st.phase === 'returning';
       const pose = flying ? 'fly' : (st.phase === 'sleeping' ? 'sleep' : 'idle');
       const frame = flying ? Math.floor(this.dragonFrameT * 8) % 4 : Math.floor(this.dragonFrameT * 1.5) % 2;
       const scale = HB.clamp(this.cam.zoom * 1.1, 0.9, 2.2) * (flying ? 1 : 0.9);
       // shadow
       ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.ellipse(p.x + 6 * scale, p.y + (flying ? 16 : 8) * scale, 10 * scale * (1 + d.tier * 0.5), 4 * scale * (1 + d.tier * 0.5), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       const bobY = flying ? Math.sin(this.dragonFrameT * 6) * 2 : 0;
-      HB.dragonArt.draw(ctx, spec, pose, frame, p.x, p.y - (flying ? 10 : 2) * scale + bobY, scale, d.facing);
+      HB.dragonArt.draw(ctx, spec, pose, frame, p.x, p.y - (flying ? 10 : 2) * scale + bobY, scale, facing);
     }
     drawFog(ctx, tl, br) {
       const st = this.state, W = st.world, F = this.fogAlpha, cam = this.cam, z = CELL * cam.zoom;
@@ -622,8 +643,8 @@
         const p = this.worldToScreen(x + 0.5 + cf[i * 3] * step, y + 0.5 + cf[i * 3 + 1] * step);
         const prng = new HB.RNG(i);
         ctx.globalAlpha = a * (edge ? 0.95 : 0.6);
-        A.cloud(ctx, p.x, p.y, puffR * cf[i * 3 + 2], prng, { fill: storm ? '#b9ad8e' : '#efe6cc', outline: edge, alpha: storm ? 0.9 : 0.55, ink: storm ? '#3a2a1a' : A.INK });
-        if (storm && edge && prng.chance(0.25)) A.lightning(ctx, p.x, p.y + puffR * 0.6, puffR * 0.5, prng);
+        A.cloud(ctx, p.x, p.y, puffR * cf[i * 3 + 2], prng, { fill: storm ? '#b9ad8e' : '#efe6cc', outline: edge, alpha: storm ? 0.9 : 0.55, ink: storm ? '#3a2a1a' : A.INK, storm, key: 'fog' + i });
+        if (storm && edge && prng.chance(0.25)) A.lightning(ctx, p.x, p.y + puffR * 0.6, puffR * 0.5, prng, 'bolt' + i);
       }
       ctx.restore();
     }
@@ -663,6 +684,8 @@
         if (!important && L.tier < minTier) continue;
         if (L.type === 'farm' && cam.zoom < 1.3) continue;
         const p = this.worldToScreen(L.x + 0.5, L.y + 1.0);
+        const lo = HB.mapAssets ? HB.mapAssets.labelOffset(L) : null; // an art pack may move a place's label (logical px at zoom 1)
+        if (lo) { const k = HB.clamp(10 * Math.sqrt(cam.zoom), 4, 12) / 10; p.x += lo[0] * k; p.y += lo[1] * k; }
         const size = HB.clamp((L.type === 'city' ? 15 : L.type === 'town' || L.type === 'castle' || L.type === 'hold' ? 13 : 11.5) * Math.sqrt(cam.zoom), 10, 20);
         const sc = L.type === 'city' || L.type === 'hold' || L.type === 'lair';
         const hazy = !L.knowledge.seen || this.fogAlpha[L.y * W.w + L.x] >= 0.5;
@@ -751,15 +774,14 @@
           ctx.strokeStyle = 'rgba(47,74,102,0.85)'; ctx.lineWidth = 1.5;
           for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r * (0.6 + k * 0.45), Math.PI * (0.2 + k * 0.3) + this.t, Math.PI * (1.3 + k * 0.3) + this.t); ctx.stroke(); }
         }
-        ctx.fillStyle = '#8f2b1f'; ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r, 0, Math.PI * 2); ctx.fill();
-        HB.text.draw(ctx, L.flags.requires ? '?' : '!', p.x, p.y - r * 2 + r * 0.55, { size: Math.max(11, r * 1.5), family: 'sc', align: 'center', color: '#f6ecd2' });
+        HB.mapart.seal(ctx, p.x, p.y - r * 2, r, L.flags.requires ? 'locked' : 'story', 'loc' + L.id);
         ctx.restore();
       }
       for (const e of st.entities) {
         if ((e.kind !== 'hunters' && !e.sitId) || e.dead) continue;
         if (Math.hypot(e.x - st.dragon.x, e.y - st.dragon.y) > 30 && !st.know.revealed[Math.round(e.y) * W.w + Math.round(e.x)]) continue;
         const p = this.worldToScreen(e.x + 0.5, e.y + 0.8), s2 = Math.max(4, Math.min(9, 7 * Math.sqrt(this.cam.zoom)));
-        ctx.save(); HB.mapart.setup(ctx); HB.mapart.walker(ctx, p.x, p.y, s2, '#7a2418'); ctx.restore();
+        ctx.save(); HB.mapart.setup(ctx); HB.mapart.walker(ctx, p.x, p.y, s2, '#7a2418', 'ent' + e.id); ctx.restore();
         HB.text.draw(ctx, e.kind === 'hero' ? `${e.name}, slayer` : e.name, p.x, p.y - s2 * 2.6, { size: 12, italic: true, align: 'center', color: '#7a2418', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
       }
     }
@@ -771,14 +793,7 @@
         if (!eg.isPlace(st, L) || L.state === 'ruin' || !HB.world.known(L)) continue;
         if (L.x < tl.x - 2 || L.x > br.x + 2 || L.y < tl.y - 2 || L.y > br.y + 2) continue;
         const p = this.worldToScreen(L.x + 0.5, L.y - 0.6), r = HB.clamp(z * 0.34, 6, 10), crystal = L.type === 'sanctuary';
-        ctx.save();
-        ctx.fillStyle = crystal ? '#3f6d3a' : '#3a1e48'; ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = crystal ? '#d9c66a' : '#c9541e'; ctx.lineWidth = 1.5; ctx.stroke();
-        ctx.fillStyle = '#f6ecd2'; ctx.beginPath();
-        if (crystal) { ctx.moveTo(p.x, p.y - r * 2.6); ctx.lineTo(p.x + r * 0.4, p.y - r * 2); ctx.lineTo(p.x, p.y - r * 1.4); ctx.lineTo(p.x - r * 0.4, p.y - r * 2); }
-        else { const yb = p.y - r * 1.6, w = r * 0.6; ctx.moveTo(p.x - w, yb); ctx.lineTo(p.x - w, yb - r * 0.6); ctx.lineTo(p.x - w * 0.4, yb - r * 0.3); ctx.lineTo(p.x, yb - r * 0.8); ctx.lineTo(p.x + w * 0.4, yb - r * 0.3); ctx.lineTo(p.x + w, yb - r * 0.6); ctx.lineTo(p.x + w, yb); }
-        ctx.closePath(); ctx.fill();
-        ctx.restore();
+        ctx.save(); HB.mapart.seal(ctx, p.x, p.y - r * 2, r, crystal ? 'crystal' : 'shadow', 'loc' + L.id); ctx.restore();
       }
     }
     /** crossed swords over places being raided by outlaws */
@@ -788,10 +803,7 @@
         if (!L.threat || !L.knowledge.seen || L.x < tl.x - 2 || L.x > br.x + 2 || L.y < tl.y - 2 || L.y > br.y + 2) continue;
         const p = this.worldToScreen(L.x + 0.5, L.y - 0.2);
         const s = HB.clamp(z * 0.55, 7, 14), pulse = 0.75 + 0.25 * Math.sin(this.t * 5);
-        ctx.save(); ctx.translate(p.x, p.y - s * 1.1); ctx.globalAlpha = pulse;
-        ctx.strokeStyle = '#8f2b1f'; ctx.lineWidth = Math.max(1.5, s * 0.18); ctx.lineCap = 'round';
-        for (const sgn of [1, -1]) { ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn, s * 0.7); ctx.lineTo(s * 0.7 * sgn, -s * 0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn + s * 0.25, s * 0.7 - s * 0.05 * sgn); ctx.lineTo(-s * 0.7 * sgn + s * 0.05, s * 0.45); ctx.stroke(); }
-        ctx.restore();
+        ctx.save(); ctx.globalAlpha = pulse; HB.mapart.threatMark(ctx, p.x, p.y - s * 1.1, s, 'loc' + L.id); ctx.restore();
         if (this.cam.zoom > 0.7) HB.text.draw(ctx, 'under attack', p.x, p.y - s * 2.2, { size: 11, italic: true, align: 'center', color: '#8f2b1f', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
       }
     }

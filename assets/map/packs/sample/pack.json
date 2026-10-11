@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "name": "sample",
+  "comment": "Test art proving partial replacement: two mountain variants at different resolutions (one with an occlusion mask), a broadleaf tree, a village, a castle with a flag point, a burned town (a state variant) and a pixel-art wagon. Everything else stays hand-drawn.",
+  "assets": {
+    "map.terrain.mountain": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "terrain/mountain-a@4x.png",
+          "sourceSize": [
+            128,
+            108
+          ],
+          "logicalSize": [
+            30,
+            25.3
+          ],
+          "anchorPx": [
+            64,
+            102
+          ],
+          "contentBoundsPx": [
+            3,
+            5,
+            122,
+            100
+          ],
+          "occlusionMask": "terrain/mountain-a-mask@4x.png",
+          "layer": "terrain",
+          "sampling": "smooth",
+          "allowFlipX": true
+        },
+        {
+          "id": "b",
+          "src": "terrain/mountain-b@2x.png",
+          "sourceSize": [
+            64,
+            54
+          ],
+          "logicalSize": [
+            30,
+            25.3
+          ],
+          "anchorPx": [
+            32,
+            51
+          ],
+          "contentBoundsPx": [
+            2,
+            5,
+            60,
+            47
+          ],
+          "layer": "terrain",
+          "sampling": "smooth"
+        }
+      ]
+    },
+    "map.terrain.tree.round": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "terrain/tree-round@4x.png",
+          "sourceSize": [
+            40,
+            48
+          ],
+          "logicalSize": [
+            10,
+            12
+          ],
+          "anchorPx": [
+            20,
+            44
+          ],
+          "contentBoundsPx": [
+            3,
+            2,
+            34,
+            44
+          ],
+          "layer": "terrain",
+          "sampling": "smooth",
+          "allowFlipX": true
+        }
+      ]
+    },
+    "map.place.village": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "places/village@4x.png",
+          "sourceSize": [
+            120,
+            92
+          ],
+          "logicalSize": [
+            30,
+            23
+          ],
+          "anchorPx": [
+            60,
+            86
+          ],
+          "contentBoundsPx": [
+            8,
+            18,
+            104,
+            72
+          ],
+          "layer": "places",
+          "sampling": "smooth",
+          "labelOffset": [
+            0,
+            1
+          ]
+        }
+      ]
+    },
+    "map.place.castle": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "places/castle@4x.png",
+          "sourceSize": [
+            112,
+            128
+          ],
+          "logicalSize": [
+            28,
+            32
+          ],
+          "anchorPx": [
+            56,
+            124
+          ],
+          "contentBoundsPx": [
+            8,
+            20,
+            96,
+            106
+          ],
+          "layer": "places",
+          "sampling": "smooth",
+          "attach": {
+            "flag": [
+              56,
+              22
+            ]
+          }
+        }
+      ]
+    },
+    "map.place.town.burned": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "places/town-burned@4x.png",
+          "sourceSize": [
+            136,
+            112
+          ],
+          "logicalSize": [
+            34,
+            28
+          ],
+          "anchorPx": [
+            68,
+            104
+          ],
+          "contentBoundsPx": [
+            14,
+            0,
+            106,
+            106
+          ],
+          "layer": "places",
+          "sampling": "smooth"
+        }
+      ]
+    },
+    "map.marker.wagon": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "markers/wagon-pixel@1x.png",
+          "sourceSize": [
+            12,
+            9
+          ],
+          "logicalSize": [
+            18,
+            13.5
+          ],
+          "anchorPx": [
+            6,
+            8
+          ],
+          "contentBoundsPx": [
+            0,
+            0,
+            12,
+            8
+          ],
+          "layer": "markers",
+          "sampling": "pixel",
+          "allowFlipX": false
+        }
+      ]
+    }
+  }
+}

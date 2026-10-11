@@ -86,7 +86,8 @@ it turns (a refuge whose people flee your cruelty becomes a camp one stage lower
   `lair.js` (defence, guards, warnings, build rate, home workers), `worldsim.js` (accrual, allied help),
   `sleep.js` (yearly domain, breach, preview), `travel.js` (founding on return), `consequences.js`, `goals.js`,
   `preview.js`, `renown.js`, `save.js` (`state.domain`, `occupation`, positions of places made during play).
-- Views: `mapview.js` (overlay, edge, key, pennants, home settlement, glyph variants), `mapart.js` (new glyphs),
+- Views: `mapview.js` (overlay, edge, key, pennants, home settlement, glyph variants), `mapart.js` (new glyphs; all
+  replaceable by map art packs as `map.home.<path>.<stage>`, `map.marker.pennant.<status>`, `map.terrain.*`),
   `lairview.js` (Domain tab), `sleepview.js` (awakening section).
 
 ## Tests

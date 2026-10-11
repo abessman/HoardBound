@@ -1,0 +1,72 @@
+{
+ "generated": "node tools/mapart-export.mjs --only=check",
+ "checks": [
+  {
+   "name": "map drawing is wrapped (procedural copies kept in HB.mapart.proc)",
+   "ok": true
+  },
+  {
+   "name": "no pack: nothing loaded, no warnings",
+   "ok": true
+  },
+  {
+   "name": "glyph placements identical with no pack, the sample pack and the broken pack (2028 glyph calls in 4 chunks at both levels of detail)",
+   "ok": true
+  },
+  {
+   "name": "selection hit areas identical with and without art",
+   "ok": true
+  },
+  {
+   "name": "sample pack: all 6 ids loaded, 7 images, no warnings",
+   "ok": true
+  },
+  {
+   "name": "mountain a (128×108 @4×) and b (64×54 @2×) draw at the same size and anchor",
+   "ok": true
+  },
+  {
+   "name": "broken pack: the valid pine draws, the 7 mistakes warn and fall back",
+   "ok": true
+  },
+  {
+   "name": "campaign saves identical with no pack and with the sample pack (art is not saved)",
+   "ok": true
+  },
+  {
+   "name": "save → load → save round-trips",
+   "ok": true
+  },
+  {
+   "name": "no page errors",
+   "ok": true
+  }
+ ],
+ "footprint": [
+  [
+   "128×108",
+   30,
+   25.3,
+   35,
+   26.106
+  ],
+  [
+   "64×54",
+   30,
+   25.3,
+   35,
+   26.106
+  ]
+ ],
+ "brokenWarnings": [
+  "duplicate id map.terrain.tree.pine: the first one is used",
+  "unknown id map.terrain.volcano (not in src/data/mapspec.js); ignored",
+  "map.place.castle variant bad-anchor: \"anchorPx\" must be [x, y] inside the 32×32 frame",
+  "map.place.castle: no usable variants; procedural art is used",
+  "map.terrain.mountain variant too-big: reaches 8.47 cells from its anchor at its largest size (145.3 px at zoom 1; terrain may reach 2.2 cells); refused, procedural art is used",
+  "map.terrain.mountain: no usable variants; procedural art is used",
+  "map.place.village variant missing: could not load assets/map/packs/test-broken/no-such-file.png",
+  "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused",
+  "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused"
+ ]
+}
