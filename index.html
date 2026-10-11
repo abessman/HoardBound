@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HoardBound</title>
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; background: #120a06; overflow: hidden; }
+  body { display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #1d120a 0%, #0d0704 100%); }
+  canvas { display: block; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+  @font-face { font-family: 'IM Fell English'; src: url('assets/fonts/IMFellEnglish-Regular.woff') format('woff'); font-style: normal; }
+  @font-face { font-family: 'IM Fell English'; src: url('assets/fonts/IMFellEnglish-Italic.woff') format('woff'); font-style: italic; }
+  @font-face { font-family: 'IM Fell English SC'; src: url('assets/fonts/IMFellEnglishSC-Regular.woff') format('woff'); font-style: normal; }
+</style>
+</head>
+<body>
+<canvas id="game" width="1280" height="720"></canvas>
+
+<!-- core -->
+<script src="src/core/namespace.js"></script>
+<script src="src/core/rng.js"></script>
+<script src="src/core/math.js"></script>
+<script src="src/core/noise.js"></script>
+<script src="src/art/palette.js"></script>
+<script src="src/core/settings.js"></script>
+<script src="src/core/input.js"></script>
+<script src="src/core/text.js"></script>
+<script src="src/core/loop.js"></script>
+<script src="src/art/pixel.js"></script>
+<script src="src/art/parchment.js"></script>
+<script src="src/core/ui.js"></script>
+<!-- data -->
+<script src="src/data/names.js"></script>
+<script src="src/data/treasures.js"></script>
+<script src="src/data/events.js"></script>
+<!-- world + game logic (headless-safe) -->
+<script src="src/world/worldgen.js"></script>
+<script src="src/world/world.js"></script>
+<script src="src/game/stats.js"></script>
+<script src="src/game/hoard.js"></script>
+<script src="src/game/state.js"></script>
+<script src="src/game/travel.js"></script>
+<!-- art -->
+<script src="src/art/mapart.js"></script>
+<script src="src/art/sprites.js"></script>
+<script src="src/art/dragon.js"></script>
+<script src="src/art/illustrations.js"></script>
+<!-- views -->
+<script src="src/views/title.js"></script>
+<script src="src/views/settings.js"></script>
+<script src="src/views/newgame.js"></script>
+<script src="src/views/generating.js"></script>
+<script src="src/views/cardview.js"></script>
+<script src="src/views/mapview.js"></script>
+<script src="src/views/debugscenes.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>
