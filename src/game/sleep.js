@@ -22,9 +22,30 @@
       const attention = state.lair.attention || 0;
       const host = HB.factions ? HB.factions.maxHostility(state) : 0;
       const hunters = state.world.factions.reduce((a, f) => a + f.learned.hunters, 0);
-      const thief = HB.clamp(0.04 + value / 40000 + attention * 0.01 - v.concealment * 0.012 + (HB.lair.hoardOverflow(state) > 0 ? 0.05 : 0), 0.02, 0.5);
-      const hunt = HB.clamp((host / 100) * 0.12 + hunters * 0.025 + attention * 0.012 - v.concealment * 0.012 + (state.dragon.alignment < -40 ? 0.03 : 0) + (state.dragon.stats.prestige > 50 ? 0.02 : 0) + (HB.history ? HB.history.activeOrders(state).length * 0.03 : 0), 0, 0.45);
+      const thief = HB.clamp((state.dragon.tier === 0 ? 0.02 : 0.04) + value / 40000 + attention * 0.01 - v.concealment * 0.012 + (HB.lair.hoardOverflow(state) > 0 ? 0.05 : 0), 0.02, 0.5);
+      let hunt = HB.clamp((host / 100) * 0.12 + hunters * 0.025 + attention * 0.012 - v.concealment * 0.012 + (state.dragon.alignment < -40 ? 0.03 : 0) + (state.dragon.stats.prestige > 50 ? 0.02 : 0) + (HB.history ? HB.history.activeOrders(state).length * 0.03 : 0), 0, 0.45);
+      // hunters come for dragons that have made enemies; a hatchling nobody fears is a rumour, not a quarry
+      const enemies = host >= 20 || hunters >= 2 || attention >= 3 || (HB.history && (HB.history.leadHunter(state) || HB.history.activeOrders(state).length));
+      if (state.dragon.tier === 0) hunt *= 0.4;
+      if (!enemies) hunt *= 0.5;
       return { thief, hunt, defense: v.defense, traps: v.traps, ward: v.ward, guards: v.guardStrength, warnings: v.warning + (HB.history ? HB.history.loyalWarning(state) : 0), sleepSafety: v.sleepSafety };
+    },
+    /** chance that one thief / one hunting party is turned back at the door, for given lair values (default: current) */
+    stopChances(state, v) {
+      v = v || HB.lair.values(state);
+      const W = state.world;
+      const avg = (arr, fn) => arr.length ? arr.reduce((a, x) => a + fn(x), 0) / arr.length : 0;
+      const known = W.factions.filter(f => f.dragon.known);
+      const vb = avg(known.length ? known : W.factions, f => f.learned.vaults) * 2;
+      const below = (D, base, spread) => HB.clamp((D - base) / spread, 0, 1);
+      const tb = 6 + state.dragon.tier * 6 + vb;
+      const thief = 0.75 * below(v.defense + v.traps * 0.8 + v.ward * 0.3, tb, 20) + 0.25 * below(v.defense + v.traps * 0.8 + v.ward, tb + 10, 20);
+      const hostile = W.factions.filter(f => f.dragon.hostility > 20);
+      const lead = HB.history ? HB.history.leadHunter(state) : null;
+      const orders = HB.history ? HB.history.activeOrders(state) : [];
+      const base = 18 + avg(hostile.length ? hostile : W.factions, f => f.learned.hunters) * 8 + (lead ? lead.level * 6 : 0) + orders.reduce((a, o) => a + o.strength * 6, 0) + state.dragon.tier * 8;
+      const hunt = below((v.defense + v.traps + (HB.history ? HB.history.loyalGuardBonus(state) : 0)) / 0.85, base, 25);
+      return { thief, hunt };
     },
     preview(state, years) {
       const d = state.dragon, lines = [];
@@ -39,10 +60,20 @@
       const ens = state.lair.workers.filter(w => w.status === 'enslaved').reduce((a, w) => a + w.count, 0);
       if (ens) lines.push({ text: `${ens} enslaved workers: expect sabotage, escapes or revolt over ${HB.fmt.years(Math.max(1, Math.floor(years)))}.`, tone: 'warn' });
       const t = sleep.threatEstimate(state);
+      const fut = HB.lair.valuesAfter(state, HB.DAYS_PER_YEAR);
+      if (fut.done.length && years >= 1) lines.push({ text: `${HB.fmt.list(fut.done.map(id => HB.UPGRADE_BY_ID[id].name))} will be finished in the first year of the sleep, before any thief comes.`, tone: 'good' });
       lines.push({ text: `Defence ${Math.round(t.defense)} (traps ${t.traps}, guards ${Math.round(t.guards)}, ward ${t.ward}); ${t.warnings ? HB.fmt.plural(t.warnings, 'warning') + ' before the worst' : 'no warning before the worst'}; ${t.sleepSafety ? 'a sleeping chamber between you and the door' : 'no sleeping chamber: hunters who get in reach you'}.`, tone: t.defense < 15 ? 'warn' : undefined });
+      const sc = sleep.stopChances(state, years >= 1 ? fut.v : undefined);
+      lines.push({ text: `At the door your defences turn back about ${Math.round(sc.thief * 100)}% of thieves and ${Math.round(sc.hunt * 100)}% of hunting parties.`, tone: sc.thief < 0.3 ? 'warn' : undefined });
       const yrs = Math.max(1, Math.floor(years));
       const pThief = 1 - Math.pow(1 - t.thief, yrs), pHunt = 1 - Math.pow(1 - t.hunt, yrs);
-      lines.push({ text: `Thieves: ${sleep.likelihood(pThief)} over the sleep. Hunters: ${sleep.likelihood(pHunt)}.`, tone: pHunt > 0.5 ? 'bad' : pThief > 0.5 ? 'warn' : 'good' });
+      lines.push({ text: `Thieves: ${sleep.likelihood(pThief)} to try over the sleep. Hunters: ${sleep.likelihood(pHunt)}.`, tone: pHunt > 0.5 ? 'bad' : pThief > 0.3 ? 'warn' : 'good' });
+      if (next && energy >= next.energy && d.age + years >= next.minAge && d.age < next.minAge) {
+        const yrsTo = Math.max(1, Math.ceil(next.minAge - d.age)), pBefore = 1 - Math.pow(1 - t.thief * (1 - sc.thief), yrsTo);
+        const room = (1 + 2.5) * (1 + d.tier * 0.6) * 100, margin = energy - next.energy;
+        if (margin < room) lines.push({ text: `You come of age in year ${yrsTo}. A theft before then (${sleep.likelihood(pBefore)}) could take up to ${HB.fmt.int(room)} gold worth, and you have only ${HB.fmt.int(margin)} to spare: a stronger door, or more treasure, keeps the growth safe.`, tone: 'warn' });
+        else lines.push({ text: `You come of age in year ${yrsTo}, with ${HB.fmt.int(margin)} to spare: a theft would not stop the change.`, tone: 'good' });
+      }
       if (HB.lair.hoardOverflow(state) > 0) lines.push({ text: `${HB.fmt.int(HB.lair.hoardOverflow(state))} gold worth does not fit in the treasure chamber and lies where thieves can carry it off.`, tone: 'warn' });
       { const locked = HB.hoard.protectedIds(state); const loose = state.hoard.items.filter(i => !locked.has(i.id) && HB.hoard.itemDensity(i) >= 300); const lockedN = locked.size;
         if (loose.length) lines.push({ text: `Thieves go for small, valuable things first: ${HB.fmt.plural(loose.length, 'treasure')} worth ${HB.fmt.int(loose.reduce((a, b) => a + b.value, 0))} could fit in a thief’s sack${lockedN ? `; ${lockedN} more ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom` : '. A strongroom would lock the best of them away'}.`, tone: 'warn' });
@@ -86,17 +117,32 @@
       // attention decays with concealment
       const v = HB.lair.values(state);
       state.lair.attention = Math.max(0, (state.lair.attention || 0) - 0.6 - v.concealment * 0.15);
+      // merchants pay a Warden of the Roads
+      if (HB.renown) { const wi = HB.renown.wardenIncome(state); if (wi) { state.hoard.gold += wi; log(`Merchants sent ${wi} gold to the Warden of the Roads.`, 'loyal'); } }
       // loyal houses send gifts
       if (HB.history) for (const l of state.memory.loyalties) if (l.kind === 'house' && rng.chance(0.1)) { const g = 40 * l.strength; state.hoard.gold += g; log(`${HB.fmt.cap(l.name)} sent a gift of ${g} gold to the sleeping dragon.`, 'loyal'); }
       // keeper
       const yd = Math.round(sl.yearsDone);
       if (HB.keeper && HB.keeper.enabled(state) && (yd === sl.keeperAt || yd === sl.keeperAt2)) { const ep = HB.keeper.episode(state, sl, rng); return { kind: 'keeper', episode: ep }; }
+      // coming of age: the change happens in the year you are old enough, if the hoard can feed it then
+      sleep.tryGrow(state, sl, log);
       // threats
       const t = sleep.threatEstimate(state);
       const thiefP = HB.clamp(t.thief + sl.mods.thiefMod * 0.1, 0, 0.6);
       if (rng.chance(thiefP)) { const p = sleep.thieves(state, sl, log, rng); if (p) return p; }
       if (rng.chance(t.hunt)) { const p = sleep.hunters(state, sl, log, rng); if (p) return p; }
       return null;
+    },
+    tryGrow(state, sl, log) {
+      const d = state.dragon, next = HB.TIERS[d.tier + 1];
+      if (sl.grew || !next || d.age < next.minAge || HB.stats.hoardEnergy(state) < next.energy) return false;
+      d.tier++; sl.grew = true; sl.grewYear = state.time.year;
+      const consumed = Math.min(state.hoard.gold, Math.round(next.energy * 0.1 * (1 - (sl.mods.growth || 0))));
+      state.hoard.gold -= consumed; sl.consumed = consumed;
+      HB.stats.recompute(state);
+      log(`In year ${Math.round(sl.yearsDone)} of your sleep you grew into ${HB.fmt.a(next.name.toLowerCase())}.`, 'growth');
+      HB.game.chronicle(state, `Grew into ${HB.fmt.a(next.name.toLowerCase())} in year ${Math.round(sl.yearsDone)} of a long sleep.`, 'growth');
+      return true;
     },
     thieves(state, sl, log, rng) {
       const v = HB.lair.values(state);
@@ -105,7 +151,8 @@
       const f = known.length ? rng.pick(known) : rng.pick(W.factions);
       const name = HB.names.person(rng, f.culture, false);
       const magic = rng.chance(0.25);
-      const strength = 10 + rng.next() * 30 + (magic ? 12 : 0) + f.learned.vaults * 2;
+      // thieves grow bolder as the dragon (and its hoard) grows: a hatchling's cave draws village burglars, an ancient's draws masters
+      const strength = 6 + rng.next() * 20 + state.dragon.tier * 6 + (magic ? 10 : 0) + f.learned.vaults * 2;
       const defense = v.defense + sl.mods.defense + v.traps * 0.8 + (magic ? v.ward + sl.mods.ward : v.ward * 0.3);
       if (strength <= defense) {
         if (v.traps > 0 && rng.chance(0.5)) log(`${name}, a thief out of ${f.name}, died in your traps. ${magic ? 'The runes on the threshold held.' : ''}`, 'thief');
@@ -130,11 +177,12 @@
         if (dest) { dest.special = it.artifactId || null; dest.flags.stolenItem = { name: it.name, year: state.time.year, from: 'the dragon' }; if (!dest.special) { dest.wealth += it.value; } }
         state.memory.stolen = state.memory.stolen || []; state.memory.stolen.push({ name: it.name, artifactId: it.artifactId, year: state.time.year, by: name, factionId: f.id, locId: dest ? dest.id : null });
         log(`${name}, a thief out of ${f.name}, crept past the door and took ${it.name}.${dest ? ` It was carried to ${dest.name}.` : ''}`, 'thief', true);
+        sleep.noteTheft(state, it.value, it.name, magic);
         HB.game.chronicle(state, `${it.name} was stolen by ${name} of ${f.name}${dest ? ' and taken to ' + dest.name : ''}.`, 'theft');
       } else {
         // plunderers carry what fits in their sacks, best value for its size first; treasure lying outside the chamber is easier to haul
         const sto = HB.lair.storage(state);
-        let room = 2 + rng.next() * 4 + Math.min(10, sto.over * 0.5);
+        let room = (1 + rng.next() * 2.5) * (1 + state.dragon.tier * 0.6) + Math.min(10, sto.over * 0.5);
         const taken = [];
         // best value for its size first; coin (100 gold per space) competes with the items
         const cands = state.hoard.items.filter(i => !i.named && !locked.has(i.id)).sort((a, b) => HB.hoard.itemDensity(b) - HB.hoard.itemDensity(a));
@@ -150,10 +198,16 @@
         const what = taken.map(i => HB.hoard.itemLabel(i)).concat(loss ? [`${HB.fmt.int(loss)} gold`] : []);
         const worth = loss + taken.reduce((a, b) => a + b.value, 0);
         log(`Thieves out of ${f.name} led by ${name} plundered the hoard: ${what.length ? HB.fmt.list(what) : 'nothing worth the climb'} gone${taken.length ? ' — small things, worth the carrying' : ''}.`, 'thief', worth > 0);
+        if (worth > 0) sleep.noteTheft(state, worth, null, magic);
         HB.game.chronicle(state, `Thieves from ${f.name} took ${HB.fmt.int(worth)} gold worth from the sleeping dragon’s hoard.`, 'theft');
       }
       f.learned.vaults++;
       return null;
+    },
+    noteTheft(state, worth, namedName, magic) {
+      const P = state.problems || (state.problems = { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 });
+      P.thefts++; P.stolenValue += Math.round(worth); if (namedName) P.stolenNamed.push(namedName); if (magic) P.magicThefts = (P.magicThefts || 0) + 1;
+      if (HB.consequences) HB.consequences.react(state, `Thieves robbed your hoard of ${namedName || HB.fmt.int(worth) + ' gold worth'}.`, `because a hoard worth ${HB.fmt.int(HB.game.hoardValue(state) + worth)} lay behind a door they could pass`);
     },
     stolenDestination(state, f, rng) {
       const W = state.world;
@@ -170,6 +224,7 @@
       const leaderName = lead ? lead.name : HB.names.person(rng, f.culture, false);
       const strength = 18 + rng.next() * 25 + f.learned.hunters * 8 + (lead ? lead.level * 6 : 0) + orders.reduce((a, o) => a + o.strength * 6, 0) + state.dragon.tier * 8;
       const party = { f, leaderName, lead, strength, orderName: orders.length ? orders[0].name : null };
+      if (state.problems) state.problems.hunts++;
       const defense = v.defense + sl.mods.defense + v.traps + (HB.history ? HB.history.loyalGuardBonus(state) : 0);
       // phase 1: the entrance
       if (defense >= strength * 0.85) {
@@ -189,6 +244,7 @@
     /** hunters reach the inner lair. woke: the dragon chose to wake beforehand */
     breach(state, sl, log, rng, party, woke) {
       const v = HB.lair.values(state), d = state.dragon, s = d.stats;
+      if (state.problems && !woke) state.problems.breaches++;
       const power = (s.bite + s.breath) * 3 + s.defense * 2 + d.health / 4 + d.tier * 20;
       if (woke) return sleep.fight(state, sl, log, rng, party, power, 'awake');
       if (v.sleepSafety >= 1 + sl.mods.ward / 100) {
@@ -264,7 +320,8 @@
         const next = HB.TIERS[d.tier + 1];
         const energy = HB.stats.hoardEnergy(state);
         const grown = sl.yearsDone >= 1 && !sl.interrupted;
-        if (next && d.age >= next.minAge && energy >= next.energy && sl.yearsDone >= 1) {
+        if (sl.grew) { summary.tierUp = true; summary.consumed = sl.consumed; summary.grewYear = sl.grewYear; }
+        else if (next && d.age >= next.minAge && energy >= next.energy && sl.yearsDone >= 1) {
           d.tier++; summary.tierUp = true;
           const consumed = Math.min(state.hoard.gold, Math.round(next.energy * 0.1 * (1 - (sl.mods.growth || 0))));
           state.hoard.gold -= consumed; summary.consumed = consumed;

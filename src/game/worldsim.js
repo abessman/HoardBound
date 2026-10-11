@@ -35,7 +35,7 @@
         const near = roads.filter(R => W.locations[R.a].regionId === 0 || W.regions[W.locations[R.a].regionId].tier <= state.dragon.tier);
         const R = rng.pick(near.length ? near : roads); if (!R) break;
         const culture = W.locations[R.a].factionId >= 0 ? W.factions[W.locations[R.a].factionId].culture : 'westron';
-        const level = 1 + (rng.chance(0.3) ? 1 : 0) + state.dragon.tier;
+        const level = 1 + (rng.chance(0.3) ? 1 : 0) + state.dragon.tier + (HB.renown && HB.renown.has(state, 'herobane') ? 1 : 0);
         state.entities.push({ id: HB.nextId('ent'), kind: 'hero', name: HB.names.person(rng, culture, false), level, lance: rng.chance(0.15 + state.dragon.tier * 0.1), roadIdx: W.roads.indexOf(R), dir: rng.chance(0.5) ? 1 : -1, t: rng.next(), speed: 8, factionId: W.locations[R.a].factionId, x: 0, y: 0, dead: false, culture });
       }
       for (const e of state.entities) if (e.kind === 'hero') sim.placeOnRoad(state, e);
@@ -64,6 +64,7 @@
         sim.placeOnRoad(state, e);
       }
       state.entities = state.entities.filter(e => !e.dead);
+      sim.updateThreats(state, days, rng);
       sim.spawnCaravans(state, 1);
       if (rng.chance(days * 0.05)) sim.spawnHeroes(state);
       if (HB.lair && HB.lair.tickDays) { const done = HB.lair.tickDays(state, days); if (done.length && HB.isBrowser && HB.flow.map) HB.flow.map.showToast(`${HB.UPGRADE_BY_ID[done[0].id].name} is finished`); }
@@ -71,6 +72,61 @@
       if (HB.factions && HB.factions.tickDays) HB.factions.tickDays(state, days);
     },
     tickRealtime(state, dt) { /* nothing continuous yet */ },
+    // ---------- outlaw raids on farms and villages: a problem you can solve (or ignore)
+    /** the camp whose outlaws would raid L */
+    threatSource(state, L) {
+      const W = state.world;
+      const n = HB.world.nearest(W, L.x, L.y, C => (C.type === 'camp' && C.camp !== 'hunter' || C.type === 'warren') && C.state === 'normal');
+      return n && n.d <= 24 ? n.L : null;
+    },
+    /** start a raid on a farm or village near home (or near the dragon); opts.first picks the one glimpsed from the cave */
+    spawnThreat(state, rng, opts = {}) {
+      const W = state.world, H = W.home, d = state.dragon;
+      const ok = (L) => (L.type === 'farm' || L.type === 'village') && L.state === 'normal' && !L.threat && !(L.flags.noThreatUntil > state.time.totalDays) && HB.world.canEnterRegion(state, L.regionId);
+      let L = null;
+      if (opts.first) {
+        const n = HB.world.nearest(W, H.x, H.y, C => ok(C) && C.knowledge.seen);
+        L = n && n.d <= 18 ? n.L : null;
+        if (!L) { const m = HB.world.nearest(W, H.x, H.y, ok); L = m && m.d <= 20 ? m.L : null; }
+      } else {
+        const cx = rng.chance(0.5) ? d.x : H.x, cy = rng.chance(0.5) ? d.y : H.y;
+        const cands = HB.world.locationsNear(W, cx, cy, 26, ok).map(o => o.L);
+        L = cands.length ? rng.pick(cands.slice(0, 8)) : null;
+      }
+      if (!L) return null;
+      const camp = sim.threatSource(state, L);
+      const goblin = camp && (camp.type === 'warren' || camp.camp === 'goblin');
+      const campName = camp ? camp.name : 'the hills';
+      L.threat = { campId: camp ? camp.id : -1, campName, goblin: !!goblin, since: state.time.totalDays, until: state.time.totalDays + (opts.first ? 40 : 14 + rng.int(12)), raiders: opts.first ? 3 : 2 + L.tier + rng.int(2) };
+      if (opts.first) { HB.world.sight(state, L, 1.6); if (camp) HB.world.sight(state, camp, 1.2); }
+      if (L.knowledge.seen && !opts.first && state.phase !== 'sleeping') {
+        const msg = `${goblin ? 'Goblins' : 'Outlaws'} from ${campName} are sacking ${L.name}. Drive them off and its people will remember.`;
+        if (HB.isBrowser && HB.flow && HB.flow.map && state.phase !== 'sleeping') HB.flow.map.showToast(`${L.name} is under attack`, 4);
+        if (HB.consequences) HB.consequences.react(state, msg, 'outlaws grow bold where no lord keeps the roads');
+      }
+      return L;
+    },
+    updateThreats(state, days, rng) {
+      const W = state.world, now = state.time.totalDays;
+      for (const L of W.locations) if (L.threat && now >= L.threat.until) sim.threatFalls(state, L, rng);
+      const active = W.locations.reduce((a, L) => a + (L.threat ? 1 : 0), 0);
+      if (active < 2 && rng.chance(days >= 300 ? 0.15 : Math.min(0.5, days * 0.015))) sim.spawnThreat(state, rng);
+    },
+    /** nobody came: the raiders take what they want */
+    threatFalls(state, L, rng) {
+      const W = state.world, t = L.threat; L.threat = null; L.flags.noThreatUntil = state.time.totalDays + 360;
+      const loss = Math.round(L.wealth * 0.4);
+      L.wealth -= loss;
+      const camp = t.campId >= 0 ? W.locations[t.campId] : null;
+      if (camp) camp.wealth += Math.round(loss * 0.5);
+      if (rng.chance(L.tier === 0 ? 0.5 : 0.3)) { L.state = 'burned'; L.flags.burnedYear = state.time.year; }
+      L.memory.push({ year: state.time.year, kind: 'sacked', by: t.campName });
+      if (L.memory.length > 12) L.memory.shift();
+      const protectedByYou = L.tribute && L.tribute.willing && !L.tribute.lapsed;
+      if (protectedByYou) { L.trust = Math.max(0, L.trust - 15); }
+      const cared = L.trust >= 10 || protectedByYou || L.memory.some(m => m.kind === 'defended');
+      if (L.knowledge.seen && cared && HB.consequences) HB.consequences.react(state, `${L.name} was ${L.state === 'burned' ? 'burned' : 'sacked'} by raiders from ${t.campName}${camp ? `, and ${camp.name} grew richer` : ''}.${protectedByYou ? ' They had trusted you to keep the raiders off; their trust falls.' : ''}`, 'nobody drove the raiders off');
+    },
     /** yearly development of settlements; returns events */
     yearly(state, rng) {
       const W = state.world, ev = [], year = state.time.year;

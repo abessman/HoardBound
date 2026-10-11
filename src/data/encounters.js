@@ -5,7 +5,9 @@
 
   const gold = (ctx, lo, hi) => Math.round(ctx.rng.between(lo, hi) * (1 + ctx.L.wealth / 2000));
   const takeGold = (ctx, g) => { ctx.state.cargo.gold += g; ctx.stolen += g; return g; };
-  const takeItems = (ctx, cat, n) => { const out = []; for (let i = 0; i < n; i++) { const it = HB.hoard.makeItem(ctx.rng.pick(HB.LOOT[cat]), ctx.rng, ctx.L.name, ctx.state.time.year); if (!HB.hoard.canCarry(ctx.state, it.weight + ctx.extraWeight)) break; ctx.state.cargo.items.push(it); ctx.stolen += it.value; ctx.extraWeight += it.weight; out.push(it); } return out; };
+  // what a place can give is bounded by what it has: a shrine does not hide a king's crown
+  const fitting = (ctx, cat) => { const cap = Math.max(60, ctx.L.wealth * 0.6); const defs = HB.LOOT[cat].filter(d => d[2] <= cap); return { defs: defs.length ? defs : [HB.LOOT[cat].slice().sort((a, b) => a[2] - b[2])[0]], cap }; };
+  const takeItems = (ctx, cat, n) => { const out = []; for (let i = 0; i < n; i++) { const { defs, cap } = fitting(ctx, cat); const it = HB.hoard.makeItem(ctx.rng.pick(defs), ctx.rng, ctx.L.name, ctx.state.time.year); it.value = Math.min(it.value, Math.round(Math.max(cap, 40))); if (!HB.hoard.canCarry(ctx.state, it.weight + ctx.extraWeight)) break; ctx.state.cargo.items.push(it); ctx.stolen += it.value; ctx.extraWeight += it.weight; out.push(it); } return out; };
   const takeArtifact = (ctx) => { if (!ctx.L.special) return null; const it = HB.hoard.makeArtifact(ctx.L.special, ctx.L.name, ctx.state.time.year); if (!HB.hoard.canCarry(ctx.state, it.weight + ctx.extraWeight)) return false; ctx.state.cargo.items.push(it); ctx.stolen += it.value; ctx.L.special = null; ctx.artifact = it; return it; };
   const hurt = (ctx, lo, hi) => { const d = Math.round(ctx.rng.between(lo, hi) - ctx.stats.defense * 0.5); const dmg = Math.max(1, d); ctx.state.dragon.health = Math.max(1, ctx.state.dragon.health - dmg); ctx.damage += dmg; return dmg; };
   const list = (items) => items.length ? HB.fmt.list(items.map(i => HB.hoard.itemLabel(i))) : 'nothing';

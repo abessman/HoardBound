@@ -4,6 +4,10 @@
 
 The map is a hand-drawn Tolkien-style parchment that inks itself in as you fly. The dragon and its hoard are pixel art that changes with age, deeds and treasure.
 
+## The first goal
+
+You hatch with one goal on screen: **become a young dragon** (hoard strength 1 000 stored at home, age 8). The panel under your name shows both and the next step; **Aims** (G) lists what you could do now, tagged by what it serves (grow stronger, build trust, build fear, secure your sleep, become known), and what each would bring. A farm or village near your cave is being sacked by outlaws on day one: drive them off and its people will trust you, work for you and give you a name. After every encounter a short summary says what changed. Reinforce the entrance before you sleep; you grow in the year you come of age.
+
 ## Play it
 
 No install, no build step, no backend.
@@ -18,7 +22,7 @@ Saves live in the browser's localStorage (autosave on every return home and afte
 
 | Where | Mouse / touch | Keyboard | Gamepad |
 | --- | --- | --- | --- |
-| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **C** chronicle, **F** realms, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
+| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **G** aims, **C** chronicle, **F** realms, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
 | Flight | Pause / Speed / Turn back buttons | **P** pause, hold **Shift** fast, hold **Ctrl** slow | RB fast, LB slow |
 | Raid | click a highlighted target or a chip in the bar; click an action | **1–9** actions, **Space** pass, **Q** next target, **W** withdraw, **Shift** fast | A first action, X pass, B withdraw |
 | Panels | click | arrows move focus, Enter select, Esc back | d-pad / stick, A, B |
@@ -27,12 +31,14 @@ Tooltips explain every action, cost and disabled button.
 
 ## The loop
 
+0. Check your goal (panel under your name, or **Aims**): what you need, what you could do next, what each choice brings.
 1. Inspect a target: distance, stamina there and back, estimated wealth and defences (uncertain until scouted), what makes it dangerous.
 2. Fly there. The flight costs stamina, takes days, reveals the map and may trigger road events.
 3. Raid: the dragon advances through a side-view scene; time slows when an opportunity appears. Grab exposed loot, bite isolated sleepers, burn buildings (and what is inside them), seize a noble, eat a sheep, roar, dodge the ballista, withdraw. Alarm rises; bells, militia, archers, ballistae and champions follow.
-4. Fly home with what you can carry. Only treasure stored at home powers you.
-5. At the lair: spend gold on upgrades (with cost, balance and stat change shown first), hire or enslave workers, ransom or release captives, demand tribute from the frightened or protection money from the grateful.
-6. Sleep: five years, twenty, fifty, a century. You heal and grow (if the hoard can feed the change); towns grow, lords die, wars move borders, thieves and hunters test the lair. Wake into the same world, changed.
+4. Read what changed: a summary after every encounter names the loot and its effect once stored, how each realm's fear, hostility and trust moved, what they learned, and any name you earned.
+5. Fly home with what you can carry. Only treasure stored at home powers you.
+6. At the lair: spend gold on upgrades (with cost, balance and stat change shown first), hire or enslave workers, ransom or release captives, demand tribute from the frightened or protection money from the grateful.
+7. Sleep: five years, twenty, fifty, a century. You heal and grow (if the hoard can feed the change); towns grow, lords die, wars move borders, thieves and hunters test the lair. Wake into the same world, changed.
 
 ## Project layout
 
@@ -42,8 +48,9 @@ src/core/             rng, noise, input, ui toolkit, text, loop, save, audio, se
 src/art/              palette, pixel helpers + sprite registry, sprites, dragon, map glyphs, parchment, illustrations
 src/world/            worldgen (terrain, rivers, regions, factions, locations, roads), world helpers (fog, gating)
 src/game/             state, stats, hoard, travel, preview, raid/ (engine + templates), encounter, lair, ransom, tribute,
-                      factions, history, worldsim, keeper, sleep, petitions
-src/views/            title, newgame, settings, generating, intro, cardview, raidview, lairview, sleepview, menus, mapview
+                      factions, history, worldsim, keeper, sleep, petitions, renown, consequences, goals
+src/views/            title, newgame, settings, generating, intro, cardview, raidview, lairview, sleepview, consequenceview,
+                      aimsview, menus, mapview
 src/data/             names, treasures (loot + artifacts), events (travel/roost), encounters (decision cards), upgrades/workers
 tools/                screenshot.mjs, playthrough.mjs (Playwright), headless.js + test.js + worldstats.js (Node)
 docs/                 BRIEF.md (original brief), FEATURE_STATUS.md
@@ -52,7 +59,7 @@ DESIGN.md             design decisions
 
 ### Tests and tools
 
-- `node tools/test.js [seed]` — headless simulation: world generation, travel, raid, deposit, economy, ransom, sleep, save round-trip, card encounters, tribute, defeat safety.
+- `node tools/test.js [seed]` — headless simulation: world generation, travel, raid, deposit, economy, ransom, sleep, save round-trip, card encounters, tribute, defeat safety, the goal milestone, the defend raid, renown, consequence summaries, why-now reasons.
 - `node tools/worldstats.js [seed] [size] [--ascii]` — world generation report.
 - `node tools/screenshot.mjs out.png "js" --url="index.html?debug=1&scene=map"` — headless screenshot after running JS in the page.
 - `node tools/playthrough.mjs shots/` — scripted full run with screenshots at every stage.

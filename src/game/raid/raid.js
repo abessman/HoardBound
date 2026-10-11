@@ -21,9 +21,12 @@
         camera: { x: 0 },
         length: scene.length, escalations: scene.escalations || [], nextEntityId: 1000,
         ended: false, endT: 0,
+        mode: scene.mode || 'raid', fled: 0, recoveredValue: 0, recoveredGold: 0, raiderBurned: 0, raidersKilled: 0,
       };
       for (const e of r.entities) raid.initEntity(r, e);
+      for (const e of r.entities) if (e.preBurning) { e.burning = e.preBurning; e.raiderFire = true; }
       raid.msg(r, scene.intro || 'The raid begins.');
+      if (scene.hint) raid.msg(r, scene.hint, 'alarm');
       return r;
     },
     initEntity(r, e) {
@@ -70,9 +73,13 @@
       // alarm: rises slowly until you are noticed (alarm 25), then at the scene's rate
       const alarmRate = (r.scene.alarmBase || 1.6) * (st.dragon.stats.alarmRate || 1) * (r.alarm < 25 ? 0.45 : 1);
       r.alarm = Math.min(100, r.alarm + alarmRate * sdt);
+      // defending: the bar is the raiders' progress, a clock your noise does not speed up
+      if (r.mode === 'defend') { r.clock = (r.clock || 0) + alarmRate * sdt; r.alarm = Math.min(100, r.clock); }
       raid.checkEscalation(r);
       // opportunities
       raid.updateOpportunities(r);
+      // defend: the village is saved when no raider is left
+      if (r.mode === 'defend' && !r.outcome && !r.entities.some(e => e.raider && !e.dead)) { raid.msg(r, 'The last raider is gone.', 'good'); raid.end(r, 'defended'); }
       // death
       if (D.hp <= 0 && !r.outcome) raid.end(r, 'defeated');
     },
@@ -102,9 +109,11 @@
       const dragonLow = D.y > GROUND - 40;
       if (e.dead || e.building || e.loot && !e.person && !e.animal) return;
       // fear / flee
-      if (e.fearT > 0) {
-        const dir = dx > 0 ? -1 : 1;
-        e.x += dir * (e.speed || 20) * 1.2 * dt; e.facing = dir; e.state = 'flee'; return;
+      if (e.fearT > 0 || e.routed) {
+        const dir = e.routed ? (e.fleeDir || (dx > 0 ? -1 : 1)) : dx > 0 ? -1 : 1;
+        e.x += dir * (e.speed || 20) * 1.2 * dt; e.facing = dir; e.state = 'flee';
+        if (e.raider && (e.x < -14 || e.x > r.length + 14)) raid.raiderGone(r, e);
+        return;
       }
       if (e.state === 'asleep') { if (r.alarm >= 25 || adx < 18 && dragonLow) { e.state = 'alert'; raid.msg(r, `${e.label || e.kind} wakes.`); } return; }
       if (e.civilian || e.animal) {
@@ -164,7 +173,7 @@
     kill(r, e, how) {
       e.dead = true; e.state = 'dead';
       if (e.civilian) { r.civiliansKilled++; }
-      else if (e.defender) { r.kills++; }
+      else if (e.defender) { r.kills++; if (e.raider) r.raidersKilled++; }
       if (e.animal) r.ate += 0;
       raid.msg(r, `${HB.fmt.cap(e.label || e.kind)} ${how === 'burned' ? 'burns' : 'falls'}.`);
       // loot carried by the fallen
@@ -172,7 +181,7 @@
     },
     makeLoot(r, def, x, access) { const e = Object.assign({ kind: def.sprite || 'coins', x, y: GROUND, w: 10, h: 8, loot: def, access: access || def.access || 'exposed', label: def.label || def.name || 'treasure' }, {}); raid.initEntity(r, e); return e; },
     buildingBurned(r, e) {
-      e.burnedDown = true; r.burned++;
+      e.burnedDown = true; if (e.raiderFire) r.raiderBurned++; else r.burned++;
       let inside = r.entities.filter(o => o.insideOf === e.id && !o.dead && o.loot);
       for (const o of inside) {
         if (o.loot.gold) { const kept = Math.random() < 0.6; if (kept) { o.insideOf = null; o.access = 'exposed'; o.y = GROUND; o.x = e.x + (Math.random() - 0.5) * 20; raid.msg(r, `Coin spills from the burning ${e.label || 'building'}.`); } else { o.dead = true; r.destroyedValue += o.loot.value || 0; } }
@@ -229,7 +238,7 @@
       const isolated = !r.entities.some(o => o !== e && o.defender && !o.dead && Math.abs(o.x - e.x) < 26 && o.state !== 'asleep');
       if (e.state === 'aiming') out.push({ id: 'dodge', label: 'Dodge the bolt', desc: 'Costs 5 stamina; the bolt will almost surely miss.', risk: 'safe', enabled: stamOK(5), reason: 'Not enough stamina' });
       if (e.loot && !e.person && !e.animal) {
-        if (e.access === 'exposed') out.push({ id: 'grab', label: `Grab ${e.label}`, desc: `${e.loot.value ? HB.fmt.int(e.loot.value) + ' gold worth, ' : ''}weighs ${e.loot.weight}. Alarm rises a little.`, risk: 'low', enabled: e.loot.weight <= weightLeft + 1e-6, reason: `Too heavy: ${e.loot.weight} with ${Math.max(0, weightLeft).toFixed(1)} left`, showDisabled: true });
+        if (e.access === 'exposed') out.push({ id: 'grab', label: `${e.loot.recovered ? 'Take back' : 'Grab'} ${e.label}`, desc: `${e.loot.value ? HB.fmt.int(e.loot.value) + ' gold worth, ' : ''}weighs ${e.loot.weight}. ${e.loot.recovered ? 'Stolen from the village: afterwards you choose to return it or keep it.' : 'Alarm rises a little.'}`, risk: 'low', enabled: e.loot.weight <= weightLeft + 1e-6, reason: `Too heavy: ${e.loot.weight} with ${Math.max(0, weightLeft).toFixed(1)} left`, showDisabled: true });
         else if (e.access === 'inside') out.push({ id: 'smash', label: `Smash open ${e.container || 'it'}`, desc: 'Land and break it open. Takes time; defenders close in; alarm rises sharply.', risk: 'high', enabled: s.canLand && stamOK(10), reason: s.canLand ? 'Not enough stamina' : 'Only an adult dragon can land and smash', showDisabled: true });
       }
       if (e.building && !e.burnedDown && !e.burning) out.push({ id: 'breathe', label: `Burn ${e.label}`, desc: `${e.contents || 'What is inside may burn with it.'} Costs 12 stamina; alarm rises sharply; the realm will hate you for it.`, risk: 'mid', enabled: stamOK(12), reason: 'Not enough stamina' });
@@ -291,8 +300,9 @@
     },
     takeLoot(r, e) {
       const L = e.loot;
-      if (L.gold) { r.loot.gold += L.gold; r.stolenValue += L.gold; raid.msg(r, `You snatch ${HB.fmt.int(L.gold)} gold.`, 'good'); }
-      else if (L.item) { r.loot.items.push(L.item); r.stolenValue += L.item.value; raid.msg(r, `You take ${L.item.named ? L.item.name : L.item.name}.`, 'good'); if (L.item.named) r.tookArtifact = L.item; }
+      if (L.recovered) { r.recoveredValue += L.value || L.gold || 0; if (L.gold) r.recoveredGold += L.gold; else if (L.item) L.item.recovered = r.target.id; }
+      if (L.gold) { r.loot.gold += L.gold; if (!L.recovered) r.stolenValue += L.gold; raid.msg(r, L.recovered ? `You take back ${HB.fmt.int(L.gold)} stolen gold.` : `You snatch ${HB.fmt.int(L.gold)} gold.`, 'good'); }
+      else if (L.item) { r.loot.items.push(L.item); if (!L.recovered) r.stolenValue += L.item.value; raid.msg(r, `You take ${L.recovered ? 'back ' : ''}${L.item.name}.`, 'good'); if (L.item.named) r.tookArtifact = L.item; }
       e.dead = true; r.alarm = Math.min(100, r.alarm + 6);
       raid.spawnParticles(r, e.x, e.y - 6, 6, 'coin');
       if (L.watchers) r.alarm = Math.min(100, r.alarm + L.watchers);
@@ -303,7 +313,7 @@
       e.hp -= dmg; e.state = e.state === 'asleep' ? 'alert' : e.state;
       raid.spawnParticles(r, e.x, e.y - 8, 5, 'spark');
       r.alarm = Math.min(100, r.alarm + 5);
-      if (e.hp <= 0) raid.kill(r, e, 'bitten'); else { raid.msg(r, `You tear at ${e.label}.`); if (e.melee && e.cooldown <= 0) raid.meleeHit(r, e); }
+      if (e.hp <= 0) raid.kill(r, e, 'bitten'); else { raid.msg(r, `You tear at ${e.label}.`); if (raid.maybeRout(r, e)) return; if (e.melee && e.cooldown <= 0) raid.meleeHit(r, e); }
     },
     applyBreath(r, e) {
       const st = r.state, s = st.dragon.stats, D = r.dragon;
@@ -318,7 +328,7 @@
         if (o.loot && !o.person && !o.animal) { if (o.loot.gold) continue; if (Math.random() < 0.5) { o.dead = true; r.destroyedValue += o.loot.value || 0; raid.msg(r, `${HB.fmt.cap(o.label)} is destroyed by your breath.`); } continue; }
         const dmg = s.breath * (0.8 + Math.random() * 0.4) * (dx > 40 ? 0.6 : 1);
         o.hp -= dmg; if (o.person || o.animal) o.burning = Math.max(o.burning, 1.5);
-        if (o.hp <= 0) raid.kill(r, o, 'burned'); else { o.fearT = Math.max(o.fearT, 1.5); }
+        if (o.hp <= 0) raid.kill(r, o, 'burned'); else { o.fearT = Math.max(o.fearT, 1.5); raid.maybeRout(r, o); }
       }
       raid.spawnParticles(r, D.x + dir * 30, D.y, 12, 'fire');
       if (e && e.kind === 'ballista' && !e.dead) { e.hp = 0; raid.kill(r, e, 'burned'); }
@@ -341,7 +351,7 @@
         if (o.dead || !(o.person || o.animal)) continue;
         if (Math.abs(o.x - D.x) > 130) continue;
         const resist = (o.courage || 1) * (o.kind === 'hero' ? 1.5 : 1);
-        if (s.roar * (0.7 + Math.random() * 0.6) >= resist) { o.fearT = 3 + s.roar; n++; if (o.state === 'aiming') o.state = 'alert'; }
+        if (s.roar * (0.7 + Math.random() * 0.6) >= resist) { o.fearT = 3 + s.roar; n++; if (o.state === 'aiming') o.state = 'alert'; if (o.raider) raid.rout(r, o); }
       }
       raid.msg(r, n ? `Your roar scatters ${n} of them.` : 'Your roar echoes. Nobody runs.', n ? 'good' : 'info');
     },
@@ -376,7 +386,23 @@
       }
       r.pursued = r.alarm >= 70 || r.captured > 0;
     },
-    stageName(r) { return r.alarm < 25 ? 'Quiet' : r.alarm < 50 ? 'Bells ringing' : r.alarm < 70 ? 'Militia gathering' : r.alarm < 85 ? 'Archers organised' : 'Full alarm'; },
+    /** a wounded or terrified raider breaks and runs for the hills */
+    maybeRout(r, e) { if (!e.raider || e.dead || e.routed) return false; if (e.hp < e.maxHp * 0.5 && Math.random() < 0.7) { raid.rout(r, e); return true; } return false; },
+    rout(r, e) {
+      if (e.routed) return;
+      e.routed = true; e.fleeDir = e.x < r.length / 2 ? -1 : 1;
+      if (e.drop && Math.random() < 0.5) { r.entities.push(raid.makeLoot(r, e.drop, e.x, 'exposed')); raid.msg(r, `${HB.fmt.cap(e.label)} drops what they stole and runs.`, 'good'); e.drop = null; }
+      else raid.msg(r, `${HB.fmt.cap(e.label)} breaks and runs${e.drop ? ', still clutching the loot' : ''}.`, 'good');
+    },
+    raiderGone(r, e) { e.dead = true; e.fled = true; r.fled++; raid.msg(r, `${HB.fmt.cap(e.label)} flees into the hills${e.drop ? ' with what they stole' : ''}.`); },
+    /** outlaws set a building alight (does not count as your burning) */
+    raiderFire(r, kind) {
+      const b = r.entities.find(e => e.building && !e.burning && !e.burnedDown && (!kind || e.kind === kind) && (kind || e.kind === 'house'));
+      if (b) { b.burning = 8; b.raiderFire = true; }
+    },
+    stageName(r) {
+      if (r.mode === 'defend') return r.alarm < 30 ? 'Raiders looting' : r.alarm < 60 ? 'Roofs burning' : r.alarm < 90 ? 'More raiders coming' : 'The village burns';
+      return r.alarm < 25 ? 'Quiet' : r.alarm < 50 ? 'Bells ringing' : r.alarm < 70 ? 'Militia gathering' : r.alarm < 85 ? 'Archers organised' : 'Full alarm'; },
   };
 
   // archetypes

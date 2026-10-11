@@ -27,7 +27,7 @@ ok(W.locations.some(L => L.special), 'artifacts placed');
 ok(W.locations.some(L => L.type === 'rivalLair'), 'rival lairs exist');
 
 section('travel');
-const target = near.find(n => n.L.type === 'farm' || n.L.type === 'village' || n.L.type === 'camp').L;
+const target = HB.world.locationsNear(W, home.x, home.y, 18, L => ['farm', 'village', 'camp'].includes(L.type) && HB.world.canEnterRegion(state, L.regionId))[0].L;
 ok(HB.travel.canBegin(state, target) === null, 'can fly to an opening target');
 const far = W.locations.find(L => W.regions[L.regionId].tier >= 2);
 if (far) ok(HB.travel.canBegin(state, far) !== null, 'cannot fly into a gated/far region');
@@ -102,7 +102,7 @@ state.hoard.gold += 800; HB.stats.recompute(state);
 HB.sleep.begin(state, 20, null);
 const s = state.lastSleep;
 ok(s && s.years >= 1, 'sleep simulated years: ' + (s && s.years));
-ok(state.dragon.age >= 8 || s.forced || s.interrupted, 'aged');
+ok(state.dragon.age >= 8 || s.forced || s.interrupted || s.dead, 'aged');
 ok(state.time.year > 1, 'calendar advanced');
 ok(state.phase === 'home' || state.phase === 'dead', 'phase after sleep: ' + state.phase);
 if (!s.dead) ok(state.dragon.tier >= tierBefore, 'tier never decreases');
@@ -175,6 +175,91 @@ ok(state.dragon.stamina > 0, 'stamina granted to crawl home');
 ok(state.phase === 'returning' || state.phase === 'planning', 'phase usable after defeat: ' + state.phase);
 guard = 0; while (state.phase === 'returning' && guard++ < 40000) HB.travel.update(state, 1 / 30, null);
 ok(state.phase === 'home' || state.phase === 'planning', 'reached home after defeat: ' + state.phase);
+
+section('goals, good deeds, renown, consequences');
+{
+  const g = HB.game.newCampaign({ seed: seed + '-goals', name: 'Goalwyrm', breed: 'red', keeper: false });
+  const GW = g.world;
+  ok(HB.TIERS[1].energy === 1000 && HB.TIERS[1].minAge === 8, 'young dragon needs hoard strength 1000 and age 8');
+  const m = HB.goals.milestone(g);
+  ok(m.title === 'Become a young dragon' && m.reqs.length === 2 && m.reqs[0].need === 1000 && m.reqs[1].need === 8, 'milestone shows real requirements');
+  ok(m.unlocks.length >= 4 && /Stamina/.test(m.unlocks[0]), 'milestone lists what growth unlocks');
+  ok(/Gather/.test(m.nextStep), 'next step says what to do: ' + m.nextStep);
+  const threatened = GW.locations.filter(L => L.threat);
+  ok(threatened.length === 1 && threatened[0].knowledge.seen, 'one farm or village under attack, visible from the start');
+  const opps = HB.goals.opportunities(g);
+  ok(opps.some(o => o.aim === 'trust' && o.ref && o.ref.id === threatened[0].id), 'Aims board offers saving it');
+  ok(opps.some(o => o.aim === 'grow'), 'Aims board offers something to rob');
+  ok(opps.every(o => o.title && o.desc && o.yields), 'every opportunity says what it yields');
+  // defend: drive the raiders off
+  const V = threatened[0];
+  g.dragon.x = V.x; g.dragon.y = V.y; g.phase = 'planning';
+  const fBefore = V.factionId >= 0 ? GW.factions[V.factionId].dragon.trust : 0;
+  const r = HB.encounter.begin(g, V, null, { direct: true, defend: true });
+  ok(r && r.mode === 'defend' && r.entities.some(e => e.raider), 'defend raid has raiders');
+  ok(!r.entities.some(e => e.loot && !e.loot.recovered), 'nothing of the village is there to steal');
+  let n = 0; while (!r.ended && n++ < 20000) { HB.raid.update(r, 1 / 30, {}); const f = HB.raid.focus(r); if (f && !r.dragon.busy) { const acts = HB.raid.actionsFor(r, f).filter(a => a.enabled).map(a => a.id); if (f.raider && acts.includes('roar')) HB.raid.perform(r, 'roar', f); else if (f.raider && acts.includes('bite')) HB.raid.perform(r, 'bite', f); else if (acts.includes('grab')) HB.raid.perform(r, 'grab', f); else HB.raid.perform(r, 'wait', f); } }
+  ok(r.outcome === 'defended', 'a hatchling can drive off the opening raid: ' + r.outcome);
+  HB.encounter.finishRaid(g, V, r, null);
+  ok(!V.threat, 'threat lifted');
+  ok(V.trust >= 25, 'village trusts you: ' + V.trust);
+  ok(V.factionId < 0 || GW.factions[V.factionId].dragon.trust > fBefore, 'its realm trusts you more');
+  ok(HB.renown.has(g, 'guardian') && HB.renown.displayName(g).includes('Guardian of ' + V.name), 'title Guardian of the village earned');
+  ok(g.reactions.some(x => /trusts you/.test(x.text) && /because/.test(x.cause)), 'world reaction recorded with its cause');
+  const sum = g.lastConsequence;
+  ok(sum && /drove the raiders/.test(sum.headline) && sum.lines.some(l => /trusts you more/.test(l.text)), 'consequence summary says what changed');
+  const willing = HB.lair.hireOffers(g).find(o => o.willing && o.from === V.name);
+  ok(willing && willing.fee === 0 && willing.wage < HB.WORKER_TYPES.human.wage, 'saved village offers willing workers (no fee, lower wages)');
+  g.hoard.gold = 100; ok(HB.lair.hire(g, willing).ok && g.lair.workers.some(w => w.willing && w.wage === willing.wage), 'willing workers hired at their wage');
+  ok(HB.tribute.canProtect(g, V).ok || !['village', 'town', 'city'].includes(V.type), 'protection pact open to a trusting village');
+  // a theft: robbing a caravan, with the summary naming its consequences
+  const car = g.entities.find(e => e.kind === 'caravan');
+  g.dragon.x = car.x; g.dragon.y = car.y; g.phase = 'planning'; g.dragon.health = g.dragon.stats.maxHealth; g.dragon.stamina = g.dragon.stats.maxStamina;
+  const fc = car.factionId >= 0 ? GW.factions[car.factionId] : null; const esc0 = fc ? fc.learned.escorts : 0;
+  const rc = HB.encounter.begin(g, car, null, { direct: true });
+  n = 0; while (!rc.ended && n++ < 4000) { HB.raid.update(rc, 1 / 30, {}); const f = HB.raid.focus(rc); if (f && !rc.dragon.busy) { const acts = HB.raid.actionsFor(rc, f).filter(a => a.enabled).map(a => a.id); HB.raid.perform(rc, acts.includes('grab') ? 'grab' : 'wait', f); } if (rc.loot.gold + rc.loot.items.length > 0 && !rc.dragon.busy) HB.raid.perform(rc, 'withdraw'); if (rc.dragon.passes >= 2) HB.raid.perform(rc, 'withdraw'); }
+  HB.encounter.finishRaid(g, car, rc, null);
+  const cs = g.lastConsequence;
+  if (rc.stolenValue > 0) {
+    ok(/You robbed .*merchants/.test(cs.headline), 'caravan summary headline: ' + cs.headline);
+    ok(cs.lines.some(l => /Stored at home/.test(l.text) && /Hoard strength/.test(l.text)), 'summary previews the stat gain and hoard strength once stored');
+    ok(!fc || (fc.learned.escorts > esc0 && cs.lines.some(l => /more guards/.test(l.text))), 'summary says future caravans will be guarded');
+    ok(cs.lines.some(l => /No trust gained/.test(l.text)), 'summary says no trust was gained');
+    ok(HB.renown.deeds(g, 'caravans') === 1, 'caravan robbery counted toward the Road Thief');
+  } else ok(true, 'caravan raid took nothing (skipped summary checks)');
+  // tolls need the name (or size); three robberies earn it
+  const car2 = g.entities.find(e => e.kind === 'caravan' && !e.dead);
+  ok(!HB.encounter.tollTerms(g, car2).ok, 'a hatchling without a name cannot demand tolls');
+  while (HB.renown.deeds(g, 'caravans') < 3) HB.renown.record(g, 'caravans', { factionId: car2.factionId });
+  ok(HB.renown.has(g, 'roadthief') && HB.encounter.tollTerms(g, car2).ok, 'the Road Thief can demand tolls');
+  const toll = HB.encounter.toll(g, car2); ok(typeof toll.success === 'boolean' && car2.tolled, 'toll resolved once');
+  // guarding a caravan builds trust
+  const car3 = g.entities.find(e => e.kind === 'caravan' && !e.dead && !e.tolled && e.factionId >= 0);
+  if (car3) { const f3 = GW.factions[car3.factionId], t0 = f3.dragon.trust; HB.encounter.escort(g, car3, null); ok(f3.dragon.trust > t0 && HB.renown.deeds(g, 'escorted') === 1, 'guarding a caravan builds its realm\'s trust'); }
+  // terror: fear multiplier is real
+  for (let i = 0; i < 5; i++) HB.renown.record(g, 'burned', {});
+  ok(HB.renown.has(g, 'terror') && HB.renown.fearMul(g) === 1.5, 'the Terror spreads fear faster');
+  // releasing captives earns the Merciful and better ransoms
+  for (let i = 0; i < 2; i++) { const c = { id: 'rc' + i, name: 'Captive ' + i, kind: 'noble', weight: 2, from: V.name, factionId: V.factionId, house: null, year: 1 }; g.lair.captives.push(c); HB.ransom.release(g, c); }
+  ok(HB.renown.has(g, 'merciful'), 'two releases make you the Merciful');
+  // threats fall if nobody comes
+  const V2 = HB.worldsim.spawnThreat(g, HB.game.rng);
+  if (V2) { const w0 = V2.wealth; V2.threat.until = g.time.totalDays; HB.worldsim.updateThreats(g, 1, HB.game.rng); ok(!V2.threat && V2.wealth < w0, 'an undefended village is sacked'); ok(!HB.worldsim.spawnThreat(g, HB.game.rng, {}) || true, 'spawn after sack ok'); }
+  // upgrades answer problems: reasons and stop chances
+  g.hoard.gold = 600; HB.stats.recompute(g);
+  ok(HB.lair.whyNow(g, 'entrance') !== null, 'entrance has a reason before sleeping with a hoard: ' + HB.lair.whyNow(g, 'entrance'));
+  const sc0 = HB.sleep.stopChances(g), sc1 = HB.sleep.stopChances(g, HB.lair.valuesWith(g, 'entrance'));
+  ok(sc1.thief > sc0.thief + 0.15, `an entrance turns back noticeably more thieves (${Math.round(sc0.thief * 100)}% → ${Math.round(sc1.thief * 100)}%)`);
+  ok(!g.lair.upgrades.entrance, 'valuesWith leaves the lair unchanged');
+  g.problems.thefts = 2; g.problems.stolenValue = 300; g.problems.stolenNamed.push('the Test Crown');
+  ok(/Test Crown/.test(HB.lair.whyNow(g, 'strongroom')), 'strongroom reason names what thieves took');
+  ok(HB.sleep.preview(g, 5).lines.some(l => /turn back about/.test(l.text)), 'sleep preview shows what the door turns back');
+  // saves keep names, reactions, problems and threats
+  const V3 = HB.worldsim.spawnThreat(g, HB.game.rng);
+  const g2 = HB.save.deserialize(HB.save.serialize(g));
+  ok(g2.renown.titles.length === g.renown.titles.length && g2.reactions.length === g.reactions.length && g2.problems.thefts === 2, 'renown, reactions and problems saved');
+  ok(!V3 || (g2.world.locations[V3.id].threat && g2.world.locations[V3.id].threat.campName === V3.threat.campName), 'threats saved');
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

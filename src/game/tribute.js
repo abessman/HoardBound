@@ -12,7 +12,7 @@
       if (state.dragon.tier < 1) return { ok: false, reason: 'A hatchling’s demands are laughed at. Grow first.' };
       const fear = Math.max(L.fear, f ? f.dragon.fear : 0);
       const leverage = fear + s.dominance * 0.8 + s.prestige * 0.3 - L.defense * 0.6;
-      const chance = HB.clamp(0.1 + leverage / 100, 0.02, 0.95);
+      const chance = HB.clamp(0.1 + leverage / 100 + (HB.renown && HB.renown.has(state, 'terror') ? 0.15 : 0), 0.02, 0.95);
       const amount = tribute.amountFor(L);
       if (chance < 0.15) return { ok: false, reason: `They are not afraid of you yet (fear ${Math.round(fear)}, dominance ${Math.round(s.dominance)} against defences ${L.defense}).` };
       return { ok: true, chance, chanceText: chance > 0.7 ? 'very likely' : chance > 0.45 ? 'likely' : 'uncertain', amount };
@@ -28,13 +28,15 @@
         state.dragon.alignment = HB.clamp(state.dragon.alignment - 1, -100, 100);
         if (f && HB.factions) HB.factions.adjust(state, f, { fear: 4, hostility: 2 }, `tribute from ${L.name}`);
         HB.game.chronicle(state, `${L.name} agreed to pay ${HB.fmt.int(t.amount)} gold a year in tribute.`, 'tribute', L.id);
+        if (HB.renown) HB.renown.record(state, 'tributes', { factionId: L.factionId, place: L.name });
+        if (HB.consequences) HB.consequences.react(state, `${L.name} pays you ${HB.fmt.int(t.amount)} gold a year, and resents every coin.`, 'because they feared you more than they trusted their walls');
         // first payment now
         const first = Math.min(L.wealth, t.amount); L.wealth -= first; state.cargo.gold += first; L.tribute.paidTotal += first;
         state.phase = 'planning';
         return `${L.name} bows. ${HB.fmt.int(first)} gold is brought out at once, and ${HB.fmt.int(t.amount)} a year is promised. They will pay as long as they fear you and can afford it.`;
       }
       L.defense = Math.min(100, L.defense + 3);
-      if (f) { if (HB.factions) HB.factions.adjust(state, f, { hostility: 6, fear: 1 }, `refused tribute at ${L.name}`); f.learned.hunters++; }
+      if (f) { if (HB.factions) HB.factions.adjust(state, f, { hostility: 6, fear: 1 }, `refused tribute at ${L.name}`); f.learned.hunters++; if (HB.consequences) HB.consequences.react(state, HB.consequences.LEARNED.hunters(f), `because ${L.name} refused your demand and sent for help`); }
       HB.game.chronicle(state, `${L.name} refused tribute.`, 'tribute', L.id);
       state.phase = 'planning';
       return `${L.name} refuses. Doors bar; bows come out; someone rides for the castle. You could still raid them, or remember this for later.`;
@@ -45,7 +47,8 @@
       if (L.state !== 'normal') return { ok: false, show: false };
       if (L.tribute && !L.tribute.lapsed) return { ok: false, show: false };
       const trust = Math.max(L.trust, f ? f.dragon.trust : 0);
-      if (trust < 15 && state.dragon.alignment < 10) return { ok: false, show: true, reason: 'They have no reason to trust a dragon (trust under 15). Release captives, deal fairly, kill their raiders.' };
+      const guardian = HB.renown && HB.renown.guardianOf(state).includes(L.name);
+      if (trust < 15 && state.dragon.alignment < 10 && !guardian) return { ok: false, show: true, reason: `They have no reason to trust a dragon (trust ${Math.round(trust)} of 15). Drive raiders off them, guard their caravans, release captives.` };
       return { ok: true };
     },
     protect(state, L) {
@@ -58,6 +61,8 @@
       if (f && HB.factions) HB.factions.adjust(state, f, { trust: 5 }, `protects ${L.name}`);
       HB.game.chronicle(state, `Swore to protect ${L.name}; they will send gifts of ${HB.fmt.int(amount)} gold a year.`, 'tribute', L.id);
       if (HB.history) HB.history.onProtect(state, L);
+      if (HB.renown) HB.renown.record(state, 'protected', { factionId: L.factionId, place: L.name });
+      if (HB.consequences) HB.consequences.react(state, `${L.name} sends you ${HB.fmt.int(amount)} gold a year and keeps watch on your approaches.`, 'because you swore to protect it');
       state.phase = 'planning';
       return `The elders of ${L.name} agree, warily. Gifts of about ${HB.fmt.int(amount)} gold a year, and they will speak well of you. Keep the bandits off them and the bargain holds.`;
     },

@@ -15,19 +15,32 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Retreat, carry loot, deposit at home | Functional | Cargo capacity enforced; loot merges once; deposit recalculates stats and shows deltas. |
 | Power from possessed treasure | Functional | Six categories with diminishing returns; artifacts with effects and visible mutations; spending/theft removes bonuses; age stats separate. |
 | Spend on workers and lair with visible trade-offs | Functional | Cost, resulting balance, stat change and build time shown before purchase. |
-| Multi-year sleep | Functional | Season, 5, 20, 50, 100, 200 years (gated by tier); legible preview of growth, wages, defences, threat likelihood. |
+| Multi-year sleep | Functional | Season, 5, 20, 50, 100, 200 years (gated by tier); legible preview of growth, wages, defences, what the door turns back, threat likelihood, and whether a theft could stop growth. |
 | World development and lair risks during sleep | Functional | Settlements grow/decline/burn/abandon/ruin; rulers change; wars; thieves (targeted or plunder); hunters with warning, sleeping-chamber breach, slaying; keeper episodes. |
 | Awaken into the same changed world | Functional | Before/after summary: body, hoard gains/losses, finished upgrades, settlement changes, faction mood shifts, key events. |
+
+## Goals, consequences and milestones (the opening cycle)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Visible first milestone with real requirements | Functional | "Become a young dragon": hoard strength x / 1 000 and age x / 8 on the map HUD, the Aims board and the lair; carried treasure shows as pending; the next step changes with the situation; what growth unlocks is listed. |
+| Expeditions as purposeful choices | Functional | Aims board (G): opportunities tagged Grow stronger / Build trust / Build fear / Secure your sleep / Become known, each with what it yields; tap to find it on the map or open the lair tab. |
+| Playable good deeds | Functional | Outlaw raids on farms and villages (one at the start, more over time; ignored ones sack the place); animated defend raid; return or keep recovered goods; guard caravans; release captives; protection pacts. Rewards: trust, willing workers, gifts, titles. |
+| Consequence summary after every encounter | Functional | Raids, defends, cards, tolls, escorts, tribute and protection: headline, loot and its stored-at-home effect, place and realm changes, what realms learned, "No trust gained", name shift, title progress, wounds, next step. |
+| Renown with identity and effects | Functional | Eight titles from deeds (Road Thief, Guardian of <place>, the <Breed> Terror, the Merciful, Castle-Thief, Bane of Heroes, Warden of the Roads, Overlord), each with a real mechanical effect; latest title shown with the name; who knows you; names still to earn. |
+| World reactions with causes | Functional | Logged when realms learn, titles are earned, pacts/tribute start, thieves strike, cared-for villages fall; shown on the Aims board and on waking. |
+| Upgrades tied to problems | Functional | Build tab sorts upgrades with a reason first and shows thief/hunter turn-back chances before and after; sleep preview shows what the door turns back and whether a theft could stop growth. |
+| Awaken with new capabilities | Functional | Growth happens in the year you come of age during a sleep; the awakening lists new capabilities, world reactions with causes, and the next goal. |
 
 ## Encounters and travel
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
-| Caravan: easy chest, dangerous second wagon | Functional | Moving caravans on roads; escorts grow with faction learning. |
+| Caravan: easy chest, dangerous second wagon | Functional | Moving caravans on roads; escorts grow with faction learning. On arrival: rob, demand a toll (Road Thief or adult), guard it for its realm's trust, or let it pass. |
 | Camp rewards timing/isolation | Functional | Sleepers; waking at alarm 25; isolated-bite rule. |
 | Castle quick theft without conquest | Functional | Parapet goblet reachable by a hatchling; vault needs an adult to smash; ballista manned at alarm 40. |
 | Novice hero | Functional | Wandering heroes on roads; lance variant; survivors become named hunters. |
-| Village / monastery / ruin scenarios | Functional | Village/town/city scene (granary famine, barred treasury); monastery, shrine, ruin, tower, glade, hold as decision cards. |
+| Village / monastery / ruin scenarios | Functional | Village/town/city scene (granary famine, barred treasury); defend scene for villages under outlaw attack; monastery, shrine, ruin, tower, glade, hold as decision cards (loot bounded by the place's wealth). |
 | Animation reflects actions; alarm brings threats | Functional | Swoop, breath flame, roar rings, fire particles; escalation spawns militia/archers/knights/champion. |
 | Cargo limits loot and captives | Functional | |
 | Return journey consequences; drop loot | Functional | Load raises stamina cost; pursuit volley on withdrawal; a "Too Heavy to Outrun Them" road event offers dropping a third of the cargo when riders follow a burdened dragon. |
@@ -103,6 +116,8 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 ## Known rough edges
 
 - Raid balance is first-pass: castles are deadly to hatchlings who linger (by design), but town watchmen may still be too strong early.
+- Opening pacing (tested by a headless bot): about 10–18 short expeditions to reach hoard strength 1 000; with a reinforced entrance, three of four seeds grew in the first 20-year sleep. Thieves can still undo an unprotected first sleep, which the preview now warns about.
+- Opportunity ranking is heuristic: it prefers reachable hauls with low risk and can suggest small farms repeatedly.
 - Labels can crowd at mid zoom in dense kingdoms.
 - The wandering-hero duel uses the generic scene with a campfire; it needs more distinct staging.
 - No hand testing on physical gamepads or touch screens yet.

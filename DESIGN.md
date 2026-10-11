@@ -94,13 +94,63 @@ Possession bonuses from treasure stored at home (never from cargo), with diminis
 
 Formula shape: `bonus = cap * (1 - exp(-value / scale))` per category, plus flat artifact effects.
 
+## 3a. Goals and feedback (the opening cycle)
+
+Agreed with the owner after the first playtest: systems alone did not give clear goals, understandable
+consequences or satisfying milestones. At any moment the player should know **what they are trying to achieve,
+how the next action helps, and what changed because of it**. Art waits until this loop works.
+
+The opening is one cycle: *choose a useful target → make a consequential choice → bring home a meaningful
+reward → see progress toward growth → prepare for sleep → awaken with a new capability and a visible world reaction.*
+
+- **Milestone** (`src/game/goals.js`, map HUD panel under the status plaque, Aims board, lair status): "Become a
+  young dragon — Hoard strength 240 / 1 000 · Age 3 / 8 — Next: …". The requirements are the real ones
+  (`HB.TIERS`), what you carry is shown as pending until stored, and the board lists what growth unlocks (range,
+  carry, breath, sight, the storm walls it opens, tribute, smashing, longer sleeps). The next step is concrete
+  and changes with the situation (gather / fly home / reinforce the door / sleep N years).
+- **Aims board** (G): concrete opportunities tagged by aim — *Grow stronger* (best haul for its danger, with the
+  hoard-strength change), *Build trust* (villages under attack, captives to release, pacts, caravans to guard),
+  *Build fear* (terrorise, tribute), *Secure your sleep* (only upgrades with a reason now), *Become known*
+  (closest titles, with a target). Selecting one shows it on the map or opens the lair tab.
+- **Good deeds are playable**: outlaw camps raid farms and villages (`L.threat`, one guaranteed at the start,
+  visible from the cave); the **defend raid** (`templates.defend`, `raid.mode='defend'`) has raiders, stolen
+  goods and a burning roof but no militia and nothing of the village's to take. Bite, burn, or roar to rout them;
+  your fire still burns houses. Win when no raider is left; then choose to return or keep what you recovered.
+  Rewards: village trust, realm trust, kinder name, the title Guardian of <place>, willing workers (no fee, lower
+  wages) and a protection pact. Ignored threats sack the village (wealth, sometimes fire) and enrich the camp.
+  Breaking the camp itself also spares its victims. Caravans can be robbed, **tolled** (needs the Road Thief or
+  adulthood), **guarded** (trust, a small gift; three make you Warden of the Roads) or let pass.
+- **Consequence summary** after every encounter (`src/game/consequences.js`, `ConsequenceScene`): a headline
+  ("You robbed Stoneford's merchants."), what you carry and what it does once stored ("→ +2 defence. Hoard
+  strength 240 → 425 of 1 000"), the place's change (poorer, burned, safe), each realm's fear/hostility/trust
+  deltas and what it learned ("Caravans of X will ride with more guards"), "No trust gained" when none was,
+  the shift in your name, title progress, wounds, and the next step. It reports; it does not moralise.
+- **Renown** (`src/game/renown.js`): deeds earn named titles with real effects — the Road Thief (tolls),
+  Guardian of <place> (willing workers, protection), the <Breed> Terror (fear ×1.5, tribute +15%), the Merciful
+  (ransom acceptance +15%, trust ×1.5), the Castle-Thief and Bane of Heroes (+10 prestige; heroes come stronger),
+  Warden of the Roads (merchants send gold each year), the Overlord (+10 dominance). The latest title shows with
+  the name on the HUD; the Aims board shows who knows you and what each unearned name would change.
+- **World reactions with causes** (`state.reactions`): every time a realm learns something, a title is earned, a
+  pact or tribute starts, thieves rob you or a village you cared for is sacked, the reaction is logged with
+  *why*. The awakening screen shows them ("How the world answered") plus **New capabilities** after growth.
+- **Upgrades answer problems**: the Build tab lists upgrades with a reason first ("Thieves took the Ember Crown
+  while you slept"; "Before you sleep: a hoard worth 1 196 draws thieves") and shows what the next level changes
+  in the terms of the threat ("turns back 22% → 41% of thieves"). The sleep preview says what the door turns
+  back and whether a theft before you come of age could stop the change.
+- **Growth happens when you come of age during a sleep** (if the hoard can feed it then), so a theft in year 15
+  of a 20-year sleep no longer undoes a change that happened in year 8. Hatchlings draw fewer, weaker burglars
+  and fewer hunters unless they have made enemies.
+
 ### Age tiers (initial tuning)
 | Tier | Age | Hoard energy needed | Vision | Capacity |
 | --- | --- | --- | --- | --- |
 | Hatchling | 0+ | — | 2.5 | 4 |
-| Young | 8+ | 400 | 4.5 | 10 |
-| Adult | 40+ | 3 000 | 7 | 25 |
-| Ancient | 150+ | 20 000 | 11 | 60 |
+| Young | 8+ | 1 000 | 4.8 | 10 |
+| Adult | 40+ | 6 000 | 7 | 25 |
+| Ancient | 150+ | 30 000 | 11 | 60 |
+
+(Raised from 400 / 3 000 / 20 000 so the first milestone takes roughly ten expeditions; "hoard energy" is shown
+to the player as **hoard strength**.)
 
 Sleeping with too little hoard energy heals and ages but does not advance the tier ("restless sleep").
 

@@ -6,7 +6,10 @@
   const CW = 320, CH = 180;
 
   class LairScene {
-    constructor(state) { this.state = state; this.opaque = true; this.ui = new HB.ui.UI(); this.tab = 'hoard'; this.t = 0; this.buf = px.create(CW, CH); this.workerAnim = []; }
+    constructor(state, opts = {}) {
+      this.state = state; this.opaque = true; this.ui = new HB.ui.UI(); this.tab = opts.tab || 'hoard'; this.t = 0; this.buf = px.create(CW, CH); this.workerAnim = [];
+      if (opts.upgrade && HB.UPGRADE_BY_ID[opts.upgrade]) this.selectedUpgrade = { u: HB.UPGRADE_BY_ID[opts.upgrade] };
+    }
     enter() { this.buildUi(); }
     buildUi() {
       const ui = this.ui; ui.clear(); this.tabWidgets = [];
@@ -41,16 +44,20 @@
     }
     buildBuildTab() {
       const st = this.state, p = this.panel, ui = this.ui;
-      const items = HB.UPGRADES.map(u => ({ u, lv: HB.lair.level(st, u.id), can: HB.lair.canBuild(st, u.id), inProgress: st.lair.construction.find(c => c.id === u.id) }));
-      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 60, w: p.w - 32, h: p.h - 150, items, itemHeight: 58, onSelect: (it) => { this.selectedUpgrade = it; this.buildUi(); }, selected: this.selectedUpgrade ? items.findIndex(i => i.u.id === this.selectedUpgrade.u.id) : -1,
-        drawItem: (ctx, it, x, y, w, h) => { const next = it.u.levels[it.lv]; HB.text.draw(ctx, `${it.u.name}${it.lv ? ` (level ${it.lv}${it.lv >= it.u.levels.length ? ', complete' : ''})` : ''}`, x + 10, y + 20, { size: 15, family: 'sc' }); if (it.inProgress) { HB.text.draw(ctx, `Under construction: ${Math.round(it.inProgress.progress * 100)}% · about ${Math.ceil((1 - it.inProgress.progress) * it.inProgress.days / Math.max(0.2, HB.lair.buildRate(st)))} days left`, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.warn }); } else if (next) HB.text.draw(ctx, `Next: ${HB.fmt.int(next.cost)} gold · ~${HB.lair.estimateDays(st, next.days)} days · ${describeEffects(next.effects)}`, x + 10, y + 40, { size: 12, italic: true, color: it.can.ok ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 20 }); else HB.text.draw(ctx, it.u.mitigates, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.inkSoft }); },
+      // upgrades that answer a problem you have had (or are about to have) come first, with the reason
+      const items = HB.UPGRADES.map(u => ({ u, lv: HB.lair.level(st, u.id), can: HB.lair.canBuild(st, u.id), inProgress: st.lair.construction.find(c => c.id === u.id), why: HB.lair.level(st, u.id) < u.levels.length ? HB.lair.whyNow(st, u.id) : null }));
+      items.sort((a, b) => (b.why && !b.inProgress ? 1 : 0) - (a.why && !a.inProgress ? 1 : 0));
+      this.stopNow = HB.sleep.stopChances(st);
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 60, w: p.w - 32, h: p.h - 196, items, itemHeight: 86, onSelect: (it) => { this.selectedUpgrade = it; this.buildUi(); }, selected: this.selectedUpgrade ? items.findIndex(i => i.u.id === this.selectedUpgrade.u.id) : -1,
+        drawItem: (ctx, it, x, y, w, h) => { const next = it.u.levels[it.lv]; HB.text.draw(ctx, `${it.u.name}${it.lv ? ` (level ${it.lv}${it.lv >= it.u.levels.length ? ', complete' : ''})` : ''}`, x + 10, y + 20, { size: 15, family: 'sc' }); if (it.inProgress) { HB.text.draw(ctx, `Under construction: ${Math.round(it.inProgress.progress * 100)}% · about ${Math.ceil((1 - it.inProgress.progress) * it.inProgress.days / Math.max(0.2, HB.lair.buildRate(st)))} days left`, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.warn }); } else if (next) HB.text.draw(ctx, `Next: ${HB.fmt.int(next.cost)} gold · ~${HB.lair.estimateDays(st, next.days)} days · ${describeEffects(next.effects)}`, x + 10, y + 40, { size: 12, italic: true, color: it.can.ok ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 20 }); else HB.text.draw(ctx, it.u.mitigates, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.inkSoft }); HB.text.paragraph(ctx, it.why ? 'Why now: ' + it.why : it.u.mitigates, x + 10, y + 47, w - 20, { size: 12, lineHeight: 15, maxLines: 2, italic: !it.why, color: it.why ? HB.palette.warn : HB.palette.inkSoft }); },
         itemTooltip: (it) => `${it.u.desc}\n\nMitigates: ${it.u.mitigates}${it.can.ok ? '' : '\n\n' + it.can.reason}` }));
       const sel = this.selectedUpgrade && items.find(i => i.u.id === this.selectedUpgrade.u.id);
       if (sel) {
         const pv = HB.lair.buildPreview(st, sel.u.id);
         ui.add(new HB.ui.Button({ x: p.x + 16, y: p.y + p.h - 80, w: 220, h: 40, label: `Build ${sel.u.name}`, primary: true, size: 15, disabled: !sel.can.ok, disabledReason: sel.can.reason || '', tooltip: pv ? `Cost ${HB.fmt.int(pv.cost)} gold → ${HB.fmt.int(pv.balance)} left. ${pv.diff.length ? 'Hoard power changes: ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') + '.' : 'No change to your power.'} About ${pv.days} days with your current workers.` : '', onClick: () => { const r = HB.lair.build(st, sel.u.id); if (!r.ok) HB.notice('Cannot build', r.reason); else HB.notice('Work begins', `${sel.u.name}: ${HB.fmt.int(pv.cost)} gold spent. ${pv.diff.length ? 'Your hoard’s power shifts: ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') + '.' : ''} The workers reckon about ${pv.days} days.`); this.buildUi(); } }));
         this.buildPreviewInfo = pv;
-      }
+        this.buildEffect = HB.lair.level(st, sel.u.id) < sel.u.levels.length ? HB.goals.upgradeEffect(st, sel.u.id, this.stopNow) : 'Complete.';
+      } else this.buildEffect = null;
     }
     buildWorkersTab() {
       const st = this.state, p = this.panel, ui = this.ui;
@@ -159,8 +166,9 @@
       const cw = (w - 32) / 4;
       cols.forEach(([k, v], i) => { const cx = x + 16 + (i % 4) * cw, cy = y + 80 + Math.floor(i / 4) * 40; HB.text.draw(ctx, k, cx, cy, { size: 12, family: 'sc', color: Pp.inkSoft }); HB.text.draw(ctx, String(v), cx, cy + 20, { size: 17 }); });
       const next = HB.TIERS[d.tier + 1];
-      if (next) { const e = HB.stats.hoardEnergy(st); HB.text.draw(ctx, `To become ${HB.fmt.a(next.name.toLowerCase())}: age ${next.minAge} (now ${Math.floor(d.age)}) and a hoard worth ${HB.fmt.int(next.energy)} (now ${HB.fmt.int(e)}), then sleep.`, x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft, maxWidth: w - 32 }); }
-      else HB.text.draw(ctx, 'There is no older kind of dragon.', x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft });
+      const m = HB.goals.milestone(st);
+      const req = m.reqs.map(r => `${r.label.toLowerCase()} ${HB.fmt.int(r.cur)}/${HB.fmt.int(r.need)}${r.done ? ' (done)' : ''}`).join(', ');
+      HB.text.paragraph(ctx, `${m.title}${req ? ': ' + req : ''}. Next: ${m.nextStep}`, x + 16, y + 158, w - 32, { size: 13, italic: true, color: Pp.ink, maxLines: 2, lineHeight: 16 });
     }
     drawHoardTab(ctx) {
       const st = this.state, p = this.panel, Pp = HB.palette;
@@ -190,6 +198,10 @@
       const st = this.state, p = this.panel, Pp = HB.palette;
       const v = HB.lair.values(st);
       HB.text.draw(ctx, `Defence ${Math.round(v.defense)} · concealment ${v.concealment} · traps ${v.traps} · guards ${Math.round(v.guardStrength)} · ward ${v.ward} · gold ${HB.fmt.int(st.hoard.gold)}`, p.x + 16, p.y + 44, { size: 13, maxWidth: p.w - 32 });
+      const sc = this.stopNow || HB.sleep.stopChances(st);
+      const ey = p.y + p.h - 130;
+      if (this.buildEffect && this.selectedUpgrade) HB.text.paragraph(ctx, `${this.selectedUpgrade.u.name}: ${this.buildEffect}`, p.x + 16, ey, p.w - 32, { size: 13, maxLines: 3, lineHeight: 16 });
+      else HB.text.paragraph(ctx, `At the door your defences turn back about ${Math.round(sc.thief * 100)}% of thieves and ${Math.round(sc.hunt * 100)}% of hunting parties. Choose an upgrade to see what it changes.`, p.x + 16, ey, p.w - 32, { size: 13, italic: true, color: Pp.inkSoft, maxLines: 3, lineHeight: 16 });
       if (this.selectedUpgrade && this.buildPreviewInfo) { const pv = this.buildPreviewInfo; HB.text.draw(ctx, `Spend ${HB.fmt.int(pv.cost)} → ${HB.fmt.int(pv.balance)} left${pv.diff.length ? ' · ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') : ''} · ~${pv.days} days`, p.x + 250, p.y + p.h - 54, { size: 12, italic: true, color: pv.diff.some(d => d.delta < 0) ? Pp.warn : Pp.inkSoft, maxWidth: p.w - 270 }); }
     }
     drawWorkersTab(ctx) {

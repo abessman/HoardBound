@@ -37,7 +37,7 @@
     demand(state, c, opt) {
       if (c.pending) return { ok: false, reason: 'A demand is already out' };
       const { rescueRisk } = ransom.options(state, c);
-      c.pending = { kind: opt.id, amount: opt.amount || 0, daysLeft: 8 + Math.round(HB.game.rng.between(6, 30)), accept: opt.accept, rescueRisk, sent: state.time.totalDays };
+      c.pending = { kind: opt.id, amount: opt.amount || 0, daysLeft: 8 + Math.round(HB.game.rng.between(6, 30)), accept: Math.min(0.97, opt.accept + (HB.renown && HB.renown.has(state, 'merciful') ? 0.15 : 0)), rescueRisk, sent: state.time.totalDays };
       HB.game.chronicle(state, `Sent a ransom demand for ${c.name} to ${ransom.payerName(state, c)}.`, 'ransom');
       return { ok: true, days: c.pending.daysLeft };
     },
@@ -48,6 +48,8 @@
       state.dragon.alignment = HB.clamp(state.dragon.alignment + 4, -100, 100);
       state.counters.released++;
       if (HB.history) HB.history.onRelease(state, c);
+      if (HB.renown) HB.renown.record(state, 'released', { factionId: c.factionId, place: c.from });
+      if (HB.consequences) HB.consequences.react(state, `${c.house || 'The family of ' + c.name} remembers your mercy. They may send gifts, and warning of hunters.`, `because you let ${c.name} go unharmed`);
       HB.game.chronicle(state, `Released ${c.name} unharmed.`, 'ransom');
     },
     /** resolve pending demands as days pass; returns events */

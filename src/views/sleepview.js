@@ -65,6 +65,10 @@
       if (s.tierUp) lines.push({ text: `You are a ${HB.TIERS[d.tier].name.toLowerCase()} now, ${HB.game.ageString(st)}. ${HB.TIERS[d.tier].land && !HB.TIERS[b.tier].land ? 'You can land and smash open what you could only burn before. ' : ''}Sight ${b.stats.vision.toFixed(1)} → ${a.stats.vision.toFixed(1)}; carry ${b.stats.capacity} → ${a.stats.capacity}; health ${b.stats.maxHealth} → ${a.stats.maxHealth}; breath ${b.stats.breath} → ${a.stats.breath}.${s.consumed ? ` The growing consumed ${HB.fmt.int(s.consumed)} gold of coin.` : ''}`, tone: 'good' });
       else if (s.restless) lines.push({ text: `You are ${HB.game.ageString(st)} and no larger. The hoard was too small to feed the change (${HB.fmt.int(HB.stats.hoardEnergy(st))} of ${HB.fmt.int(HB.TIERS[d.tier + 1].energy)}). Gather more and sleep again.`, tone: 'warn' });
       else lines.push({ text: `You are ${HB.game.ageString(st)}. ${s.interrupted ? 'The sleep was cut short; growth needs an unbroken slumber.' : s.forced ? 'You were forced awake.' : 'You slept well.'}` });
+      if (s.tierUp) {
+        lines.push({ h: 'New capabilities' });
+        for (const u of HB.goals.unlocks(st, b.tier, d.tier)) lines.push({ text: u, tone: 'good' });
+      }
       const diff = HB.stats.diff(b.stats, a.stats).filter(x => ['maxHealth', 'defense', 'breath', 'bite'].includes(x.key));
       if (!s.tierUp && diff.length) lines.push({ text: 'Hoard power: ' + diff.map(x => `${x.label} ${HB.fmt.signed(x.delta, 1)}`).join(', ') + '.' });
       lines.push({ h: 'Hoard' });
@@ -72,13 +76,21 @@
       lines.push({ text: `Gold ${HB.fmt.int(b.gold)} → ${HB.fmt.int(st.hoard.gold)}.${gained.length ? ' Gained ' + HB.fmt.list(gained.map(i => HB.hoard.itemLabel(i))) + '.' : ''}${lost.length ? ' Lost ' + HB.fmt.list(lost) + ' — stolen; the chronicle says where.' : ''}`, tone: lost.length ? 'bad' : undefined });
       const done = Object.keys(st.lair.upgrades).filter(k => (b.upgrades[k] || 0) < st.lair.upgrades[k]);
       if (done.length) lines.push({ text: 'Finished in the lair: ' + HB.fmt.list(done.map(k => HB.UPGRADE_BY_ID[k].name + ' ' + st.lair.upgrades[k])) + '.', tone: 'good' });
-      lines.push({ h: 'The world' });
+      const worldAt = lines.length;
       const changes = [];
       W.locations.forEach((L, i) => { const old = b.locTiers[i]; if (!old) return; const [ot, os] = old.split(':'); if (L.knowledge.seen && (Number(ot) !== L.tier || os !== L.state)) changes.push(`${L.name}: ${os !== L.state ? L.state : HB.world.locTypeName(L)}`); });
       if (changes.length) lines.push({ text: changes.slice(0, 8).join('; ') + (changes.length > 8 ? `; and ${changes.length - 8} more` : '') + '.' });
-      W.factions.forEach((f, i) => { const o = b.factions[i]; if (!f.dragon.known) return; const dh = f.dragon.hostility - o.hostility, df = f.dragon.fear - o.fear; if (Math.abs(dh) >= 5 || Math.abs(df) >= 5) lines.push({ text: `${f.name}: ${df >= 5 ? 'fears you more' : df <= -5 ? 'fears you less' : ''}${df && dh ? ', ' : ''}${dh >= 5 ? 'hates you more' : dh <= -5 ? 'hates you less' : ''}.` }); });
+      W.factions.forEach((f, i) => { const o = b.factions[i]; if (!f.dragon.known) return; const dh = f.dragon.hostility - o.hostility, df = f.dragon.fear - o.fear; const parts = [df >= 5 ? 'fears you more' : df <= -5 ? 'fears you less' : '', dh >= 5 ? 'hates you more' : dh <= -5 ? 'hates you less' : ''].filter(Boolean); if (parts.length) lines.push({ text: `${f.name} ${parts.join(' and ')}.` }); });
+      if (lines.length > worldAt) lines.splice(worldAt, 0, { h: 'The world' });
+      // how the world answered you, with the reasons
+      const reacts = HB.consequences.unseen(st).slice(-10);
+      if (reacts.length) { lines.push({ h: 'How the world answered' }); for (const r of reacts) lines.push({ text: `${r.text}${r.cause ? ` (${r.cause})` : ''}`, tone: /robbed|price|sacked|burned|hunters|thieves/i.test(r.text) ? 'warn' : undefined }); HB.consequences.markSeen(st); }
       const important = s.events.filter(e => e.kind === 'war' || e.kind === 'rival' || e.kind === 'grudge' || e.kind === 'hunters' || e.kind === 'thief' || e.kind === 'loyal').slice(-8);
+      if (important.length) lines.push({ h: 'Events' });
       for (const e of important) lines.push({ text: `Year ${e.year}: ${e.text}`, tone: e.bad ? 'bad' : undefined });
+      const m = HB.goals.milestone(st);
+      lines.push({ h: 'Your goal now' });
+      lines.push({ text: `${m.title}${m.reqs.length ? ': ' + m.reqs.map(r => `${r.label.toLowerCase()} ${HB.fmt.int(r.cur)} of ${HB.fmt.int(r.need)}`).join(', ') : ''}. ${m.nextStep}`, tone: 'good' });
       this.lines = lines;
       this.ui.add(new HB.ui.ListBox({ x: 60, y: 110, w: HB.W - 120, h: HB.H - 200, items: lines, itemHeight: 46, gap: 2, focusable: true, drawItem: (ctx, l, x, y, w, h) => { if (l.h) { HB.text.draw(ctx, l.h, x + 10, y + 28, { size: 18, family: 'sc' }); return; } HB.text.paragraph(ctx, l.text, x + 10, y + 6, w - 20, { size: 14, maxLines: 2, lineHeight: 17, color: l.tone === 'good' ? HB.palette.good : l.tone === 'bad' ? HB.palette.bad : l.tone === 'warn' ? HB.palette.warn : HB.palette.ink }); } }));
       this.ui.add(new HB.ui.Button({ x: HB.W / 2 - 110, y: HB.H - 70, w: 220, h: 44, label: 'Wake', primary: true, size: 18, onClick: () => { HB.scenes.pop(this); if (this.map) { this.map.centerOn(this.state.dragon.x + 0.5, this.state.dragon.y + 0.5, 1.6); this.map.selected = null; this.map.chunks.clear(); this.map.chunkOrder.length = 0; } } }));

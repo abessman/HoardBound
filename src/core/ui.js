@@ -247,6 +247,8 @@
       else this.hoverTime += dt;
       if (hw && ptr.moved && inp.usingPointer() && hw.focusable && !hw.disabled) this.setFocus(hw);
       if (hw && ptr.wheel && hw.scrollY !== undefined) { hw.scrollY += ptr.wheel * 40; hw.clampScroll(); }
+      // drag to scroll lists (touch screens have no wheel)
+      if (hw && ptr.down && ptr.dragging && hw.scrollY !== undefined && (ptr.dy || 0) !== 0) { hw.scrollY -= ptr.dy; hw.clampScroll(); this.consumedPointer = true; }
       if (ptr.released && hw && !ptr.dragging && HB.dist(ptr.x, ptr.y, ptr.clickX, ptr.clickY) < 10) {
         this.pointerActive = true; hw.activate(this); this.pointerActive = false; this.consumedPointer = true;
       }

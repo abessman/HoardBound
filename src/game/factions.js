@@ -7,7 +7,7 @@
       const m = f.dragon;
       if (delta.fear) m.fear = HB.clamp(m.fear + delta.fear, 0, 100);
       if (delta.hostility) m.hostility = HB.clamp(m.hostility + delta.hostility, 0, 100);
-      if (delta.trust) m.trust = HB.clamp(m.trust + delta.trust, 0, 100);
+      if (delta.trust) m.trust = HB.clamp(m.trust + delta.trust * (delta.trust > 0 && HB.renown ? HB.renown.trustMul(state) : 1), 0, 100);
       m.known = true;
       if (cause) { f.history.push({ year: state.time.year, text: `${HB.fmt.cap(cause)}.`, delta }); if (f.history.length > 30) f.history.shift(); }
     },
@@ -27,7 +27,7 @@
       for (const f of W.factions) {
         const m = f.dragon;
         m.fear = Math.max(0, m.fear - 2); m.hostility = Math.max(0, m.hostility - 1); m.trust = Math.max(0, m.trust - 0.5);
-        if (m.hostility > 50 && state.time.year % 5 === 0) { f.learned.hunters++; ev.push({ text: `${f.name} put a price on the dragon’s head and funded hunters.`, kind: 'faction', bad: true }); }
+        if (m.hostility > 50 && state.time.year % 5 === 0) { f.learned.hunters++; ev.push({ text: `${f.name} put a price on the dragon’s head and funded hunters.`, kind: 'faction', bad: true }); if (HB.consequences) HB.consequences.react(state, `${f.name} put a price on your head.`, `because their hostility toward you passed 50 (it is ${Math.round(m.hostility)})`); }
         if (f.kind === 'goblin') continue;
         // relations with neighbours drift; grievances
         for (const nid of factions.neighbours(state, f)) {

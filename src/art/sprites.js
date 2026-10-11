@@ -24,6 +24,21 @@
     '..u.u...',
     '..o.o...',
   ]);
+  // an outlaw: dark hood, mask, a blade in hand
+  def('bandit', [
+    '..ooo...',
+    '.onnno..',
+    '.onkko..',
+    '.ommmo..',
+    '..ddd...',
+    '.odddo.I',
+    'okdddkoI',
+    '.ouduo.o',
+    '..ddd...',
+    '..d.d...',
+    '..u.u...',
+    '..o.o...',
+  ]);
   def('villager2', [
     '..ooo...',
     '.oHHHo..',

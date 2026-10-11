@@ -41,8 +41,11 @@
       this.btnLair = btn(x, 'Lair', 'lair', () => this.openLair(), { tooltip: 'Return to your cave: hoard, workers, upgrades, captives and sleep. (H)' }); x += bw + 8;
       this.btnChron = btn(x, 'Chronicle', 'chronicle', () => this.openChronicle(), { tooltip: 'The story of this dragon so far. (C)' }); x += bw + 8;
       this.btnRealms = btn(x, 'Realms', 'factions', () => this.openRealms(), { tooltip: 'Known realms, their mood toward you, and their wars. (F)' }); x += bw + 8;
+      this.btnAims = btn(x, 'Aims', 'KeyG', () => this.openAims(), { tooltip: 'Your goal, what you could do next and why, and what you are known for. (G)' }); x += bw + 8;
       this.btnMenu = btn(x, 'Menu', 'menu', () => this.openMenu(), { tooltip: 'Save, load, settings. (Esc)' }); x += bw + 8;
       this.btnHome = btn(x, 'Find me', null, () => this.centerOn(st.dragon.x + 0.5, st.dragon.y + 0.5), { tooltip: 'Centre the map on your dragon.' });
+      // the goal panel under the status plaque: always visible, opens the Aims board
+      this.goalPanel = ui.add(new HB.ui.Custom({ x: 14, y: 114, w: 330, h: 92, focusable: true, tooltip: 'Your goal and the next step. Open the Aims board for what you could do and why.', render: (ctx, wdg) => this.drawGoalPanel(ctx, wdg), onClick: () => this.openAims() }));
       // context buttons (visibility set per frame)
       const cx = HB.W - 14 - 150;
       this.btnFlyHome = ui.add(new HB.ui.Button({ x: cx, y, w: 150, h: bh, label: 'Fly home', size: 15, primary: true, tooltip: 'Return to the lair with your cargo.', onClick: () => { const lair = st.world.locations[st.world.home.locId]; const err = HB.travel.canBegin(st, lair); if (err) this.showToast(err); else HB.travel.begin(st, lair, this); } }));
@@ -64,6 +67,7 @@
     openLair() { if (HB.LairScene) HB.scenes.push(new HB.LairScene(this.state)); else HB.notice('Lair', 'The lair view is not built yet.'); }
     openChronicle() { if (HB.ChronicleScene) HB.scenes.push(new HB.ChronicleScene(this.state)); else HB.notice('Chronicle', this.state.chronicle.map(c => `Year ${c.year}: ${c.text}`).slice(-8).join('\n')); }
     openRealms() { if (HB.RealmsScene) HB.scenes.push(new HB.RealmsScene(this.state)); else HB.notice('Realms', 'Not built yet.'); }
+    openAims() { if (HB.AimsScene) HB.scenes.push(new HB.AimsScene(this.state, this)); }
     openMenu() { if (HB.MenuScene) HB.scenes.push(new HB.MenuScene(this.state)); else HB.scenes.push(new HB.SettingsScene({ inGame: true })); }
 
     // ---------- update
@@ -342,6 +346,7 @@
       // fog
       this.drawFog(ctx, tl, br);
       this.drawHazyPlaces(ctx, tl, br);
+      this.drawThreats(ctx, tl, br);
       // labels
       this.drawLabels(ctx, tl, br);
       // selection ring / hover
@@ -523,8 +528,9 @@
       // top-left status plaque
       const x = 14, y = 12, w = 330, h = 96;
       HB.parchment.panel(ctx, x, y, w, h, { shadow: true, stains: false, vignette: 0.1, flourish: 0 });
-      HB.text.draw(ctx, d.name, x + 14, y + 28, { size: 22, family: 'sc', color: P.ink });
-      HB.text.draw(ctx, `${HB.TIERS[d.tier].name} · ${HB.game.ageString(st)}`, x + 14, y + 46, { size: 13, italic: true, color: P.inkSoft });
+      HB.text.draw(ctx, d.name, x + 14, y + 28, { size: 22, family: 'sc', color: P.ink, maxWidth: w - 150 });
+      const title = HB.renown ? HB.renown.primary(st) : null;
+      HB.text.draw(ctx, [title ? title.name : null, HB.TIERS[d.tier].name, HB.game.ageString(st)].filter(Boolean).join(' · '), x + 14, y + 46, { size: 13, italic: true, color: title ? P.good : P.inkSoft, maxWidth: w - 28 });
       HB.text.draw(ctx, HB.game.dateString(st), x + w - 14, y + 28, { size: 14, align: 'right', color: P.inkSoft });
       // meters
       const mw = (w - 40) / 2;
@@ -538,14 +544,51 @@
       const hint = st.phase === 'home' || st.phase === 'planning' ? (HB.settings.hints ? `${tap} a place to inspect it, or ${tap.toLowerCase()} anywhere to fly there and explore. Dotted ring: how far your stamina carries you.` : '') : st.phase === 'traveling' ? 'Flying… Shift speeds up, P pauses.' : st.phase === 'returning' ? 'Returning home with cargo.' : '';
       if (hint) HB.text.draw(ctx, hint, HB.W / 2, HB.H - 60, { size: 14, italic: true, align: 'center', color: P.inkSoft, stroke: 'rgba(240,228,200,0.8)', strokeWidth: 3 });
     }
+    drawGoalPanel(ctx, wdg) {
+      const st = this.state, P = HB.palette, m = HB.goals.milestone(st);
+      const { x, y, w, h } = wdg;
+      HB.parchment.panel(ctx, x, y, w, h, { shadow: true, stains: false, vignette: 0.1, flourish: 0 });
+      if (wdg.hover || wdg.focused) { ctx.save(); ctx.strokeStyle = P.focus; ctx.lineWidth = 2; HB.parchment.roundRect(ctx, x + 2, y + 2, w - 4, h - 4, 4); ctx.stroke(); ctx.restore(); }
+      HB.text.draw(ctx, m.title, x + 14, y + 22, { size: 16, family: 'sc', maxWidth: w - 80 });
+      HB.text.draw(ctx, 'Aims ›', x + w - 12, y + 21, { size: 13, italic: true, align: 'right', color: P.inkSoft });
+      const hoard = m.reqs.find(r => r.key === 'hoard'), age = m.reqs.find(r => r.key === 'age');
+      if (hoard) {
+        const bw = Math.round((w - 40) * 0.64);
+        goalMeter(ctx, x + 14, y + 30, bw, 15, hoard.cur, hoard.need, '#9c6b1c', hoard.done ? 'Hoard strength: enough' : `Hoard ${HB.fmt.int(hoard.cur)} / ${HB.fmt.int(hoard.need)}`, hoard.carried || 0);
+        goalMeter(ctx, x + 26 + bw, y + 30, w - 40 - bw, 15, age.cur, age.need, '#3f6d3a', age.done ? 'Age: enough' : `Age ${Math.floor(age.cur)} / ${age.need}`, 0);
+      }
+      HB.text.paragraph(ctx, 'Next: ' + m.nextStep, x + 14, y + 52, w - 28, { size: 13, italic: true, maxLines: 2, lineHeight: 16, color: P.ink });
+    }
+    /** crossed swords over places being raided by outlaws */
+    drawThreats(ctx, tl, br) {
+      const st = this.state, W = st.world, z = CELL * this.cam.zoom;
+      for (const L of W.locations) {
+        if (!L.threat || !L.knowledge.seen || L.x < tl.x - 2 || L.x > br.x + 2 || L.y < tl.y - 2 || L.y > br.y + 2) continue;
+        const p = this.worldToScreen(L.x + 0.5, L.y - 0.2);
+        const s = HB.clamp(z * 0.55, 7, 14), pulse = 0.75 + 0.25 * Math.sin(this.t * 5);
+        ctx.save(); ctx.translate(p.x, p.y - s * 1.1); ctx.globalAlpha = pulse;
+        ctx.strokeStyle = '#8f2b1f'; ctx.lineWidth = Math.max(1.5, s * 0.18); ctx.lineCap = 'round';
+        for (const sgn of [1, -1]) { ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn, s * 0.7); ctx.lineTo(s * 0.7 * sgn, -s * 0.7); ctx.stroke(); ctx.beginPath(); ctx.moveTo(-s * 0.7 * sgn + s * 0.25, s * 0.7 - s * 0.05 * sgn); ctx.lineTo(-s * 0.7 * sgn + s * 0.05, s * 0.45); ctx.stroke(); }
+        ctx.restore();
+        if (this.cam.zoom > 0.7) HB.text.draw(ctx, 'under attack', p.x, p.y - s * 2.2, { size: 11, italic: true, align: 'center', color: '#8f2b1f', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
+      }
+    }
     previewContains(sx, sy) { const r = this.previewRect(); return r && HB.pointInRect(sx, sy, r.x, r.y, r.w, r.h); }
-    previewRect() { return this.selected ? { x: HB.W - 372, y: 130, w: 350, h: 400 } : null; }
+    previewRect() { return this.selected ? { x: HB.W - 372, y: 130, w: 350, h: HB.clamp(this._pvH || 400, 400, 530) } : null; }
+    /** height the preview needs for its lines */
+    measurePreview(ctx, info, tw) {
+      let h = 48 + 10 + 20;
+      for (const line of info.lines) h += line.label ? Math.max(HB.text.paragraphHeight(ctx, line.text, tw - 96, { size: 14 }), 18) + 4 : HB.text.paragraphHeight(ctx, line.text, tw, { size: 14, italic: !!line.italic }) + 4;
+      return h + 64;
+    }
     drawPreview(ctx) {
       const st = this.state, W = st.world, L = this.selected, P = HB.palette, d = st.dragon;
+      const info0 = HB.preview ? HB.preview.describe(st, L) : basicDescribe(st, L);
+      this._pvH = this.measurePreview(ctx, info0, 350 - 40);
       const r = this.previewRect();
       HB.parchment.panel(ctx, r.x, r.y, r.w, r.h, { tone: 'light', title: L.name, titleSize: 18 });
       let y = r.y + 48; const x = r.x + 20, tw = r.w - 40;
-      const info = HB.preview ? HB.preview.describe(st, L) : basicDescribe(st, L);
+      const info = info0;
       HB.text.draw(ctx, info.subtitle, x, y, { size: 14, italic: true, color: P.inkSoft }); y += 10;
       HB.parchment.rule(ctx, x, y + 6, tw, { ornament: false }); y += 20;
       for (const line of info.lines) {
@@ -567,7 +610,7 @@
         this._pvBtns.push(this.ui.add(fly), this.ui.add(close));
         this._pvFor = L;
         this._pvFly = fly;
-      } else if (this._pvFly) { this._pvFly.disabled = !!info.flyError; this._pvFly.disabledReason = info.flyError || ''; }
+      } else if (this._pvFly) { this._pvFly.disabled = !!info.flyError; this._pvFly.disabledReason = info.flyError || ''; for (const b of this._pvBtns) b.y = r.y + r.h - 50; }
     }
     drawToast(ctx) {
       const k = Math.min(1, this.toast.t * 3, (this.toast.max - this.toast.t) * 3);
@@ -584,6 +627,14 @@
   const origUpdate = MapScene.prototype.update;
   MapScene.prototype.update = function (dt) { origUpdate.call(this, dt); if (!this.selected && this._pvBtns) { for (const b of this._pvBtns) this.ui.remove(b); this._pvBtns = null; this._pvFor = null; } };
 
+  function goalMeter(ctx, x, y, w, h, v, m, color, label, pending) {
+    const P = HB.palette;
+    HB.parchment.plaque(ctx, x, y, w, h, { fill: 'rgba(60,40,20,0.22)', color: P.ink, width: 1, radius: 2 });
+    const f = HB.clamp(v / Math.max(1e-6, m), 0, 1), f2 = HB.clamp((v + pending) / Math.max(1e-6, m), 0, 1);
+    if (f2 > f) { ctx.save(); ctx.globalAlpha = 0.4; ctx.fillStyle = color; ctx.fillRect(x + 2 + (w - 4) * f, y + 2, (w - 4) * (f2 - f), h - 4); ctx.restore(); }
+    ctx.fillStyle = color; ctx.fillRect(x + 2, y + 2, (w - 4) * f, h - 4);
+    HB.text.draw(ctx, label, x + w / 2, y + h - 3, { size: 11, align: 'center', family: 'sc', color: P.parchmentLight, shadow: 'rgba(0,0,0,0.7)', maxWidth: w - 4 });
+  }
   function drawMeter(ctx, x, y, w, h, v, m, color, label) {
     const P = HB.palette;
     HB.parchment.plaque(ctx, x, y, w, h, { fill: 'rgba(60,40,20,0.22)', color: P.ink, width: 1, radius: 2 });

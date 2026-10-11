@@ -36,32 +36,59 @@ try {
   await page.waitForTimeout(600); await shot('03-intro');
   await ev(`while (HB.scenes.top() instanceof HB.IntroScene) HB.scenes.pop();`);
   await page.waitForTimeout(400); await shot('04-map-start');
+  // the goal panel and the Aims board
+  await ev(`HB.flow.map.openAims();`); await page.waitForTimeout(300); await shot('04a-aims');
+  const aims = await ev(`const sc=HB.scenes.top(); const o=sc.opps.map(o=>o.aim+': '+o.title); HB.scenes.pop(sc); return o;`);
+  console.log('aims:', aims);
   // tap empty land: should offer a point to explore
   await page.mouse.click(860, 260); await page.waitForTimeout(300);
   const tapped = await ev(`const s = HB.flow.map.selected; return s ? (s.kind || s.type) + ':' + s.name : 'nothing';`);
   console.log('tap on empty map selects:', tapped);
   await shot('04b-explore-point');
   await ev(`HB.flow.map.selected = null;`);
-  // select the nearest easy target and open its preview
-  const target = await ev(`const st=HB.state, m=HB.flow.map; const near=HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, 12, L=>L.knowledge.seen && ['farm','village','camp'].includes(L.type)); const L=near[0].L; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {name:L.name, type:L.type, d:near[0].d};`);
+  // helpers: fly to the selected target and answer cards with the first choice; play a raid; settle what follows
+  const flyAndArrive = async (tag) => {
+    await ev(`const st=HB.state, m=HB.flow.map; HB.travel.begin(st, m.selected, m);`);
+    await page.waitForTimeout(1200); await shot(tag + '-flight');
+    let cardShot = false;
+    for (let i = 0; i < 120; i++) {
+      const top = await ev(`return HB.scenes.top().constructor.name + ':' + HB.state.phase;`);
+      if (top.startsWith('CardScene') && !cardShot && top.endsWith('encounter')) { cardShot = true; await shot(tag + '-arrival'); }
+      const ph = await ev(`const t=HB.scenes.top(); if (t instanceof HB.CardScene && !t.result) { t.choose(t.o.choices[0]); } else if (t instanceof HB.CardScene && t.result) { t.close(); } return HB.state.phase + ':' + HB.scenes.top().constructor.name;`);
+      if (ph.startsWith('encounter') && ph.includes('RaidScene')) break;
+      if (ph.startsWith('planning') && !ph.includes('Card')) break;
+      await page.waitForTimeout(250);
+    }
+  };
+  const playRaid = async (tag) => {
+    await page.waitForTimeout(400); await shot(tag + '-raid-start');
+    const res = await ev(`const sc=HB.scenes.top(); if(!(sc instanceof HB.RaidScene)) return 'no raid: '+sc.constructor.name; const r=sc.r; let n=0; while(!r.ended && n++<4000){ HB.raid.update(r,1/30,{}); const f=HB.raid.focus(r); if(f && !r.dragon.busy){ const acts=HB.raid.actionsFor(r,f).filter(a=>a.enabled).map(a=>a.id); const pick=f.raider?(acts.includes('roar')?'roar':'bite'):acts.includes('grab')?'grab':acts.includes('dodge')?'dodge':acts.includes('feed')?'feed':null; HB.raid.perform(r, pick||'wait', f);} if(r.mode!=='defend' && ((r.alarm>60 && (r.loot.gold+r.loot.items.length)>0) || r.dragon.passes>=2)) HB.raid.perform(r,'withdraw'); if(r.dragon.hp<12 || r.dragon.passes>=4) HB.raid.perform(r,'withdraw'); if(n===300) sc.draw(HB.app.ctx);} return {mode:r.mode, outcome:r.outcome, gold:r.loot.gold, items:r.loot.items.length, recovered:r.recoveredValue, alarm:Math.round(r.alarm), hp:Math.round(r.dragon.hp)};`);
+    console.log(tag, 'raid', res);
+    await page.waitForTimeout(300); await shot(tag + '-raid-end');
+  };
+  const settle = async (tag) => {
+    let consShot = false, goodsShot = false;
+    for (let i = 0; i < 60; i++) {
+      const t = await ev(`return HB.scenes.top().constructor.name;`);
+      if (t === 'CardScene' && !goodsShot) { goodsShot = true; await shot(tag + '-goods'); }
+      if (t === 'ConsequenceScene' && !consShot) { consShot = true; await shot(tag + '-consequence'); const sum = await ev(`const s=HB.state.lastConsequence; return [s.headline].concat(s.lines.map(l=>' - '+l.text)).join(String.fromCharCode(10));`); console.log(sum); }
+      const done = await ev(`const t=HB.scenes.top(); if (t instanceof HB.CardScene && !t.result) { t.choose(t.o.choices[0]); return 'card'; } if (t instanceof HB.CardScene && t.result) { t.close(); return 'card'; } if (t instanceof HB.ConsequenceScene || t.constructor.name==='Modal') { HB.scenes.pop(t); return 'cons'; } return t.constructor.name;`);
+      if (done === 'MapScene') break;
+      await page.waitForTimeout(200);
+    }
+  };
+  // 1) a good deed: the farm or village under attack
+  const threatened = await ev(`const st=HB.state, m=HB.flow.map; const L=st.world.locations.find(L=>L.threat && L.knowledge.seen); if(!L) return null; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {name:L.name, type:L.type, camp:L.threat.campName};`);
+  console.log('threatened', threatened);
+  await page.waitForTimeout(500); await shot('05-preview-threat');
+  if (threatened) { await flyAndArrive('06'); await playRaid('07'); await settle('08'); }
+  const after1 = await ev(`const st=HB.state; return {titles: st.renown.titles.map(t=>t.name), reactions: st.reactions.length};`);
+  console.log('after defend', after1);
+  // 2) a theft: the nearest easy target that is not under attack
+  const target = await ev(`const st=HB.state, m=HB.flow.map; st.dragon.stamina = st.dragon.stats.maxStamina; const near=HB.world.locationsNear(st.world, st.dragon.x, st.dragon.y, 14, L=>L.knowledge.seen && !L.threat && !L.flags.savedYear && ['farm','village','camp'].includes(L.type) && L.state==='normal' && Math.hypot(L.x-st.dragon.x, L.y-st.dragon.y) > 1); if(!near.length) return null; const L=near[0].L; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {name:L.name, type:L.type, d:near[0].d};`);
   console.log('target', target);
-  await page.waitForTimeout(500); await shot('05-preview');
-  // fly
-  await ev(`const st=HB.state, m=HB.flow.map; HB.travel.begin(st, m.selected, m);`);
-  await page.waitForTimeout(1500); await shot('06-flight');
-  // wait for arrival (events may pop cards: auto-choose the first option)
-  for (let i = 0; i < 120; i++) {
-    const ph = await ev(`const t=HB.scenes.top(); if (t instanceof HB.CardScene && !t.result) { t.choose(t.o.choices[0]); } else if (t instanceof HB.CardScene && t.result) { t.close(); } return HB.state.phase + ':' + HB.scenes.top().constructor.name;`);
-    if (ph.startsWith('encounter') && ph.includes('RaidScene')) break;
-    if (ph.startsWith('planning')) break;
-    await page.waitForTimeout(250);
-  }
-  await page.waitForTimeout(400); await shot('07-raid-start');
-  // play the raid: grab what is exposed, dodge bolts, withdraw when alarm is high
-  const raidResult = await ev(`const sc=HB.scenes.top(); if(!(sc instanceof HB.RaidScene)) return 'no raid: '+sc.constructor.name; const r=sc.r; let n=0; while(!r.ended && n++<3000){ HB.raid.update(r,1/30,{}); const f=HB.raid.focus(r); if(f && !r.dragon.busy){ const acts=HB.raid.actionsFor(r,f).filter(a=>a.enabled).map(a=>a.id); const pick=acts.includes('grab')?'grab':acts.includes('dodge')?'dodge':acts.includes('feed')?'feed':null; HB.raid.perform(r, pick||'wait', f);} if((r.alarm>60 && (r.loot.gold+r.loot.items.length)>0) || r.dragon.hp<15 || r.dragon.passes>=2) HB.raid.perform(r,'withdraw'); if(n===200) sc.draw(HB.app.ctx);} return {outcome:r.outcome, gold:r.loot.gold, items:r.loot.items.length, alarm:Math.round(r.alarm), hp:r.dragon.hp};`);
-  console.log('raid', raidResult);
-  await page.waitForTimeout(300); await shot('08-raid-end');
-  for (let i = 0; i < 40; i++) { const t = await ev(`return HB.scenes.top().constructor.name + ':' + HB.state.phase;`); if (t.startsWith('Modal') || t.startsWith('MapScene')) break; await page.waitForTimeout(200); }
+  await page.waitForTimeout(500); await shot('05b-preview');
+  if (target) { await flyAndArrive('06b'); await playRaid('07b'); await settle('08b'); }
   await shot('09-after-raid');
   // fly home via the modal's primary button equivalent
   await ev(`const t=HB.scenes.top(); if (t.constructor.name==='Modal') { HB.scenes.pop(t); } HB.travel.returnHome(HB.state, HB.flow.map);`);

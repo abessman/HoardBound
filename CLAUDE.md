@@ -34,7 +34,7 @@ through decades while the world changes and remembers. Played on desktop and iPa
 
 ## Verify before pushing
 ```
-node tools/test.js              # 69 headless checks: world, travel, raid, economy, ransom, sleep, save, defeat
+node tools/test.js              # 109 headless checks: world, travel, raid, economy, ransom, sleep, save, defeat, goals/defend/renown/consequences
 node tools/test.js other-seed   # try a second seed
 for f in src/**/*.js; do node --check $f; done   # syntax (class bodies: no commas between methods!)
 node tools/playthrough.mjs <outDir>              # scripted browser run with screenshots (Playwright, preinstalled Chromium)
@@ -53,10 +53,12 @@ sprite sheet; `?scene=map&seed=…` jumps straight into a world.
 - Power: `src/game/stats.js` (`HB.CATEGORIES`), tiers in `src/game/state.js` (`HB.TIERS`), treasure in `src/data/treasures.js`.
 - Lair/workers/upgrades: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`.
 - Ransom/tribute/petitions: `src/game/ransom.js`, `tribute.js`, `petitions.js`.
+- Goals and feedback (see DESIGN §3a): milestone + Aims board `src/game/goals.js` / `src/views/aimsview.js`; consequence summaries and the world-reaction log `src/game/consequences.js` / `src/views/consequenceview.js`; titles `src/game/renown.js`; outlaw threats `worldsim.spawnThreat/updateThreats`; defend raid `templates.defend` + `raid.mode === 'defend'`; caravan toll/escort in `encounter.js`; why-now reasons `lair.whyNow`; turn-back chances `sleep.stopChances`.
 - Sleep/keeper/awakening: `src/game/sleep.js`, `keeper.js`, view `src/views/sleepview.js`.
 - World memory: `src/game/factions.js` (wars, armies, rivals), `history.js` (grudges, orders, loyal houses), `worldsim.js` (caravans, heroes, yearly settlement change).
 
 ## Owner preferences (from the design conversation)
+- Goals first: at every moment the player should see what they are trying to achieve, how the next action helps, and what changed because of it. Good deeds must be playable, consequences reported plainly (not moralised), renown visible with real effects, upgrades tied to problems already met. Art waits until this loop works.
 - Long campaign; enormous world revealed little by little; vision grows with size; storm walls gate regions by tier.
 - Dragon appearance evolves with tyranny/benevolence, artifacts and treasure (Binding-of-Isaac-style mutations), 4 size tiers.
 - Tone: Tolkien gravitas with lighter Zelda/Pokémon readability.
@@ -65,12 +67,13 @@ sprite sheet; `?scene=map&seed=…` jumps straight into a world.
 - The owner tests on an iPad: check touch flows (tap to select, drag to pan) and readability at that size.
 
 ## Open backlog (most valuable next)
-1. Raid balance pass (town watch may be too strong for hatchlings; castles are deadly by design).
-2. Distinct staging for the wandering-hero duel and rival-dragon duel.
-3. Visual seasons on the map; armies that move day by day.
-4. A persistent low-res overview canvas for the fully zoomed-out map (performance).
-5. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
-6. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
+1. Playtest the opening cycle on iPad (defend raid feel, Aims board readability, summary length); tune hoard-strength pacing.
+2. Raid balance pass (town watch may be too strong for hatchlings; castles are deadly by design).
+3. Distinct staging for the wandering-hero duel and rival-dragon duel; more good deeds (rescue a captive from a camp, escort a pilgrim) and their own scenes.
+4. Visual seasons on the map; armies that move day by day.
+5. A persistent low-res overview canvas for the fully zoomed-out map (performance).
+6. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
+7. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
 
 ## Git
 Work on the branch named in the session instructions; commit with clear messages; push when a change is verified.

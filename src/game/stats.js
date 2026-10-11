@@ -53,8 +53,9 @@
           else s[k] = v;
         }
       }
-      // age and deeds
+      // age, deeds and named titles
       s.prestige += Math.min(60, d.age * 0.25) + Math.min(40, (state.counters.raids || 0) * 0.5);
+      if (HB.renown) { const rb = HB.renown.bonuses(state); s.prestige += rb.prestige; s.dominance += rb.dominance; }
       s.dominance += s.prestige * 0.3 + Math.max(0, -d.alignment) * 0.2;
       // injury
       if (d.injury > 0) { s.maxStamina *= 1 - 0.3 * d.injury; s.speed *= 1 - 0.25 * d.injury; }

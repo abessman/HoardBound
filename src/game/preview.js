@@ -20,6 +20,7 @@
       lines.push({ label: 'Stamina', text: costText, tone: est.canReturn ? 'good' : est.canReach ? 'warn' : 'bad' });
       if (est.blocked) lines.push({ text: `Storms wall off ${W.regions[est.blocked.regionId].name}. You are too small to cross them.`, tone: 'bad' });
       else if (est.canReach && !est.canReturn) lines.push({ text: 'You could reach it, but not fly home without resting somewhere on the way.', tone: 'warn' });
+      if (!isEnt && target.threat) { const days = Math.max(1, Math.round(target.threat.until - state.time.totalDays)); lines.push({ label: 'Under attack', text: `${HB.fmt.cap(HB.fmt.plural(target.threat.raiders, target.threat.goblin ? 'goblin' : 'outlaw'))} from ${target.threat.campName}; it falls in about ${HB.fmt.plural(days, 'day')}. Drive them off and ${target.name} will trust you.`, tone: 'warn' }); }
       if (target.type === 'lair') { return { subtitle: 'Your cave. Treasure stored here powers you; treasure carried does not.', lines, flyError: est.blocked ? 'blocked' : null }; }
       // knowledge
       const k = target.knowledge || { scoutedYear: state.time.year, raided: true };
@@ -47,7 +48,7 @@
         if (mem) lines.push({ label: 'History', text: `You ${mem.burned ? 'burned' : 'raided'} this place in Year ${mem.year}${mem.stolen ? `, taking ${HB.fmt.int(mem.stolen)} gold worth` : ''}.` });
         if (target.flags && target.flags.famine) lines.push({ text: `Famine since Year ${target.flags.famine}.`, tone: 'warn' });
         if (target.tribute) lines.push({ label: 'Tribute', text: `Pays you ${HB.fmt.int(target.tribute.amount)} gold a year.`, tone: 'good' });
-      } else if (target.kind === 'caravan') lines.push({ text: `${target.escort >= 2 ? 'Well escorted — merchants here have learned.' : target.escort ? 'A few guards.' : 'Barely guarded.'} Strongbox on the first wagon; the best goods ride in the last.`, italic: true });
+      } else if (target.kind === 'caravan') lines.push({ text: `${target.escort >= 2 ? 'Well escorted — merchants here have learned.' : target.escort ? 'A few guards.' : 'Barely guarded.'} Rob it, ${HB.renown && HB.renown.canToll(state) ? 'make it pay a toll, ' : ''}or guard it on the road for its realm’s trust.`, italic: true });
       else if (target.kind === 'hero') lines.push({ text: target.level <= 1 ? 'Green, but armed. Bite from the flank or frighten them off.' : 'Experienced. Companions may come running.', italic: true });
       if (f) lines.push({ label: 'Realm', text: preview.moodText(f) });
       const flyError = HB.travel.canBegin(state, target);

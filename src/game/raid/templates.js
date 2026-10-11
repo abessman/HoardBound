@@ -12,8 +12,8 @@
       const m = { farm: 'village', village: 'village', town: 'village', city: 'village', castle: 'castle', camp: 'camp', warren: 'camp', mine: 'mine', battlefield: 'battlefield', rivalLair: 'dragonDuel' };
       return m[target.type] || null;
     },
-    build(state, target, rng) {
-      const id = T.pick(target);
+    build(state, target, rng, opts = {}) {
+      const id = opts.defend ? 'defend' : T.pick(target);
       const builder = T.builders[id];
       const scene = builder(state, target, rng, T.ctx(state, target));
       scene.templateId = id;
@@ -255,6 +255,45 @@
         return { entities: ents, length, intro: 'Crows over a battlefield. Arms and coin lie among the dead, and the living are too tired to care.', backdrop: 'dusk', alarmBase: 0.9, escalations: [
           { at: 50, text: 'A burial party arrives with an escort.', spawn: [{ kind: 'archer', x: -20, label: 'an escort archer' }, { kind: 'guard', x: -30, label: 'an escort' }] },
           { at: 85, text: 'Cavalry from the victorious host.', spawn: [{ kind: 'knight', x: length + 20, label: 'a knight' }, { kind: 'knight', x: length + 40, label: 'a knight' }] },
+        ] };
+      },
+      /** outlaws are sacking a farm or village: drive them off. No militia, nothing of the village's to take; raiders carry stolen goods. */
+      defend(state, target, rng, ctx) {
+        const ents = [];
+        const tier = target.tier || 0;
+        const t = target.threat || { campName: 'the hills', raiders: 2 + tier, goblin: false };
+        const goblin = !!t.goblin;
+        const houses = tier === 0 ? 2 : tier === 1 ? 4 : 6;
+        const length = 300 + houses * 46;
+        let x = 70, hid = 500;
+        for (let i = 0; i < houses; i++) {
+          const h = { kind: 'house', x, y: G(), w: 20 + rng.int(8), h: 16, label: tier === 0 && i === 0 ? 'the farmhouse' : 'a house', building: true, sprite: 'house', variant: i === houses - 1 && tier === 0 ? 2 : 0, contents: 'A family’s home. Your fire would burn it as surely as theirs.', id: hid++ };
+          ents.push(h);
+          ents.push(T.person(rng.chance(0.5) ? 'villager' : 'merchant', x - 10 + rng.int(10), 'a villager', { sprite: rng.chance(0.5) ? 'villager' : 'villager2' }));
+          x += 46;
+        }
+        ents.push({ kind: 'barn', x: x + 8, y: G(), w: 26, h: 16, label: 'the barn', building: true, sprite: 'house', variant: 2, contents: 'Hay and animals.', id: hid++ });
+        for (let i = 0; i < 3; i++) ents.push(T.person(i === 0 ? 'cow' : 'sheep', 30 + i * 12, i === 0 ? 'a cow' : 'a sheep'));
+        // the raiders have already set one roof alight
+        const first = ents.find(e => e.kind === 'house' && e !== ents[0]) || ents[0];
+        first.preBurning = 9;
+        // what they have stolen: carried by raiders, or piled by the road
+        const stolen = HB.hoard.generateLoot(rng, target, 0.3, state.time.year);
+        const goods = [];
+        if (stolen.gold > 0) goods.push({ gold: stolen.gold, value: stolen.gold, weight: Math.max(0.3, stolen.gold / 100), label: `${HB.fmt.int(stolen.gold)} gold of theirs`, recovered: true });
+        for (const it of stolen.items) goods.push({ item: it, value: it.value, weight: it.weight, label: `${HB.hoard.itemLabel(it)} (stolen)`, recovered: true });
+        const n = HB.clamp(t.raiders || 3, 2, 7);
+        const kind = goblin ? 'goblin' : 'bandit';
+        for (let i = 0; i < n; i++) {
+          const rx = 110 + i * (length - 170) / n + rng.int(18);
+          const lead = i === 0;
+          ents.push(T.person(kind, rx, lead ? 'the raid leader' : goblin ? 'a goblin raider' : 'a raider', { raider: true, state: 'idle', courage: lead ? 1.4 : goblin ? 0.8 : 1.0, hp: lead ? 16 : goblin ? 7 : 10, attack: lead ? 5 : goblin ? 3 : 4, drop: goods.shift() || null }));
+        }
+        for (const g of goods.splice(0, 2)) ents.push(Object.assign({ kind: g.gold ? 'coins' : 'chest', x: 60 + rng.int(length - 120), y: G(), w: 10, h: 8, loot: g, access: 'exposed', label: g.gold ? 'a sack of stolen coin' : g.label }));
+        return { mode: 'defend', entities: ents, length, intro: `${target.name} is burning: ${HB.fmt.plural(n, goblin ? 'goblin' : 'outlaw')} from ${t.campName} are looting it.`, hint: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses too.', backdrop: 'village', alarmBase: 1.0, escalations: [
+          { at: 30, text: 'The raiders set another roof alight.', effect: (r) => HB.raid.raiderFire(r) },
+          { at: 60, text: 'More outlaws come down from the hills.', spawn: [{ kind, x: -24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }, { kind, x: length + 24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }] },
+          { at: 90, text: 'They torch the barn.', effect: (r) => HB.raid.raiderFire(r, 'barn') },
         ] };
       },
       dragonDuel(state, target, rng, ctx) {

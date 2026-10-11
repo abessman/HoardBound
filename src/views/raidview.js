@@ -164,7 +164,7 @@
         return;
       }
       // people / animals
-      const spriteId = e.sprite || ({ guard: 'guard', militia: 'villager2', archer: 'archer', knight: 'knight', hero: 'hero', captain: 'knight', bandit: 'villager', goblin: 'goblin', goblinArcher: 'goblin', dwarfWarrior: 'dwarf', elfArcher: 'archer', villager: 'villager', merchant: 'villager2', priest: 'priest', noble: 'noble', worker: 'villager2', sheep: 'sheep', cow: 'cow', horse: 'horse' }[e.kind] || 'villager');
+      const spriteId = e.sprite || ({ guard: 'guard', militia: 'villager2', archer: 'archer', knight: 'knight', hero: 'hero', captain: 'knight', bandit: 'bandit', goblin: 'goblin', goblinArcher: 'goblin', dwarfWarrior: 'dwarf', elfArcher: 'archer', villager: 'villager', merchant: 'villager2', priest: 'priest', noble: 'noble', worker: 'villager2', sheep: 'sheep', cow: 'cow', horse: 'horse' }[e.kind] || 'villager');
       const sp = S.get(spriteId);
       const bob = e.state === 'flee' || (e.melee && e.state === 'alert' && Math.abs(e.vx) > 0) ? (Math.floor(this.t * 10 + e.id) % 2) : 0;
       let yOff = 0;
@@ -202,7 +202,7 @@
       meter(ctx, 190, 24, mw, 16, D.stamina, s.maxStamina, '#3f6d3a', 'Stamina');
       const carried = HB.game.cargoWeight(st) + HB.raid.lootWeight(r);
       meter(ctx, 352, 24, mw, 16, carried, s.capacity, '#9c6b1c', 'Cargo');
-      meter(ctx, 28, 50, 312, 16, r.alarm, 100, r.alarm < 50 ? '#9c6b1c' : '#8f2b1f', 'Alarm');
+      meter(ctx, 28, 50, 312, 16, r.alarm, 100, r.alarm < 50 ? '#9c6b1c' : '#8f2b1f', r.mode === 'defend' ? `The raid goes on · ${r.entities.filter(e => e.raider && !e.dead).length} raiders left` : 'Alarm', r.mode === 'defend');
       HB.text.draw(ctx, HB.raid.stageName(r), 352, 63, { size: 14, family: 'sc', color: r.alarm >= 70 ? Pp.bad : Pp.ink });
       // target name + loot summary (right top)
       HB.parchment.panel(ctx, HB.W - 334, 12, 320, 74, { shadow: true, stains: false, vignette: 0.1, flourish: 0 });
@@ -240,16 +240,16 @@
       // ending overlay
       if (r.ended) {
         ctx.fillStyle = `rgba(15,8,4,${Math.min(0.6, r.endT)})`; ctx.fillRect(0, 0, HB.W, HB.H);
-        HB.text.draw(ctx, r.outcome === 'defeated' ? 'You fall' : 'You withdraw', HB.W / 2, HB.H / 2, { size: 48, family: 'sc', align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
+        HB.text.draw(ctx, r.outcome === 'defeated' ? 'You fall' : r.outcome === 'defended' ? 'The raiders are gone' : 'You withdraw', HB.W / 2, HB.H / 2, { size: 48, family: 'sc', align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
       }
       // intro text
       if (this.introT < 4) { ctx.save(); ctx.globalAlpha = Math.min(1, 4 - this.introT); HB.text.draw(ctx, r.scene.intro, HB.W / 2, 120, { size: 18, italic: true, align: 'center', color: Pp.parchmentLight, stroke: 'rgba(20,10,5,0.8)', strokeWidth: 3, maxWidth: 900 }); ctx.restore(); }
     }
   }
-  function meter(ctx, x, y, w, h, v, m, color, label) {
+  function meter(ctx, x, y, w, h, v, m, color, label, noValue) {
     HB.parchment.plaque(ctx, x, y, w, h, { fill: 'rgba(60,40,20,0.22)', color: HB.palette.ink, width: 1, radius: 2 });
     ctx.fillStyle = color; ctx.fillRect(x + 2, y + 2, (w - 4) * HB.clamp(v / Math.max(1e-6, m), 0, 1), h - 4);
-    HB.text.draw(ctx, `${label} ${Math.round(v)}/${Math.round(m)}`, x + w / 2, y + h - 3, { size: 12, align: 'center', family: 'sc', color: HB.palette.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
+    HB.text.draw(ctx, noValue ? label : `${label} ${Math.round(v)}/${Math.round(m)}`, x + w / 2, y + h - 3, { size: 12, align: 'center', family: 'sc', color: HB.palette.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
   }
   HB.RaidScene = RaidScene;
 })();

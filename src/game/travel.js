@@ -208,6 +208,7 @@
     arriveHome(state, map) {
       const d = state.dragon;
       state.phase = 'home';
+      const energyBefore = Math.round(HB.stats.hoardEnergy(state));
       const summary = HB.hoard.deposit(state);
       // automatic rest: stamina refills 30%/day, health heals 12%/day
       let days = 0;
@@ -218,7 +219,11 @@
       if (summary.value > 0) {
         const deltas = summary.diff.map(x => `${x.label} ${HB.fmt.signed(x.delta, 1)}`).join(', ');
         HB.game.chronicle(state, `Returned home with ${HB.fmt.int(summary.value)} gold worth of plunder${summary.items.filter(i => i.named).length ? ', including ' + summary.items.filter(i => i.named).map(i => i.name).join(' and ') : ''}.`, 'return');
-        if (HB.isBrowser && HB.notice) HB.notice('Home', `You add ${HB.fmt.int(summary.value)} gold worth of treasure to the hoard${days ? ` and rest for ${HB.fmt.plural(days, 'day')}` : ''}.${deltas ? `\n\nThe hoard’s power grows: ${deltas}.` : ''}${summary.rumors ? '\n\nThe maps you carried sketch lands you have not flown.' : ''}`);
+        state.lastDeposit = { lines: HB.consequences ? HB.consequences.depositSummary(state, summary, energyBefore) : [], days };
+        if (HB.isBrowser && HB.notice) {
+          const m = HB.goals ? HB.goals.milestone(state) : null;
+          HB.notice('Home', `${state.lastDeposit.lines.join('\n')}${days ? `\nYou rest for ${HB.fmt.plural(days, 'day')}.` : ''}${summary.rumors ? '\n\nThe maps you carried sketch lands you have not flown.' : ''}${m ? `\n\nNext: ${m.nextStep}` : ''}`);
+        }
       } else if (map) map.showToast(days ? `Home. You rest for ${HB.fmt.plural(days, 'day')}.` : 'Home.');
       if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
       if (HB.petitions) { HB.petitions.expire(state); const p = HB.petitions.onReturn(state, map); if (p) HB.petitions.show(state, p, map); }

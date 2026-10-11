@@ -23,6 +23,63 @@
       for (const g of state.lair.workers) if (g.task === 'guard') s += g.count * HB.WORKER_TYPES[g.type].guard * (g.loyalty / 100) * 2.5 * vals;
       return Math.min(30, s);
     },
+    /** lair values as they would be with the next level of an upgrade */
+    valuesWith(state, id) {
+      const lv = lair.level(state, id), u = HB.UPGRADE_BY_ID[id];
+      if (!u || lv >= u.levels.length) return lair.values(state);
+      state.lair.upgrades[id] = lv + 1;
+      const v = lair.values(state);
+      if (lv) state.lair.upgrades[id] = lv; else delete state.lair.upgrades[id];
+      return v;
+    },
+    /** lair values once construction that will finish within `days` is done (e.g. the first year of a sleep) */
+    valuesAfter(state, days) {
+      const rate = lair.buildRate(state), saved = Object.assign({}, state.lair.upgrades), done = [];
+      for (const c of state.lair.construction) if (c.progress + rate * days / c.days >= 1) { state.lair.upgrades[c.id] = c.level; done.push(c.id); }
+      const v = lair.values(state);
+      state.lair.upgrades = saved;
+      return { v, done };
+    },
+    /** why an upgrade matters now: tied to something that has happened or is about to. null if nothing specific. */
+    whyNow(state, id) {
+      const P = state.problems || {}, value = HB.game.hoardValue(state), lv = lair.level(state, id);
+      const named = state.hoard.items.filter(i => i.named);
+      const small = state.hoard.items.filter(i => HB.hoard.itemDensity(i) >= 300);
+      const t = HB.sleep ? HB.sleep.threatEstimate(state) : { thief: 0, hunt: 0 };
+      const pct = (p) => Math.round(p * 100) + '%';
+      switch (id) {
+        case 'strongroom':
+          if (P.stolenNamed && P.stolenNamed.length) return `Thieves took ${P.stolenNamed[P.stolenNamed.length - 1]} while you slept. A strongroom would have kept it behind iron.`;
+          if (named.length > (lair.values(state).strongroom || 0)) return `You keep ${HB.fmt.plural(named.length, 'named treasure')}: exactly what a thief comes for.`;
+          if (small.length && !lv) return `${HB.fmt.cap(HB.fmt.plural(small.length, 'small, valuable piece'))} would fit in a thief’s sack.`;
+          return null;
+        case 'entrance':
+          if (P.thefts) return `Thieves have robbed you ${HB.fmt.plural(P.thefts, 'time')} (${HB.fmt.int(P.stolenValue)} gold worth lost).`;
+          if (!lv && value >= 250) return `A hoard worth ${HB.fmt.int(value)} draws thieves (${pct(t.thief)} a year) and your door is an open cave mouth.`;
+          if (P.hunts) return `Hunters have come for you ${HB.fmt.plural(P.hunts, 'time')}.`;
+          return null;
+        case 'traps':
+          if (P.thefts || P.hunts) return `${P.thefts ? HB.fmt.cap(HB.fmt.plural(P.thefts, 'theft')) : ''}${P.thefts && P.hunts ? ' and ' : ''}${P.hunts ? HB.fmt.plural(P.hunts, 'hunting party', 'hunting parties') : ''} so far. Traps wound them before they reach the hoard.`;
+          return null;
+        case 'sleeping':
+          if (P.breaches) return `Hunters reached you in your sleep ${HB.fmt.plural(P.breaches, 'time')}. Next time they may not miss.`;
+          if (t.hunt >= 0.06) return `Hunters are coming (${pct(t.hunt)} a year) and nothing stands between them and you while you sleep.`;
+          return null;
+        case 'chamber': {
+          const s = lair.storage(state);
+          if (s.over > 0) return `${HB.fmt.int(s.exposedValue)} gold worth lies outside the chamber, easy pickings for thieves.`;
+          if (s.used > s.space * 0.75) return `The chamber is ${pct(s.used / s.space)} full.`;
+          return null;
+        }
+        case 'concealed': if ((state.lair.attention || 0) >= 4) return `Too many people know where you sleep (attention ${Math.round(state.lair.attention)}). Thieves and hunters find a known lair.`; return null;
+        case 'guardpost': if (P.escapes) return `Workers or captives have escaped ${HB.fmt.plural(P.escapes, 'time')} and told where you sleep.`; if (state.lair.workers.some(w => w.status === 'enslaved')) return 'Enslaved workers will try to escape.'; if (state.lair.workers.some(w => w.task === 'guard')) return 'Your guards are worth a third as much without a post.'; return null;
+        case 'lookout': if (P.hunts) return `Hunters have come ${HB.fmt.plural(P.hunts, 'time')}; a lookout gives you warning to wake.`; return null;
+        case 'larder': if (state.dragon.injury > 0) return 'You are injured; you heal faster well fed.'; return null;
+        case 'ward': if (P.magicThefts) return 'A thief with magic got past your doors.'; return null;
+        case 'forge': if (state.lair.workers.some(w => w.type === 'dwarf' || w.type === 'human')) return 'Your smiths could arm the guard every year.'; return null;
+      }
+      return null;
+    },
     /** how full the treasure chamber is. Room is by bulk (size), not value. */
     storage(state) {
       const space = lair.values(state).space;
@@ -59,6 +116,8 @@
       for (const g of state.lair.workers) if (g.task === 'build') r += g.count * HB.WORKER_TYPES[g.type].build * (0.4 + 0.6 * g.loyalty / 100) * 0.2;
       return r;
     },
+    /** how much faster construction would go with a crew from this offer */
+    buildRateWith(state, offer) { const r = lair.buildRate(state); return (r + offer.count * HB.WORKER_TYPES[offer.type].build * (0.4 + 0.6 * 0.65) * 0.2) / Math.max(0.01, r); },
     build(state, id) {
       const c = lair.canBuild(state, id); if (!c.ok) return c;
       HB.hoard.spend(state, c.next.cost);
@@ -99,6 +158,14 @@
         const serve = f.dragon.fear >= 10 || d.tier >= 1;
         offers.push({ type: 'goblin', count: 6, fee: 60, wage: HB.WORKER_TYPES.goblin.wage, from: f.name, factionId: f.id, available: serve, reason: 'Goblins serve the strong: frighten them first, or grow' });
       }
+      // people you have helped come willingly: no fee, lower wages, loyal from the start
+      const guardianOf = HB.renown ? HB.renown.guardianOf(state) : [];
+      for (const L of W.locations) {
+        if (!['farm', 'village', 'town'].includes(L.type) || L.state !== 'normal' || !L.knowledge.seen) continue;
+        if (L.trust < 30 && !guardianOf.includes(L.name)) continue;
+        if (state.lair.workers.some(w => w.from === L.name && w.willing)) continue;
+        offers.push({ type: 'human', count: L.type === 'town' ? 4 : 3, fee: 0, wage: Math.round(HB.WORKER_TYPES.human.wage * 0.6), from: L.name, factionId: L.factionId, available: true, willing: true, reason: '' });
+      }
       const towns = near(['town', 'city'], 40);
       if (towns.length) { const L = towns[0].L; const f = W.factions[L.factionId]; const ok = f ? f.dragon.hostility < 35 : true; offers.push({ type: 'human', count: 3, fee: 220, wage: HB.WORKER_TYPES.human.wage, from: L.name, factionId: L.factionId, available: ok, reason: `${f ? f.name : 'The town'} is too hostile to send builders` }); }
       return offers;
@@ -107,7 +174,8 @@
       if (!offer.available) return { ok: false, reason: offer.reason };
       if (state.hoard.gold < offer.fee) return { ok: false, reason: `Needs ${offer.fee} gold in the hoard` };
       HB.hoard.spend(state, offer.fee);
-      let g = state.lair.workers.find(w => w.type === offer.type && w.status === 'paid');
+      let g = offer.willing ? null : state.lair.workers.find(w => w.type === offer.type && w.status === 'paid' && !w.willing);
+      if (offer.willing) { state.lair.workers.push({ id: HB.nextId('wg'), type: offer.type, count: offer.count, status: 'paid', willing: true, wage: offer.wage, loyalty: 85, task: 'build', from: offer.from, factionId: offer.factionId, since: state.time.year, unpaidYears: 0 }); HB.game.chronicle(state, `${offer.count} people of ${offer.from} came to work in the lair, willingly.`, 'lair'); return { ok: true }; }
       if (g) g.count += offer.count; else state.lair.workers.push({ id: HB.nextId('wg'), type: offer.type, count: offer.count, status: 'paid', loyalty: 65, task: 'build', from: offer.from, factionId: offer.factionId, since: state.time.year, unpaidYears: 0 });
       HB.game.chronicle(state, `Hired ${offer.count} ${HB.WORKER_TYPES[offer.type].name.toLowerCase()} from ${offer.from} for ${offer.fee} gold.`, 'lair');
       return { ok: true };
@@ -134,7 +202,7 @@
       for (const g of state.lair.workers.slice()) {
         const T = HB.WORKER_TYPES[g.type];
         if (g.status === 'paid') {
-          const wages = g.count * T.wage;
+          const wages = g.count * (g.wage || T.wage);
           if (state.hoard.gold >= wages) { state.hoard.gold -= wages; g.unpaidYears = 0; g.loyalty = Math.min(100, g.loyalty + 4); ev.push({ kind: 'wages', text: `Paid ${HB.fmt.int(wages)} gold in wages to the ${T.name.toLowerCase()}.` }); }
           else { g.unpaidYears++; g.loyalty -= 18; ev.push({ kind: 'unpaid', text: `The ${T.name.toLowerCase()} went unpaid (${HB.fmt.int(wages)} owed). Their loyalty falls.`, bad: true }); }
           if (g.type === 'dwarf' && hasGoblin) { g.loyalty -= 6; }
@@ -146,7 +214,7 @@
           const unrest = (40 - g.loyalty) / 100 + 0.05;
           const r = rng.next();
           if (r < unrest * 0.5) { const c = state.lair.construction[0]; if (c) { c.progress = Math.max(0, c.progress - 0.25); ev.push({ kind: 'sabotage', text: `Sabotage: the enslaved ${T.name.toLowerCase()} set back work on ${HB.UPGRADE_BY_ID[c.id].name}.`, bad: true }); } }
-          else if (r < unrest) { const n = Math.min(g.count, 1 + rng.int(2)); g.count -= n; state.lair.attention = (state.lair.attention || 0) + 3; ev.push({ kind: 'escape', text: `${n} enslaved ${n === 1 ? T.single : T.name.toLowerCase()} escaped and will tell where you sleep.`, bad: true }); if (g.count <= 0) lair.dismiss(state, g); }
+          else if (r < unrest) { const n = Math.min(g.count, 1 + rng.int(2)); g.count -= n; state.lair.attention = (state.lair.attention || 0) + 3; if (state.problems) state.problems.escapes++; ev.push({ kind: 'escape', text: `${n} enslaved ${n === 1 ? T.single : T.name.toLowerCase()} escaped and will tell where you sleep.`, bad: true }); if (g.count <= 0) lair.dismiss(state, g); }
           else if (r < unrest * 1.4 && g.count >= 3) { const loss = Math.min(state.hoard.gold, Math.round(rng.between(50, 200))); state.hoard.gold -= loss; state.lair.decay = Math.min(10, (state.lair.decay || 0) + 2); ev.push({ kind: 'revolt', text: `Revolt in the lair: the enslaved ${T.name.toLowerCase()} broke the doors and fled with ${loss} gold.`, bad: true }); lair.dismiss(state, g); }
           const f = g.factionId >= 0 ? state.world.factions[g.factionId] : null;
           if (f && rng.chance(0.25)) { if (HB.factions) HB.factions.adjust(state, f, { hostility: 3 }, 'held their people as slaves'); else f.dragon.hostility += 3; }

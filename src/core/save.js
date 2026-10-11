@@ -6,7 +6,7 @@
 
   function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
   function unb64(str) { const s = typeof atob === 'function' ? atob(str) : Buffer.from(str, 'base64').toString('binary'); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
-  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient'];
+  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient', 'threat'];
 
   const save = HB.save = {
     serialize(state) {
@@ -16,6 +16,7 @@
         v: 1, gen: GEN_VERSION, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
+        renown: state.renown, reactions: state.reactions, problems: state.problems,
         locations: locs, factions: W.factions, extraLocations: W.locations.length,
         know: { revealed: b64(state.know.revealed), rumor: b64(state.know.rumor), subSeen: b64(state.know.subSeen), regionSeen: b64(state.know.regionSeen) },
         regionTiers: W.regions.map(R => R.tier), subFactions: W.subregions.map(S => S.factionId),
@@ -39,6 +40,7 @@
         version: 1, seed: data.seed, created: data.created, name: data.name, world, know,
         dragon: data.dragon, hoard: data.hoard, cargo: data.cargo, lair: data.lair, time: data.time, phase: data.phase || 'home', travel: null, encounter: null,
         chronicle: data.chronicle, entities: data.entities || [], flags: data.flags, memory: data.memory, counters: data.counters, playRng: data.playRng,
+        renown: data.renown || { deeds: {}, titles: [], known: {}, places: {} }, reactions: data.reactions || [], problems: data.problems || { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 },
       };
       HB.setIdCounter(Math.max(HB.getIdCounter(), data.idCounter || 1));
       HB.game.state = HB.state = state;
