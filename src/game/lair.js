@@ -8,14 +8,13 @@
     /** derived lair values from base + upgrades (+ staffed forge bonus) */
     values(state) {
       const v = Object.assign({}, HB.LAIR_BASE);
-      for (const u of HB.UPGRADES) { const lv = lair.level(state, u.id); for (let i = 0; i < lv; i++) for (const k in u.levels[i].effects) { if (k === 'capacity') v.capacity = Math.max(v.capacity, u.levels[i].effects[k]); else v[k] += u.levels[i].effects[k]; } }
+      for (const u of HB.UPGRADES) { const lv = lair.level(state, u.id); for (let i = 0; i < lv; i++) for (const k in u.levels[i].effects) { if (k === 'space') v.space = Math.max(v.space, u.levels[i].effects[k]); else v[k] += u.levels[i].effects[k]; } }
       v.defense += state.lair.forgeBonus || 0;
       v.defense -= state.lair.decay || 0;
       // guards
       const guards = lair.guardStrength(state);
       v.guardStrength = guards;
       v.defense += Math.round(guards);
-      v.capacity = v.capacity;
       return v;
     },
     guardStrength(state) {
@@ -24,7 +23,16 @@
       for (const g of state.lair.workers) if (g.task === 'guard') s += g.count * HB.WORKER_TYPES[g.type].guard * (g.loyalty / 100) * 2.5 * vals;
       return Math.min(30, s);
     },
-    hoardOverflow(state) { const v = lair.values(state); const total = HB.game.hoardValue(state); return Math.max(0, total - v.capacity); },
+    /** how full the treasure chamber is. Room is by bulk (size), not value. */
+    storage(state) {
+      const space = lair.values(state).space;
+      const used = HB.hoard.bulk(state);
+      const over = Math.max(0, used - space);
+      const frac = used > 0 ? over / used : 0;
+      return { used, space, over, frac, exposedValue: Math.round(HB.game.hoardValue(state) * frac) };
+    },
+    /** gold worth of treasure lying outside the chamber (easy for thieves) */
+    hoardOverflow(state) { return lair.storage(state).exposedValue; },
     // ---------- construction
     canBuild(state, id) {
       const u = HB.UPGRADE_BY_ID[id]; const lv = lair.level(state, id);

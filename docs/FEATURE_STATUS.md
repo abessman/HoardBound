@@ -41,7 +41,7 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Named artifacts with identity, source, effect | Functional | 24 artifacts placed across the world; effects and lore shown; stolen artifacts travel to a named place and can be recovered. |
 | Spending/losing removes bonus; age separate | Functional | |
 | Paid vs enslaved workers | Functional | Wages, loyalty, quitting, pilfering goblins; enslaved: sabotage, escape, revolt, faction hostility. |
-| Upgrades improve cave and defence outcomes | Functional | 10 upgrades; values feed thief/hunter resolution; cutaway shows them. |
+| Upgrades improve cave and defence outcomes | Functional | 10 upgrades; values feed thief/hunter resolution; cutaway shows them. The treasure chamber holds treasure by bulk (100 coins per space, items by size), not value; whatever does not fit is easier for thieves to take. |
 | Ransom captures occupy cargo, resolve once | Functional | Five demand types; refusal, stalling, short-weighted chest, rescue attempt. |
 | Destruction reduces wealth; tribute consumes real resources | Functional | Granary famine; burned state; tribute drawn from settlement wealth, lapses on poverty/new ruler/lost fear. |
 

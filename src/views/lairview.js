@@ -140,10 +140,13 @@
       const totals = HB.stats.categoryTotals(st);
       const v = HB.lair.values(st);
       const total = HB.game.hoardValue(st);
-      HB.text.draw(ctx, `${HB.fmt.int(st.hoard.gold)} gold in coin · ${HB.fmt.int(total)} gold worth in all · cave holds ${HB.fmt.int(v.capacity)}`, p.x + 16, p.y + 44, { size: 14, maxWidth: p.w - 32 });
-      const over = HB.lair.hoardOverflow(st);
-      if (over > 0) HB.text.draw(ctx, `${HB.fmt.int(over)} gold worth overflows the chamber: exposed to thieves and only half as empowering. Build a larger treasure chamber.`, p.x + 16, p.y + 62, { size: 12, italic: true, color: Pp.bad, maxWidth: p.w - 32 });
-      let y = p.y + 84;
+      const sto = HB.lair.storage(st);
+      HB.text.draw(ctx, `${HB.fmt.int(st.hoard.gold)} gold in coin · ${HB.fmt.int(total)} gold worth in all`, p.x + 16, p.y + 44, { size: 14, maxWidth: p.w - 32 });
+      const roomText = sto.over > 0
+        ? `The hoard fills ${Math.ceil(sto.used)} spaces and the chamber has ${sto.space}. ${HB.fmt.int(sto.exposedValue)} gold worth lies outside it, where thieves can take it easily. Build a larger treasure chamber.`
+        : `The hoard fills ${Math.ceil(sto.used)} of the chamber’s ${sto.space} spaces. Room goes by size, not worth: 100 coins to a space, a sword about two, a ring almost none.`;
+      HB.text.paragraph(ctx, roomText, p.x + 16, p.y + 50, p.w - 32, { size: 13, italic: true, color: sto.over > 0 ? Pp.bad : Pp.inkSoft, maxLines: 2, lineHeight: 16 });
+      let y = p.y + 92;
       const cats = Object.keys(HB.CATEGORIES);
       for (const c of cats) {
         const def = HB.CATEGORIES[c];
@@ -215,8 +218,8 @@
       if (lv('larder')) { px.blit(g, S.get('barrel'), cx0 + cw - 56, floor - 6); px.blit(g, S.get('hay'), cx0 + cw - 64, floor - 5); }
       if (lv('sleeping')) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 10, floor - 50, 40, 50); g.fillStyle = '#4f3a46'; g.fillRect(cx0 + cw - 4, floor - 44, 30, 44); px.blit(g, S.get('gate', 12, 20), cx0 + cw - 12, floor - 20); }
       // hoard pile: size by gold value
-      const total = HB.game.hoardValue(st);
-      const pileW = HB.clamp(20 + Math.sqrt(total) * 1.6, 16, cw * 0.6), pileH = HB.clamp(4 + Math.sqrt(total) * 0.5, 3, 40);
+      const total = HB.game.hoardValue(st), bulk = HB.hoard.bulk(st);
+      const pileW = HB.clamp(16 + Math.sqrt(bulk) * 9, 14, cw * 0.6), pileH = HB.clamp(3 + Math.sqrt(bulk) * 2.6, 3, 40);
       const pxc = cx0 + cw * 0.45;
       for (let i = 0; i < 4; i++) px.ellipse(g, pxc, floor - i * (pileH / 4), pileW * (1 - i * 0.22), pileH * 0.45 * (1 - i * 0.15), i % 2 ? P.gold : P.goldLight);
       g.fillStyle = P.goldDark; for (let i = 0; i < Math.min(40, total / 40); i++) g.fillRect(pxc - pileW * 0.8 + rng.int(pileW * 1.6), floor - rng.int(pileH), 1, 1);
@@ -241,6 +244,6 @@
     }
   }
   function describeEffect(e) { if (!e) return 'none'; const parts = []; for (const k in e) { if (k === 'mul') for (const kk in e.mul) parts.push(`${kk} ×${e.mul[kk]}`); else parts.push(`${k} ${typeof e[k] === 'number' ? HB.fmt.signed(e[k]) : e[k]}`); } return parts.join(', '); }
-  function describeEffects(e) { const names = { capacity: 'holds', defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
+  function describeEffects(e) { if (e.space) return `room for ${HB.fmt.int(e.space)} spaces of treasure`; const names = { defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
   HB.LairScene = LairScene;
 })();

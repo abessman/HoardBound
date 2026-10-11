@@ -73,6 +73,8 @@
     removeItem(state, itemId) { const i = state.hoard.items.findIndex(it => it.id === itemId); if (i < 0) return null; const it = state.hoard.items.splice(i, 1)[0]; HB.stats.recompute(state); return it; },
     addToHoard(state, item) { state.hoard.items.push(item); HB.stats.recompute(state); },
     cargoWeight(state) { return HB.game.cargoWeight(state); },
+    /** room the stored hoard takes in the cave: 100 coins per space, items by their size (weight) */
+    bulk(state) { let b = state.hoard.gold / 100; for (const it of state.hoard.items) b += it.weight || 0; return b; },
     canCarry(state, weight) { return HB.game.cargoWeight(state) + weight <= state.dragon.stats.capacity + 1e-6; },
     addCargo(state, loot) { state.cargo.gold += loot.gold || 0; for (const it of loot.items || []) state.cargo.items.push(it); },
     /** drop the heaviest cargo to shed `weight` — returns dropped list */

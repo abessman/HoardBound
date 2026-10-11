@@ -43,7 +43,7 @@
       const yrs = Math.max(1, Math.floor(years));
       const pThief = 1 - Math.pow(1 - t.thief, yrs), pHunt = 1 - Math.pow(1 - t.hunt, yrs);
       lines.push({ text: `Thieves: ${sleep.likelihood(pThief)} over the sleep. Hunters: ${sleep.likelihood(pHunt)}.`, tone: pHunt > 0.5 ? 'bad' : pThief > 0.5 ? 'warn' : 'good' });
-      if (HB.lair.hoardOverflow(state) > 0) lines.push({ text: `${HB.fmt.int(HB.lair.hoardOverflow(state))} gold worth lies outside the chamber, easy to carry off.`, tone: 'warn' });
+      if (HB.lair.hoardOverflow(state) > 0) lines.push({ text: `${HB.fmt.int(HB.lair.hoardOverflow(state))} gold worth does not fit in the treasure chamber and lies where thieves can carry it off.`, tone: 'warn' });
       if (HB.keeper && HB.keeper.enabled(state) && years >= 5) lines.push({ text: 'The Keeper will tend you: expect one or two moments where its choices matter.' });
       const warning = pHunt > 0.5 && !t.sleepSafety ? `Hunters are likely (${sleep.likelihood(pHunt)}) and nothing stands between them and the sleeper.` : pThief > 0.6 ? 'Thieves are likely; the hoard is exposed.' : null;
       return { lines, warning, pThief, pHunt };
