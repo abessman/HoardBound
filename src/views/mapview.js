@@ -43,7 +43,21 @@
       this.btnRealms = btn(x, 'Realms', 'factions', () => this.openRealms(), { tooltip: 'Known realms, their mood toward you, and their wars. (F)' }); x += bw + 8;
       this.btnMenu = btn(x, 'Menu', 'menu', () => this.openMenu(), { tooltip: 'Save, load, settings. (Esc)' }); x += bw + 8;
       this.btnHome = btn(x, 'Find me', null, () => this.centerOn(st.dragon.x + 0.5, st.dragon.y + 0.5), { tooltip: 'Centre the map on your dragon.' });
+      // context buttons (visibility set per frame)
+      const cx = HB.W - 14 - 150;
+      this.btnFlyHome = ui.add(new HB.ui.Button({ x: cx, y, w: 150, h: bh, label: 'Fly home', size: 15, primary: true, tooltip: 'Return to the lair with your cargo.', onClick: () => { const lair = st.world.locations[st.world.home.locId]; const err = HB.travel.canBegin(st, lair); if (err) this.showToast(err); else HB.travel.begin(st, lair, this); } }));
+      this.btnPause = ui.add(new HB.ui.Button({ x: cx, y, w: 150, h: bh, label: 'Pause', size: 15, hotkey: 'pause', hotkeyLabel: 'P', tooltip: 'Pause or resume the flight.', onClick: () => { HB.travel.togglePause(st); } }));
+      this.btnSpeed = ui.add(new HB.ui.Button({ x: cx - 158, y, w: 150, h: bh, label: 'Speed ×1', size: 15, tooltip: 'Cycle flight speed. Hold Shift for a burst.', onClick: () => { const tr = st.travel; if (tr) tr.speedMul = tr.speedMul >= 3 ? 0.6 : tr.speedMul >= 1.6 ? 3 : tr.speedMul >= 1 ? 1.6 : 1; } }));
+      this.btnTurn = ui.add(new HB.ui.Button({ x: cx - 316, y, w: 150, h: bh, label: 'Turn back', size: 15, tooltip: 'Abandon this flight and head home.', onClick: () => HB.travel.turnBack(st, this) }));
       ui.onCancel = () => { if (this.selected) this.selected = null; else this.openMenu(); };
+    }
+    updateContextButtons() {
+      const st = this.state, tr = st.travel;
+      const away = st.phase === 'planning' && Math.hypot(st.dragon.x - st.world.home.x, st.dragon.y - st.world.home.y) > 0.5;
+      this.btnFlyHome.visible = away;
+      const flying = st.phase === 'traveling' || st.phase === 'returning';
+      this.btnPause.visible = flying; this.btnSpeed.visible = flying; this.btnTurn.visible = st.phase === 'traveling';
+      if (flying && tr) { this.btnPause.label = tr.paused ? 'Resume' : 'Pause'; this.btnSpeed.label = `Speed ×${tr.speedMul}`; }
     }
     openLair() { if (HB.LairScene) HB.scenes.push(new HB.LairScene(this.state)); else HB.notice('Lair', 'The lair view is not built yet.'); }
     openChronicle() { if (HB.ChronicleScene) HB.scenes.push(new HB.ChronicleScene(this.state)); else HB.notice('Chronicle', this.state.chronicle.map(c => `Year ${c.year}: ${c.text}`).slice(-8).join('\n')); }
@@ -54,6 +68,7 @@
     update(dt) {
       this.t += dt; this.frame++;
       const st = this.state, inp = HB.input, ptr = inp.pointer;
+      this.updateContextButtons();
       this.ui.update(dt);
       const overUi = this.ui.hoverWidget || this.ui.consumedPointer;
       // camera smoothing

@@ -91,7 +91,8 @@
       HB.parchment.vignette(ctx, 0, 0, HB.W, HB.H, 0.45);
       HB.parchment.border(ctx, 14, 14, HB.W - 28, HB.H - 28, { width: 2.5, flourish: 16 });
       HB.text.draw(ctx, this.s.tierUp ? 'You wake, and you have grown' : this.s.forced ? 'You are woken' : 'You wake', HB.W / 2, 66, { size: 40, family: 'sc', align: 'center', spacing: 3 });
-      HB.text.draw(ctx, `${HB.game.dateString(st)} · ${HB.fmt.years(Math.round(this.s.years))} passed`, HB.W / 2, 92, { size: 15, italic: true, align: 'center', color: HB.palette.inkSoft });
+      const planned = st.lastSleep && st.lastSleep.planned ? st.lastSleep.planned : null;
+      HB.text.draw(ctx, `${HB.game.dateString(st)} · ${HB.fmt.years(Math.round(this.s.years))} passed${planned && Math.round(this.s.years) < planned ? ` of the ${planned} you meant to sleep` : ''}`, HB.W / 2, 92, { size: 15, italic: true, align: 'center', color: HB.palette.inkSoft });
       HB.dragonArt.draw(ctx, HB.dragonArt.specOf(st), 'roar', 0, HB.W - 150, 80, 2.2 - st.dragon.tier * 0.3, -1);
       this.ui.draw(ctx);
     }
@@ -118,4 +119,19 @@
     }
   }
   HB.DeathScene = DeathScene;
+
+  class LegendScene {
+    constructor(state) { this.state = state; this.opaque = false; this.ui = new HB.ui.UI(); this.t = 0; }
+    enter() { this.ui.add(new HB.ui.Button({ x: HB.W / 2 - 110, y: HB.H - 110, w: 220, h: 44, label: 'Go on', primary: true, onClick: () => HB.scenes.pop(this) })); this.ui.focusFirst(); }
+    update(dt) { this.t += dt; this.ui.update(dt); }
+    draw(ctx) {
+      const st = this.state;
+      ctx.fillStyle = 'rgba(15,8,4,0.6)'; ctx.fillRect(0, 0, HB.W, HB.H);
+      HB.parchment.panel(ctx, 140, 60, HB.W - 280, HB.H - 120, { tone: 'light', title: 'A Legend' });
+      HB.dragonArt.draw(ctx, HB.dragonArt.specOf(st), 'roar', 0, HB.W / 2, 200, 3 - st.dragon.tier * 0.4, 1);
+      HB.text.paragraph(ctx, `The elder wyrm is dead and ${st.dragon.name} is the oldest fire in the world. Kingdoms will mark their borders by where you sleep. There is nothing left to prove, and a great deal left to take.\n\nThe chronicle goes on for as long as you do.`, 190, 300, HB.W - 380, { size: 19, lineHeight: 26, align: 'center' });
+      this.ui.draw(ctx);
+    }
+  }
+  HB.LegendScene = LegendScene;
 })();

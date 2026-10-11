@@ -35,11 +35,11 @@
       const acts = focus ? HB.raid.actionsFor(r, focus) : [];
       for (let i = 0; i < acts.length && i < 9; i++) if (inp.pressed(`action${i + 1}`)) { if (acts[i].enabled) this.perform(acts[i].id, focus); }
       if (inp.usingGamepad()) { if (inp.pressed('confirm') && acts[0] && acts[0].enabled && !this.ui.focus) this.perform(acts[0].id, focus); if (inp.pressed('alt')) this.perform('wait'); }
-      // pointer click on entity selects it
+      // pointer click on entity (or a chip in the bar) selects it
       const ptr = inp.pointer;
-      if (ptr.released && !ptr.dragging && !this.ui.consumedPointer && ptr.y < HB.H - 150) {
-        const hit = this.entityAtScreen(ptr.x, ptr.y);
-        if (hit) { r.focusId = hit.id; r.dismissed.delete(hit.id); }
+      if (ptr.released && !ptr.dragging && !this.ui.consumedPointer) {
+        if (ptr.y < HB.H - 120) { const hit = this.entityAtScreen(ptr.x, ptr.y); if (hit) { r.focusId = hit.id; r.dismissed.delete(hit.id); } }
+        else if (this.chips) { const c = this.chips.find(c => HB.pointInRect(ptr.x, ptr.y, c.x, c.y, c.w, c.h)); if (c) { r.focusId = c.e.id; r.dismissed.delete(c.e.id); } }
       }
       HB.raid.update(r, dt, { speed: inp.held('speed'), slow: inp.held('slow') });
       if (r.dragon.hurtT > 0.2) this.shake = 4;
@@ -224,6 +224,14 @@
       ctx.fillStyle = Pp.ink; ctx.fillRect(0, HB.H - 121, HB.W, 2);
       if (focus) HB.text.draw(ctx, `Opportunity: ${focus.label}`, 24, HB.H - 108, { size: 13, family: 'sc', color: Pp.ink });
       else HB.text.draw(ctx, r.ended ? '' : 'Flying on. Opportunities appear as you pass over them.', 24, HB.H - 108, { size: 13, italic: true, color: Pp.inkSoft });
+      // other targets in reach: chips (click to focus, Q cycles)
+      const others = (r.opportunities || []).filter(e => e !== focus).slice(0, 4);
+      if (others.length) {
+        let cx = 24 + HB.text.width(`Opportunity: ${focus ? focus.label : ''}`, 13, { family: 'sc' }) + 18;
+        HB.text.draw(ctx, 'also here:', cx, HB.H - 108, { size: 12, italic: true, color: Pp.inkSoft }); cx += 62;
+        this.chips = [];
+        for (const e of others) { const w = HB.text.width(e.label, 12) + 16; if (cx + w > 700) break; HB.parchment.plaque(ctx, cx, HB.H - 120 + 2, w, 18, { fill: 'rgba(255,246,222,0.5)', width: 1, radius: 9 }); HB.text.draw(ctx, e.label, cx + 8, HB.H - 105, { size: 12, color: Pp.ink }); this.chips.push({ x: cx, y: HB.H - 118, w, h: 18, e }); cx += w + 6; }
+      } else this.chips = [];
       // messages (middle of the bar)
       const msgs = r.messages.slice(-4);
       const mx = 724, mpw = 320;

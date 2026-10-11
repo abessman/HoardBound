@@ -22,7 +22,7 @@
         if (HB.isBrowser && HB.RaidScene) HB.scenes.push(new HB.RaidScene(state, r, (res) => enc.finishRaid(state, target, r, map)));
         else return r; // headless: caller drives raid and calls finishRaid
       } else if (kind === 'card') {
-        enc.beginCard(state, target, map);
+        return enc.beginCard(state, target, map);
       } else {
         state.phase = 'planning';
         if (map) map.showToast(`There is nothing to do at ${target.name}.`);
@@ -72,7 +72,10 @@
       let lostLoot = null;
       if (outcome === 'defeated') { lostLoot = r.loot; d.health = Math.max(1, Math.round(d.stats.maxHealth * 0.2)); d.injury = Math.min(1, d.injury + 0.6); d.scars++; state.counters.defeats++; }
       else { state.cargo.gold += r.loot.gold; for (const it of r.loot.items) state.cargo.items.push(it); for (const c of r.loot.captives) state.cargo.captives.push(c); }
-      const fearGain = Math.min(20, r.stolenValue / 150 + r.burned * 3 + r.kills * 1.2 + r.roars * 0.5 + r.captured * 3);
+      const rival = r.entities.find(e => e.kind === 'rivalDragon');
+      const rivalSlain = !!(rival && rival.dead);
+      if (rivalSlain && target.dragon) { HB.game.chronicle(state, `Slew ${target.dragon.name}${target.dragon.tier >= 3 ? ', the elder wyrm,' : ''} in its own lair.`, 'legend'); d.prestige += target.dragon.tier >= 3 ? 60 : 25; state.counters.kills++; if (target.dragon.tier >= 3) state.flags.legend = true; target.state = 'ruin'; target.dragon = null; target.name = 'The Dead Wyrm’s Lair'; }
+      const fearGain = Math.min(20, r.stolenValue / 150 + r.burned * 3 + r.kills * 1.2 + r.roars * 0.5 + r.captured * 3) + (rivalSlain ? 15 : 0);
       const hostGain = Math.min(25, r.burned * 4 + r.civiliansKilled * 2 + r.kills * 0.8 + r.captured * 3 + r.stolenValue / 400);
       const alignment = -(r.burned * 4 + r.civiliansKilled * 2 + r.captured * 1) + (r.stolenValue > 0 && !r.burned && !r.civiliansKilled ? 0.5 : 0);
       enc.applyConsequences(state, target, { stolenValue: outcome === 'defeated' ? 0 : r.stolenValue, destroyedValue: r.destroyedValue, burned: r.burned, kills: r.kills, civiliansKilled: r.civiliansKilled, captured: r.captured, famine: r.famine, fear: fearGain, hostility: hostGain, trust: 0, alignment, outcome, pursued: r.pursued, label: outcome, damageTaken: r.damageTaken, tookArtifact: r.tookArtifact, duel: r.scene.duel, lostLoot }, map);
@@ -81,7 +84,9 @@
       if (outcome === 'defeated') { enc.afterDefeat(state, target, map); return; }
       state.phase = 'planning';
       if (HB.save && HB.save.autosave) HB.save.autosave(state);
+      if (HB.petitions && HB.petitions.onRaid) HB.petitions.onRaid(state, target, r);
       if (map) enc.afterEncounterPrompt(state, map, r);
+      if (rivalSlain && state.flags.legend && !state.flags.legendShown && HB.isBrowser && HB.LegendScene) { state.flags.legendShown = true; HB.scenes.push(new HB.LegendScene(state)); }
     },
     applyConsequences(state, target, c, map) {
       const W = state.world;

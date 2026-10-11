@@ -238,7 +238,7 @@
     finish(state, map) {
       const sl = state.sleeping; if (!sl) return;
       const d = state.dragon, before = sl.before;
-      const summary = { before, events: sl.events, tierUp: false, interrupted: sl.interrupted, forced: sl.forced, dead: sl.dead, years: sl.yearsDone, restless: false };
+      const summary = { before, events: sl.events, tierUp: false, interrupted: sl.interrupted, forced: sl.forced, dead: sl.dead, years: sl.yearsDone, planned: sl.years, restless: false };
       if (!sl.dead) {
         const next = HB.TIERS[d.tier + 1];
         const energy = HB.stats.hoardEnergy(state);

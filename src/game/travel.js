@@ -181,6 +181,7 @@
         if (HB.isBrowser && HB.notice) HB.notice('Home', `You add ${HB.fmt.int(summary.value)} gold worth of treasure to the hoard${days ? ` and rest for ${HB.fmt.plural(days, 'day')}` : ''}.${deltas ? `\n\nThe hoard’s power grows: ${deltas}.` : ''}${summary.rumors ? '\n\nThe maps you carried sketch lands you have not flown.' : ''}`);
       } else if (map) map.showToast(days ? `Home. You rest for ${HB.fmt.plural(days, 'day')}.` : 'Home.');
       if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
+      if (HB.petitions) { HB.petitions.expire(state); const p = HB.petitions.onReturn(state, map); if (p) HB.petitions.show(state, p, map); }
       if (HB.save && HB.save.autosave) HB.save.autosave(state);
     },
     /** draw route line, range ring and travel controls hint */

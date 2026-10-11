@@ -206,9 +206,10 @@
         const acts = raid.actionsFor(r, e).filter(a => a.enabled || a.showDisabled);
         if (acts.length) list.push(e);
       }
-      // sort by distance ahead
+      // sort by what matters most, then by distance ahead
       const D = r.dragon;
-      list.sort((a, b) => Math.abs(a.x - D.x) - Math.abs(b.x - D.x));
+      const prio = (e) => e.state === 'aiming' ? 0 : (e.loot && !e.person && !e.animal && e.access === 'exposed') ? 1 : e.captive ? 2 : e.defender && e.state === 'asleep' ? 3 : e.animal ? 4 : e.loot ? 5 : e.defender ? 6 : e.building ? 7 : 8;
+      list.sort((a, b) => prio(a) - prio(b) || Math.abs(a.x - D.x) - Math.abs(b.x - D.x));
       r.opportunities = list;
       // threats are opportunities too (ballista aiming)
       const threat = r.entities.find(e => e.state === 'aiming' && !e.dead);
