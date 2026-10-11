@@ -605,6 +605,7 @@
       world.road = road; world.roads = roads;
       mark('roads');
       world.locations = locations;
+      world.genLocationCount = locations.length; // places added later (battlefields) are saved with their position
       world.locAt = locAt;
 
       // --- derived helpers for later systems

@@ -70,6 +70,7 @@
       if (HB.pursuit && HB.pursuit.tick(state) && HB.isBrowser && HB.flow && HB.flow.map) HB.flow.map.showToast('The riders give up the chase', 3);
       if (HB.situations) HB.situations.tick(state, days);
       if (HB.tribute && HB.tribute.accrueOfferings) HB.tribute.accrueOfferings(state, days);
+      if (HB.domain) HB.domain.accrue(state, days);
       sim.spawnCaravans(state, 1);
       if (rng.chance(days * 0.05)) sim.spawnHeroes(state);
       if (HB.lair && HB.lair.tickDays) { const done = HB.lair.tickDays(state, days); if (done.length && HB.isBrowser && HB.flow.map) HB.flow.map.showToast(`${HB.UPGRADE_BY_ID[done[0].id].name} is finished`); }
@@ -124,7 +125,8 @@
       if (L.trust < 30 && !pact) return 0;
       const guards = HB.lair ? HB.lair.guardStrength(state) : 0;
       const guardians = state.memory.loyalties.filter(l => l.kind === 'guardians').length;
-      return HB.clamp(0.15 + guards / 30 + guardians * 0.15 + (pact ? 0.1 : 0), 0, 0.8);
+      const allied = L.flags.allied && pact ? 0.15 : 0; // sworn to you: your settlement's militia rides to help
+      return HB.clamp(0.15 + guards / 30 + guardians * 0.15 + (pact ? 0.1 : 0) + allied, 0, 0.85);
     },
     threatFalls(state, L, rng) {
       if (rng.chance(sim.repelChance(state, L))) {

@@ -25,6 +25,97 @@
       for (let i = 0; i < W.w * W.h; i++) { this.cloudField[i * 3] = this.cloudSeed.range(-0.3, 0.3); this.cloudField[i * 3 + 1] = this.cloudSeed.range(-0.3, 0.3); this.cloudField[i * 3 + 2] = this.cloudSeed.range(0.75, 1.15); }
       this.pendingReveal = [];
       this.dragonFrameT = 0;
+      // the dragon's domain: washes over its territory and changed glyphs near its rule (rebuilt when the domain changes)
+      this.showTerritory = true; this._domSig = null; this.mark = null; this.overlay = null;
+      this.syncDomain();
+    }
+    /** rebuild the territory overlay and glyph marks if the domain changed (chunks re-render with the new glyphs) */
+    syncDomain() {
+      if (!HB.domain) return;
+      const sig = HB.domain.signature(this.state);
+      if (sig === this._domSig) return;
+      const hadMark = !!this.mark && this.mark.some(v => v);
+      this._domSig = sig; this.mark = HB.domain.markField(this.state); this.overlay = null;
+      if (hadMark || this.mark.some(v => v)) { this.chunks.clear(); this.chunkOrder.length = 0; }
+    }
+    buildOverlay() {
+      const st = this.state, W = st.world, inf = HB.domain.influence(st);
+      const c = document.createElement('canvas'); c.width = W.w; c.height = W.h;
+      const g = c.getContext('2d'), img = g.createImageData(W.w, W.h), D = img.data;
+      const kind = [138, 150, 58], cruel = [122, 56, 32], reach = [128, 104, 70];
+      for (let i = 0; i < W.w * W.h; i++) {
+        if (!HB.isLand(W.terrain[i])) continue;
+        const o = inf.subs.get(W.sub[i]); if (!o) continue;
+        const col = o.c > 0.2 ? kind : o.c < -0.2 ? cruel : reach;
+        const a = col === reach ? 0.09 : o.s >= 3 ? 0.3 : o.s === 2 ? 0.24 : 0.17;
+        D[i * 4] = col[0]; D[i * 4 + 1] = col[1]; D[i * 4 + 2] = col[2]; D[i * 4 + 3] = Math.round(a * 255);
+      }
+      g.putImageData(img, 0, 0);
+      this.overlay = c; this.overlayInf = inf;
+    }
+    drawTerritory(ctx, tl, br) {
+      if (!HB.domain || !this.showTerritory) return;
+      if (!this.overlay) this.buildOverlay();
+      if (!this.overlayInf.count) return;
+      const W = this.state.world;
+      const x0 = Math.max(0, Math.floor(tl.x) - 1), y0 = Math.max(0, Math.floor(tl.y) - 1), x1 = Math.min(W.w, Math.ceil(br.x) + 1), y1 = Math.min(W.h, Math.ceil(br.y) + 1);
+      if (x1 <= x0 || y1 <= y0) return;
+      const a = this.worldToScreen(x0, y0), b = this.worldToScreen(x1, y1);
+      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(this.overlay, x0, y0, x1 - x0, y1 - y0, a.x, a.y, b.x - a.x, b.y - a.y); ctx.restore();
+      // a fine dotted edge where your influence ends (not at low zoom: too many cells)
+      if (this.cam.zoom < 0.5) return;
+      const subs = this.overlayInf.subs, z = CELL * this.cam.zoom;
+      const cls = (i) => { if (!HB.isLand(W.terrain[i])) return 0; const o = subs.get(W.sub[i]); return !o ? 0 : o.c > 0.2 ? 1 : o.c < -0.2 ? 2 : 3; };
+      const paths = { 1: new Path2D(), 2: new Path2D(), 3: new Path2D() };
+      let any = false;
+      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+        const i = y * W.w + x, c = cls(i);
+        if (x + 1 < W.w) { const c2 = cls(i + 1); if (c !== c2 && (c || c2)) { const p = this.worldToScreen(x + 1, y); paths[c || c2].moveTo(p.x, p.y); paths[c || c2].lineTo(p.x, p.y + z); any = true; } }
+        if (y + 1 < W.h) { const c2 = cls(i + W.w); if (c !== c2 && (c || c2)) { const p = this.worldToScreen(x, y + 1); paths[c || c2].moveTo(p.x, p.y); paths[c || c2].lineTo(p.x + z, p.y); any = true; } }
+      }
+      if (!any) return;
+      ctx.save(); ctx.setLineDash([2, 4]); ctx.lineWidth = 1.3;
+      for (const [k, col] of [[1, 'rgba(96,110,30,0.55)'], [2, 'rgba(110,36,20,0.55)'], [3, 'rgba(90,70,40,0.35)']]) { ctx.strokeStyle = col; ctx.stroke(paths[k]); }
+      ctx.restore();
+    }
+    /** pennants showing what each settlement is to you; the settlement at your hill */
+    drawDomainMarks(ctx, tl, br) {
+      if (!HB.domain) return;
+      const st = this.state, W = st.world, cam = this.cam, z = CELL * cam.zoom;
+      const s = Math.max(4, Math.min(12, 10 * Math.sqrt(cam.zoom)));
+      const h = HB.domain.home(st);
+      if (h.stage > 0 && W.home.x >= tl.x - 6 && W.home.x <= br.x + 6 && W.home.y >= tl.y - 4 && W.home.y <= br.y + 4) {
+        const p = this.worldToScreen(W.home.x + 0.5, W.home.y + 0.85);
+        const hx = p.x + s * 4.4, hy = p.y + s * 0.2;
+        ctx.save(); HB.mapart.homeSettlement(ctx, hx, hy, s * 0.85, h.stage, h.path, new HB.RNG(HB.hash32('home' + st.seed))); ctx.restore();
+        if (cam.zoom > 0.7) HB.text.draw(ctx, h.name, hx, hy + s * 2.2, { size: HB.clamp(11.5 * Math.sqrt(cam.zoom), 10, 18), italic: true, align: 'center', color: h.path === 'tyrannical' ? '#5a2418' : '#5a4a14', stroke: 'rgba(240,228,200,0.75)', strokeWidth: 2.5 });
+      }
+      if (cam.zoom < 0.45) return;
+      for (const L of W.locations) {
+        if (L.x < tl.x - 3 || L.x > br.x + 3 || L.y < tl.y - 3 || L.y > br.y + 3 || this.fogAlpha[L.y * W.w + L.x] >= 0.7) continue;
+        const status = HB.domain.statusOf(st, L);
+        if (!status || status === 'ruined') continue;
+        const S = HB.DOMAIN_STATUSES[status], p = this.worldToScreen(L.x + 0.5, L.y + 0.85);
+        const px = p.x + s * (L.type === 'farm' ? 1.9 : 2.4), mark = status === 'allied' || status === 'protected' ? 'sun' : status === 'occupied' ? 'eye' : null;
+        ctx.save(); HB.mapart.setup(ctx);
+        if (status === 'resisting') HB.mapart.crossedSwords(ctx, px + s * 0.4, p.y - s * 1.4, s * 0.55);
+        else HB.mapart.pennant(ctx, px, p.y, s * 0.75, S.color, mark);
+        ctx.restore();
+        if (status === 'resisting' && cam.zoom > 0.7) HB.text.draw(ctx, 'in revolt', px + s * 0.4, p.y - s * 2.4, { size: 11, italic: true, align: 'center', color: '#8f2b1f', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
+      }
+    }
+    /** a small key under the territory toggle */
+    drawTerritoryKey(ctx) {
+      if (!HB.domain || !this.btnTerritory || !this.btnTerritory.visible || !this.showTerritory || this.selected) return;
+      const inf = this.overlayInf || HB.domain.influence(this.state);
+      const rows = [];
+      let kind = false, cruel = false, reach = false;
+      for (const o of inf.subs.values()) { if (o.c > 0.2) kind = true; else if (o.c < -0.2) cruel = true; else reach = true; }
+      if (kind) rows.push(['rgba(138,150,58,0.6)', 'Ruled kindly']); if (cruel) rows.push(['rgba(122,56,32,0.55)', 'Ruled by fear']); if (reach) rows.push(['rgba(128,104,70,0.4)', 'Within your reach']);
+      if (!rows.length) return;
+      const b = this.btnTerritory, x = b.x, y = b.y + b.h + 4, w = b.w, hh = 8 + rows.length * 18;
+      HB.parchment.panel(ctx, x, y, w, hh, { shadow: false, stains: false, vignette: 0.05, flourish: 0 });
+      rows.forEach(([col, label], i) => { ctx.fillStyle = col; ctx.fillRect(x + 10, y + 7 + i * 18, 14, 11); ctx.strokeStyle = HB.palette.inkSoft; ctx.lineWidth = 1; ctx.strokeRect(x + 10, y + 7 + i * 18, 14, 11); HB.text.draw(ctx, label, x + 30, y + 17 + i * 18, { size: 13, color: HB.palette.ink }); });
     }
     enter() { this.buildHud(); }
     // ---------- camera helpers
@@ -44,6 +135,7 @@
       this.btnAims = btn(x, 'Aims', 'KeyG', () => this.openAims(), { tooltip: 'Your goal, what you could do next and why, and what you are known for. (G)' }); x += bw + 8;
       this.btnMenu = btn(x, 'Menu', 'menu', () => this.openMenu(), { tooltip: 'Save, load, settings. (Esc)' }); x += bw + 8;
       this.btnHome = btn(x, 'Find me', null, () => this.centerOn(st.dragon.x + 0.5, st.dragon.y + 0.5), { tooltip: 'Centre the map on your dragon.' });
+      this.btnTerritory = ui.add(new HB.ui.Button({ x: HB.W - 280, y: 16, w: 160, h: 30, label: 'Territory: shown', size: 13, hotkey: 'KeyT', hotkeyLabel: 'T', tooltip: 'Show or hide the wash over the lands your rule reaches. Influence is reach, not loyalty: tap a place to see what it is to you. (T)', onClick: () => { this.showTerritory = !this.showTerritory; this.btnTerritory.label = this.showTerritory ? 'Territory: shown' : 'Territory: hidden'; } }));
       // the goal panel under the status plaque: always visible, opens the Aims board
       this.goalPanel = ui.add(new HB.ui.Custom({ x: 14, y: 114, w: 330, h: 92, focusable: true, tooltip: 'Your goal and the next step. Open the Aims board for what you could do and why.', render: (ctx, wdg) => this.drawGoalPanel(ctx, wdg), onClick: () => this.openAims() }));
       // context buttons (visibility set per frame)
@@ -63,6 +155,7 @@
       const flying = st.phase === 'traveling' || st.phase === 'returning';
       this.btnPause.visible = flying; this.btnSpeed.visible = flying; this.btnTurn.visible = st.phase === 'traveling';
       if (this.goalPanel) this.goalPanel.h = HB.situations && HB.situations.hint(st, true) ? 128 : 92;
+      if (this.btnTerritory) this.btnTerritory.visible = !!HB.domain && HB.domain.influence(st).count > 0;
       if (flying && tr) { this.btnPause.label = tr.paused ? 'Resume' : 'Pause'; this.btnSpeed.label = `Speed ×${tr.speedMul}`; }
     }
     openLair() { if (HB.LairScene) HB.scenes.push(new HB.LairScene(this.state)); else HB.notice('Lair', 'The lair view is not built yet.'); }
@@ -285,6 +378,26 @@
         const [X, Y] = toPx(x, y);
         const cellRng = new HB.RNG(HB.hash32(`${st.seed}:${x},${y}`));
         const push = (yy, fn) => glyphs.push({ y: yy, fn });
+        const mk = this.mark ? this.mark[i] : 0; // < 0 blighted by tyranny, > 0 flourishing under a protector
+        if (mk < 0 && lod === 0 && (tt === T().MOUNTAINS || tt === T().PEAKS)) {
+          const w = cp * (tt === T().PEAKS ? 1.6 : 1.2 + cellRng.next() * 0.3), h = cp * (tt === T().PEAKS ? 1.5 : 0.9 + cellRng.next() * 0.4);
+          const gx = X + cp * (0.5 + (cellRng.next() - 0.5) * 0.2), gy = Y + cp * 0.9;
+          push(gy, (g) => A.mountainJagged(g, gx, gy, w, h, cellRng, { deep: mk <= -2, big: tt === T().PEAKS }));
+          continue;
+        }
+        if (mk < 0 && (tt === T().FOREST || tt === T().PINE)) {
+          const n = lod === 0 ? 2 : 1;
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6), s = cp * (lod === 0 ? 0.17 : 0.26); push(gy, (g) => (mk <= -2 || cellRng.chance(0.4) ? A.treeBurned : A.treeBare)(g, gx, gy, s, cellRng)); }
+          if (mk <= -2 && lod === 0) { const gx = X + cp * 0.5, gy = Y + cp * 0.8; push(gy, (g) => A.ash(g, gx, gy, cp * 0.3, cellRng)); }
+          continue;
+        }
+        if (mk <= -2 && lod === 0 && (tt === T().PLAINS || tt === T().HILLS) && cellRng.chance(0.55)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g) => A.ash(g, gx, gy, cp * 0.3, cellRng)); if (tt === T().PLAINS) continue; }
+        if (mk > 0 && lod === 0 && tt === T().PLAINS && cellRng.chance(mk >= 2 ? 0.55 : 0.3)) { const gx = X + cp * (0.3 + cellRng.next() * 0.4), gy = Y + cp * (0.4 + cellRng.next() * 0.4); push(gy, (g) => A.field(g, gx, gy, cp * 0.28, cellRng)); continue; }
+        if (mk > 0 && lod === 0 && (tt === T().FOREST || tt === T().PINE)) {
+          const n = 3, pine = tt === T().PINE;
+          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.16 : 0.19) * (0.9 + cellRng.next() * 0.3); const fleck = mk >= 2 && cellRng.chance(0.35); push(gy, (g) => { pine ? A.treePine(g, gx, gy, s, cellRng) : A.treeRound(g, gx, gy, s, cellRng); if (fleck) A.blossom(g, gx + s * 0.3, gy - s * (pine ? 1.4 : 1.1), s); }); }
+          continue;
+        }
         if (lod === 1) {
           // simplified overview glyphs: sparser and smaller
           if (tt === T().PEAKS || (tt === T().MOUNTAINS && cellRng.chance(0.55))) { const gx = X + cp * 0.5, gy = Y + cp * 0.95; const w = cp * (tt === T().PEAKS ? 1.9 : 1.5), h = cp * (tt === T().PEAKS ? 1.7 : 1.1); push(gy, (g) => A.mountain(g, gx, gy, w, h, cellRng, { snow: tt === T().PEAKS })); }
@@ -352,8 +465,12 @@
       ctx.restore();
       // world edge: beyond the map, waves
       this.drawWorldEdge(ctx);
+      // the dragon's territory: a light wash, under the ink
+      if (this.frame % 20 === 0) this.syncDomain();
+      this.drawTerritory(ctx, tl, br);
       // locations
       this.drawLocations(ctx, tl, br);
+      this.drawDomainMarks(ctx, tl, br);
       // entities
       if (HB.worldsim && HB.worldsim.drawEntities) HB.worldsim.drawEntities(ctx, this, st);
       // route preview / travel path
@@ -375,6 +492,7 @@
       HB.mapart.compassRose(ctx, HB.W - 70, 92, 34);
       // HUD
       this.drawHud(ctx);
+      this.drawTerritoryKey(ctx);
       if (this.selected) this.drawPreview(ctx);
       this.ui.draw(ctx);
       if (this.toast) this.drawToast(ctx);

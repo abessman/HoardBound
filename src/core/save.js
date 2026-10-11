@@ -6,18 +6,21 @@
 
   function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
   function unb64(str) { const s = typeof atob === 'function' ? atob(str) : Buffer.from(str, 'base64').toString('binary'); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
-  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient', 'threat'];
+  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient', 'threat', 'occupation'];
+  // places made during play (battlefields) are not regenerated from the seed: their position is saved too
+  const DYN_FIELDS = ['x', 'y', 'cell', 'subId', 'regionId'];
 
   const save = HB.save = {
     serialize(state) {
       const W = state.world;
-      const locs = W.locations.map(L => { const o = { id: L.id }; for (const k of LOC_FIELDS) if (L[k] !== undefined) o[k] = L[k]; return o; });
+      const genCount = W.genLocationCount || W.locations.length;
+      const locs = W.locations.map(L => { const o = { id: L.id }; for (const k of LOC_FIELDS) if (L[k] !== undefined) o[k] = L[k]; if (L.id >= genCount) for (const k of DYN_FIELDS) o[k] = L[k]; return o; });
       const data = {
         v: 1, ver: HB.VERSION, gen: GEN_VERSION, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
         renown: state.renown, reactions: state.reactions, problems: state.problems,
-        situations: state.situations || [], pursuit: state.pursuit || null, pactGold: state.pactGold || 0,
+        situations: state.situations || [], pursuit: state.pursuit || null, pactGold: state.pactGold || 0, domain: state.domain || null,
         locations: locs, factions: W.factions, extraLocations: W.locations.length,
         know: { revealed: b64(state.know.revealed), rumor: b64(state.know.rumor), subSeen: b64(state.know.subSeen), regionSeen: b64(state.know.regionSeen) },
         regionTiers: W.regions.map(R => R.tier), subFactions: W.subregions.map(S => S.factionId),
@@ -29,7 +32,18 @@
       const data = JSON.parse(json);
       const world = HB.worldgen.generate(data.seed, { size: data.size });
       // apply mutable fields
-      for (const o of data.locations) { let L = world.locations[o.id]; if (!L) { L = world.locations[o.id] = Object.assign({ id: o.id, x: o.x, y: o.y, cell: o.cell, subId: o.subId, regionId: o.regionId, memory: [], knowledge: {}, flags: {} }, o); continue; } for (const k in o) if (k !== 'id') L[k] = o[k]; }
+      for (const o of data.locations) {
+        let L = world.locations[o.id];
+        if (!L) {
+          L = world.locations[o.id] = Object.assign({ id: o.id, memory: [], knowledge: {}, flags: {} }, o);
+          // a place made during play: put it back on the map (saves before 0.8.0 lack its position; drop it then)
+          if (L.cell === undefined && L.x !== undefined) L.cell = L.y * world.w + L.x;
+          if (L.cell !== undefined && L.x !== undefined) { world.locAt[L.cell] = L.id; if (L.subId === undefined) L.subId = world.sub[L.cell]; if (L.regionId === undefined) L.regionId = world.region[L.cell]; const S = world.subregions[L.subId]; if (S && !S.locations.includes(L.id)) S.locations.push(L.id); }
+          else { L.type = 'gone'; L.state = 'gone'; L.x = 0; L.y = 0; L.cell = 0; L.knowledge = { seen: false }; }
+          continue;
+        }
+        for (const k in o) if (k !== 'id') L[k] = o[k];
+      }
       world.factions = data.factions;
       data.regionTiers.forEach((t, i) => { if (world.regions[i]) world.regions[i].tier = t; });
       data.subFactions.forEach((f, i) => { if (world.subregions[i]) world.subregions[i].factionId = f; });
@@ -41,7 +55,7 @@
         version: 1, seed: data.seed, created: data.created, name: data.name, world, know,
         dragon: data.dragon, hoard: data.hoard, cargo: data.cargo, lair: data.lair, time: data.time, phase: data.phase || 'home', travel: null, encounter: null,
         chronicle: data.chronicle, entities: data.entities || [], flags: data.flags, memory: data.memory, counters: data.counters, playRng: data.playRng,
-        situations: data.situations || [], pursuit: data.pursuit || null, pactGold: data.pactGold || 0, ambush: null,
+        situations: data.situations || [], pursuit: data.pursuit || null, pactGold: data.pactGold || 0, ambush: null, domain: data.domain || (HB.domain ? HB.domain.fresh() : null),
         renown: data.renown || { deeds: {}, titles: [], known: {}, places: {} }, reactions: data.reactions || [], problems: data.problems || { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 },
       };
       HB.setIdCounter(Math.max(HB.getIdCounter(), data.idCounter || 1));

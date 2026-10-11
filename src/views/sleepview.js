@@ -76,6 +76,15 @@
       lines.push({ text: `Gold ${HB.fmt.int(b.gold)} → ${HB.fmt.int(st.hoard.gold)}.${gained.length ? ' Gained ' + HB.fmt.list(gained.map(i => HB.hoard.itemLabel(i))) + '.' : ''}${lost.length ? ' Lost ' + HB.fmt.list(lost) + ' — stolen; the chronicle says where.' : ''}`, tone: lost.length ? 'bad' : undefined });
       const done = Object.keys(st.lair.upgrades).filter(k => (b.upgrades[k] || 0) < st.lair.upgrades[k]);
       if (done.length) lines.push({ text: 'Finished in the lair: ' + HB.fmt.list(done.map(k => HB.UPGRADE_BY_ID[k].name + ' ' + st.lair.upgrades[k])) + '.', tone: 'good' });
+      // the settlement at your hill and the places that are yours
+      if (HB.domain) {
+        const h = HB.domain.home(st), dEv = s.events.filter(e => e.kind === 'domain');
+        if (h.stage || dEv.length) {
+          lines.push({ h: 'Your domain' });
+          for (const e of dEv.slice(-6)) lines.push({ text: `Year ${e.year}: ${e.text}`, tone: e.bad ? 'bad' : 'good' });
+          if (h.stage) { const S = HB.domain.stageInfo(st), nr = HB.domain.nextReqs(st), miss = nr.reqs.filter(r => !r.done); lines.push({ text: `${h.name} is ${S.noun} and has sent you ${HB.fmt.int(h.goldTotal)} gold in all.${nr.target ? ` To grow into ${nr.target.noun} it still needs: ${miss.length ? HB.domain.missingText(nr) : 'nothing more'}.` : ''}` }); }
+        }
+      }
       const worldAt = lines.length;
       const changes = [];
       W.locations.forEach((L, i) => { const old = b.locTiers[i]; if (!old) return; const [ot, os] = old.split(':'); if (L.knowledge.seen && (Number(ot) !== L.tier || os !== L.state)) changes.push(`${L.name}: ${os !== L.state ? L.state : HB.world.locTypeName(L)}`); });

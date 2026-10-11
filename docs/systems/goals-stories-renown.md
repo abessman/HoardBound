@@ -44,7 +44,8 @@ bar*, and a world that answers. Starts differ between worlds.
 - **Renown** (`src/game/renown.js`): deeds earn named titles with real effects — the Road Thief (tolls),
   Guardian of <place> (willing workers, protection), the <Breed> Terror (fear ×1.5, tribute +15%), the Merciful
   (ransom acceptance +15%, trust ×1.5), the Castle-Thief and Bane of Heroes (+10 prestige; heroes come stronger),
-  Warden of the Roads (4 guarded caravans; merchants send gold each year), the Overlord (+10 dominance). The latest
+  Warden of the Roads (4 guarded caravans; merchants send gold each year), the Overlord (+10 dominance), Liege of
+  <your vale> (3 oaths; +1 warning while you sleep), the Tyrant (2 occupations; resistance grows a third slower). The latest
   title shows with the name on the HUD; the Aims board shows who knows you and what each unearned name would change.
 - **World reactions with causes** (`state.reactions`): every time a realm learns something, a heat step is
   reached, a title is earned, a pact or tribute starts, thieves rob you or a village you cared for is sacked, the
@@ -62,7 +63,8 @@ bar*, and a world that answers. Starts differ between worlds.
 ## Known issues and tuning
 - Four story templates; scenes reuse the camp, hero and defend layouts. More templates and a seasonal calendar
   (tax convoy, harvest, pilgrims, winter) are next.
-- Opportunity ranking is heuristic.
+- Opportunity ranking is heuristic. The Aims board has a sixth aim, *Grow your domain* (found or grow the home
+  settlement, take oaths, rebuild, occupy, answer revolts): see [domain-and-influence](domain-and-influence.md).
 
 ## Related
-[raids-and-encounters](raids-and-encounters.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)
+[raids-and-encounters](raids-and-encounters.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [domain-and-influence](domain-and-influence.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)

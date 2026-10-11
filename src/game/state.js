@@ -43,6 +43,7 @@
         renown: { deeds: {}, titles: [], known: {}, places: {} },   // titles earned by deeds (renown.js)
         reactions: [],                                              // how the world answered, with causes (consequences.js)
         situations: [], pursuit: null, ambush: null, pactGold: 0,
+        domain: HB.domain ? HB.domain.fresh() : null,               // allegiance, influence, the settlement at your hill (domain.js)
         problems: { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 }, // what has gone wrong, for 'why build this'
         counters: { raids: 0, goldStolen: 0, kills: 0, captures: 0, burned: 0, released: 0, ransoms: 0, tributes: 0, sleeps: 0, defeats: 0, artifactsFound: 0 },
         playRng: playRng.getState(),

@@ -360,5 +360,97 @@ section('situations, heat, hunters, pursuit, offerings');
   ok(st4.situations.length === st.situations.length && st4.situations[0].t === st.situations[0].t && !!st4.pursuit === !!st.pursuit, 'situations and pursuit saved');
 }
 
+section('domain: allegiance, influence, the settlement at your hill');
+{
+  const D = HB.domain;
+  const fresh = (tag) => HB.game.newCampaign({ seed: seed + '-dom-' + tag, name: 'D', keeper: false });
+  const young = (st, align) => { st.dragon.tier = 1; st.dragon.age = 9; st.dragon.alignment = align; HB.stats.recompute(st); };
+  const nearPeople = (st, r) => HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, r, L => (L.type === 'village' || L.type === 'farm') && L.state === 'normal').map(o => o.L);
+  // a kind domain
+  let st = fresh('kind');
+  ok(st.domain && D.home(st).stage === 0 && D.influence(st).count === 0, 'a hatchling has no domain and no influence');
+  young(st, 20);
+  ok(D.influence(st).count >= 1, 'a young dragon reaches its own vale');
+  ok(/young/i.test(HB.goals.unlocks(st, 0, 1).join(' ')) || HB.goals.unlocks(st, 0, 1).some(u => /settle/.test(u)), 'growing up promises the domain');
+  const vs = nearPeople(st, 30); const V = vs.find(L => L.type === 'village') || vs[0];
+  ok(!!V, 'a village or farm near home');
+  ok(!D.advance(st, HB.game.rng) && D.nextReqs(st).reqs.some(r => r.key === 'source' && !r.done), 'nobody settles without people who trust you');
+  V.trust = 45; V.knowledge.seen = true;
+  const t1 = D.advance(st, HB.game.rng);
+  ok(t1 && D.home(st).stage === 1 && D.home(st).path === 'benevolent' && D.home(st).name, 'trusting families found a refuge: ' + (t1 || '').slice(0, 60));
+  ok(st.reactions.some(x => /huts/.test(x.text)), 'the founding is reported with a cause');
+  const def0 = HB.lair.values(st), b0 = HB.lair.buildRate(st);
+  ok(b0 > 0.2 && HB.lair.hireOffers(st).some(o => o.from === D.home(st).name && o.willing), 'the refuge speeds building and offers willing hands');
+  HB.tribute.protect(st, V);
+  ok(D.statusOf(st, V) === 'protected' && D.members(st).some(m => m.L === V), 'protection makes it part of the domain');
+  ok(!D.canOath(st, V).ok, 'an oath needs time and trust');
+  V.trust = 60; V.flags.protected = st.time.year - 2;
+  const reach0 = D.influence(st).count;
+  ok(D.canOath(st, V).ok, 'trusted for years, it can swear');
+  D.takeOath(st, V);
+  ok(D.statusOf(st, V) === 'allied' && D.influence(st).count >= reach0, 'sworn: allied, influence spreads from it');
+  ok(HB.goals.opportunities(st).some(o => o.aim === 'domain'), 'the Aims board offers domain goals');
+  // grow a stage: years, members, a guard post
+  const h = D.home(st); h.stageYear = st.time.year - 6; st.lair.upgrades.guardpost = 1;
+  ok(D.advance(st, HB.game.rng) && h.stage === 2, 'with years, a member and a guard post the refuge becomes a village');
+  ok(HB.lair.values(st).warning > def0.warning && HB.lair.values(st).defense > def0.defense, 'the village warns and guards the lair');
+  D.accrue(st, 90); const got = HB.tribute.collectOfferings(st);
+  ok(got.names.includes(h.name) && got.total > 0, 'its gifts wait at the foot of the hill: ' + got.total);
+  // a broken promise
+  const W2 = nearPeople(st, 40).find(L => L !== V && L.state === 'normal');
+  if (W2) { W2.trust = 40; HB.tribute.protect(st, W2); }
+  const trustW2 = W2 ? W2.trust : 0;
+  HB.encounter.applyConsequences(st, V, { stolenValue: 50, destroyedValue: 0, burned: 0, kills: 0, civiliansKilled: 0, captured: 0, fear: 2, hostility: 2, trust: 0, alignment: 0, label: 'withdrew', outcome: 'withdrew', damageTaken: 0 }, null);
+  ok(D.statusOf(st, V) === null && V.trust === 0, 'raiding a sworn village breaks the oath');
+  if (W2) ok(W2.trust < trustW2, 'every place under your protection hears of it');
+  // the home turns with your deeds
+  st.dragon.alignment = -70; for (let i = 0; i < 8; i++) D.yearly(st, HB.game.rng);
+  ok(h.path === 'tyrannical' && st.reactions.some(x => /fled your cruelty/.test(x.text)), 'cruelty turns a refuge into a camp');
+
+  // a cruel domain
+  st = fresh('cruel'); young(st, -30);
+  const T = nearPeople(st, 30).find(L => L.type === 'village') || nearPeople(st, 30)[0];
+  T.fear = 90; HB.tribute.demand(st, T); if (!(T.tribute && !T.tribute.lapsed)) { T.tribute = { amount: 30, since: st.time.year, lapsed: false, willing: false, paidTotal: 0 }; }
+  ok(D.statusOf(st, T) === 'tributary', 'tribute makes a tributary');
+  ok(D.advance(st, HB.game.rng) && D.home(st).path === 'tyrannical' && D.stageInfo(st).name === 'Coerced Camp', 'fear founds a coerced camp');
+  const occ = D.canOccupy(st, T);
+  ok(occ.ok, 'a frightened tributary inside your influence can be occupied: ' + (occ.reason || ''));
+  const enslaved0 = st.lair.workers.filter(w => w.status === 'enslaved').reduce((a, w) => a + w.count, 0);
+  const snap = HB.consequences.snapshot(st, T);
+  D.occupy(st, T);
+  ok(D.statusOf(st, T) === 'occupied' && st.lair.workers.filter(w => w.status === 'enslaved').reduce((a, w) => a + w.count, 0) === enslaved0 + 2, 'occupied: it pays heavily and sends labour');
+  const sum = HB.consequences.summarize(st, T, snap, { kind: 'domain', label: 'Occupy' });
+  ok(/occupied/.test(sum.headline) && sum.lines.some(l => /now occupied/.test(l.text)), 'the summary says what it is now');
+  const far = st.world.locations.find(L => L.type === 'village' && L.state === 'normal' && !D.inInfluence(st, L));
+  if (far) { far.fear = 95; ok(!D.canOccupy(st, far).ok && /influence/.test(D.canOccupy(st, far).reason || ''), 'beyond your influence nothing can be occupied'); }
+  let rose = false; for (let i = 0; i < 20 && !rose; i++) { D.yearly(st, HB.game.rng); rose = D.statusOf(st, T) === 'resisting'; }
+  ok(rose, 'occupation breeds resistance until it revolts');
+  D.crush(st, T);
+  ok(D.statusOf(st, T) === 'occupied' && T.occupation.resistance === 10, 'crushing it puts it back to work');
+  const tr = T.tribute.amount, carried0 = st.cargo.gold;
+  D.raze(st, T);
+  ok(D.statusOf(st, T) === 'ruined' && !T.tribute && st.reactions.some(x => x.text.includes(`never again its ${tr} gold`)), 'razing it ends its tribute for good');
+  ok(st.cargo.gold >= carried0, 'razing gives what you can carry now');
+  // rebuild it
+  st.cargo.gold += 400; const tr0 = T.trust;
+  ok(D.canRebuild(st, T).ok, 'a burned village can be rebuilt with gold');
+  D.rebuild(st, T);
+  ok(T.state === 'normal' && T.trust >= tr0 + 25, 'rebuilt: alive again, and grateful');
+  // a cruel home revolts
+  const hh = D.home(st); hh.unrest = 59; st.lair.workers = []; let revolted = false;
+  for (let i = 0; i < 4 && !revolted; i++) { D.yearly(st, HB.game.rng); revolted = hh.lastRevolt === st.time.year; }
+  ok(revolted && st.reactions.some(x => /rose against your overseers/.test(x.text)), 'unrest in the camp ends in revolt');
+  // saves keep the domain and occupation; places made during play keep their position
+  const O = nearPeople(st, 30).find(L => L.type === 'village' && L !== T && L.state === 'normal');
+  if (O) { O.fear = 95; if (D.canOccupy(st, O).ok) D.occupy(st, O); }
+  HB.factions.makeBattlefield(st, st.world.subregions[st.world.home.subId], st.world.factions[0], st.world.factions[1] || st.world.factions[0], HB.game.rng);
+  const bf = st.world.locations[st.world.locations.length - 1];
+  const st2 = HB.save.deserialize(HB.save.serialize(st));
+  ok(st2.domain.home.stage === D.home(st).stage && st2.domain.home.name === D.home(st).name, 'saves keep the settlement at your hill');
+  if (O && O.occupation) ok(st2.world.locations[O.id].occupation && st2.world.locations[O.id].occupation.since === O.occupation.since, 'saves keep occupations');
+  const bf2 = st2.world.locations[bf.id];
+  ok(bf2 && bf2.x === bf.x && bf2.y === bf.y && st2.world.locAt[bf.cell] === bf.id, 'places made during play keep their position on the map');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -13,7 +13,7 @@
       const kind = enc.kindOf(target);
       state.phase = 'encounter';
       // settlements (and any place under attack) offer a choice on arrival; so do caravans
-      const settlement = !target.kind && (['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type) || target.threat);
+      const settlement = !target.kind && (['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type) || target.threat || (target.type === 'farm' && (target.trust >= 15 || target.tribute || target.state === 'burned')));
       const story = !target.kind && HB.situations && (HB.situations.isStoryPlace(state, target) || HB.situations.choicesFor(state, target, map).length > 0);
       if (!opts.direct && HB.isBrowser && HB.CardScene) {
         if (settlement || story) { enc.arrivalCard(state, target, map); return; }
@@ -40,20 +40,37 @@
       const t = target.threat;
       if (t) choices.push({ label: 'Drive off the raiders', desc: `${HB.fmt.cap(HB.fmt.plural(t.raiders, t.goblin ? 'goblin' : 'outlaw'))} from ${t.campName}. Saving ${target.name} wins its trust.`, tooltip: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses as readily as raiders. Afterwards you choose whether to give back what you recover.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true, defend: true }), 0); return false; } });
       if (HB.situations) for (const ch of HB.situations.choicesFor(state, target, map)) { const fn = ch.onChoose; choices.push(Object.assign({}, ch, { onChoose: () => { const before = HB.consequences.snapshot(state, target); const res = fn(); if (res !== false) enc.pendingSummary = { before, info: { kind: 'story', label: ch.label } }; return res; } })); }
-      if (kind !== 'none') choices.push({ label: kind === 'raid' ? (t ? 'Raid it yourself' : 'Raid') : 'Approach', desc: kind === 'raid' ? 'Enter the animated raid: take what you can, leave when you must.' : 'Deal with the place as it is.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true }), 0); return false; } });
-      if (HB.tribute && ['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type)) {
+      const sworn = HB.domain && ['protected', 'allied'].includes(HB.domain.statusOf(state, target));
+      if (kind !== 'none') choices.push({ label: kind === 'raid' ? (t ? 'Raid it yourself' : 'Raid') : 'Approach', desc: kind === 'raid' ? (sworn ? 'You swore to protect them: raiding breaks your word, and every place you protect will trust you less.' : 'Enter the animated raid: take what you can, leave when you must.') : 'Deal with the place as it is.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true }), 0); return false; } });
+      if (HB.tribute && ['farm', 'village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type)) {
         const tr = HB.tribute.canDemand(state, target);
-        if (target.tribute && !target.tribute.lapsed) choices.push({ label: 'Collect tribute', desc: `They owe ${HB.fmt.int(target.tribute.amount)} gold a year. Collect what is due.`, onChoose: () => HB.tribute.collect(state, target) });
+        if (target.type === 'farm' && !(target.tribute && !target.tribute.lapsed)) { /* farms cannot pay tribute, but can be protected */ }
+        else if (target.tribute && !target.tribute.lapsed) choices.push({ label: target.tribute.willing ? 'Collect their gifts' : 'Collect tribute', desc: `They owe ${HB.fmt.int(target.tribute.amount)} gold a year. Collect what is due.`, onChoose: () => HB.tribute.collect(state, target) });
         else choices.push({ label: 'Demand tribute', desc: tr.ok ? `Likely to accept: ${tr.chanceText}. Yearly payment about ${HB.fmt.int(tr.amount)} gold.` : tr.reason, disabled: !tr.ok, disabledReason: tr.reason, onChoose: () => { const before = HB.consequences.snapshot(state, target); const txt = HB.tribute.demand(state, target); enc.pendingSummary = { before, info: { kind: 'tribute', success: !!(target.tribute && !target.tribute.lapsed) } }; return txt; } });
         const p = HB.tribute.canProtect(state, target);
         if (p.ok || p.show) choices.push({ label: 'Offer protection', desc: p.ok ? 'Promise to guard them from raiders in exchange for gifts. Trust grows; tyranny does not.' : p.reason, disabled: !p.ok, disabledReason: p.reason, onChoose: () => { const before = HB.consequences.snapshot(state, target); const txt = HB.tribute.protect(state, target); enc.pendingSummary = { before, info: { kind: 'protect' } }; return txt; } });
       }
-      choices.push({ label: 'Scout and move on', desc: 'Learn its wealth and defences exactly. No alarm, nothing taken.', onChoose: () => { target.knowledge.scoutedYear = state.time.year; target.knowledge.raided = target.knowledge.raided || false; target.knowledge.exact = true; state.phase = 'planning'; return `You circle ${target.name} twice, counting roofs and spears. ${target.defense > 45 ? 'Too strong to fight; perhaps not too strong to rob.' : 'Nothing here you could not handle with care.'}`; } });
+      // your domain: oaths, rebuilding, occupation and its answers
+      if (HB.domain) for (const ch of HB.domain.choicesFor(state, target)) { const fn = ch.onChoose; choices.splice(choices.length, 0, Object.assign({}, ch, { onChoose: () => { const before = HB.consequences.snapshot(state, target); const res = fn(); enc.pendingSummary = { before, info: { kind: 'domain', label: ch.label } }; return res; } })); }
+      const yours = HB.domain && HB.domain.statusOf(state, target) && HB.DOMAIN_STATUSES[HB.domain.statusOf(state, target)].member;
+      if (!yours) choices.push({ label: 'Scout and move on', desc: 'Learn its wealth and defences exactly. No alarm, nothing taken.', onChoose: () => { target.knowledge.scoutedYear = state.time.year; target.knowledge.raided = target.knowledge.raided || false; target.knowledge.exact = true; state.phase = 'planning'; return `You circle ${target.name} twice, counting roofs and spears. ${target.defense > 45 ? 'Too strong to fight; perhaps not too strong to rob.' : 'Nothing here you could not handle with care.'}`; } });
       choices.push({ label: 'Fly on', desc: '', onChoose: () => { state.phase = 'planning'; return 'You fly on.'; } });
       const storyText = HB.situations ? HB.situations.arrivalText(state, target) : '';
       const threatText = (t ? `Smoke rises from ${target.name}: raiders from ${t.campName} are looting it. ` : '') + (storyText && !t ? storyText + ' ' : '');
-      const card = new HB.CardScene({ title: `Above ${target.name}`, illustration: target.type === 'castle' ? 'ransom' : target.type === 'glade' || target.type === 'monastery' ? 'monastery' : 'petition', text: `${threatText}${HB.preview.describe(state, target).subtitle}. ${f ? HB.preview.moodText(f) : 'No realm claims it.'} ${target.memory.length ? 'They remember you.' : 'They have never seen a dragon.'}`, choices, onClose: () => { const p = enc.pendingSummary; enc.pendingSummary = null; if (p && map) enc.showSummary(state, target, p.before, p.info, map); } });
+      const card = new HB.CardScene({ title: `Above ${target.name}`, illustration: target.type === 'castle' ? 'ransom' : target.type === 'glade' || target.type === 'monastery' ? 'monastery' : 'petition', text: `${threatText}${HB.preview.describe(state, target).subtitle}. ${f ? HB.preview.moodText(f) : 'No realm claims it.'} ${enc.placeMood(state, target)}`, choices, onClose: () => { const p = enc.pendingSummary; enc.pendingSummary = null; if (p && map) enc.showSummary(state, target, p.before, p.info, map); } });
       HB.scenes.push(card);
+    },
+    /** what this place is to you, in a sentence for its arrival card */
+    placeMood(state, L) {
+      const s = HB.domain ? HB.domain.statusOf(state, L) : null;
+      if (s === 'protected') return `It is under your protection (trust ${Math.round(L.trust)}).`;
+      if (s === 'allied') return `It is sworn to you (trust ${Math.round(L.trust)}).`;
+      if (s === 'tributary') return `It pays you tribute out of fear (fear ${Math.round(L.fear)}).`;
+      if (s === 'occupied') return `Your overseers hold it. Resistance ${Math.round(L.occupation.resistance)} of 60.`;
+      if (s === 'resisting') return `It has risen against your overseers and pays nothing.`;
+      if (s === 'ruined') return 'Ash and empty doorways.';
+      if (L.trust >= 30) return 'They trust you.';
+      return L.memory.length ? 'They remember you.' : 'They have never seen a dragon.';
     },
     /** a caravan on the road: rob it, make it pay, guard it, or let it go */
     caravanCard(state, e, map) {
@@ -202,6 +219,7 @@
           const gain = Math.max(0, 25 - c.burned * 10 - c.civiliansKilled * 6) * R.trustMul(state);
           L.trust = Math.min(100, L.trust + gain); L.fear = Math.min(100, L.fear + 2);
           L.flags.savedYear = year;
+          if (HB.domain && HB.domain.statusOf(state, L) === 'protected' && L.trust >= 50 && !L.flags.oathOffered) { L.flags.oathOffered = year; HB.consequences.react(state, `${L.name} asks to swear an oath to you and join your domain.`, 'because you kept your promise to protect it'); }
           if (f) { HB.factions.adjust(state, f, { trust: gain > 0 ? 6 : 0, fear: c.fear, hostility: c.hostility }, `drove the raiders of ${t ? t.campName : 'the hills'} from ${L.name}`); HB.heat.add(state, f, -12); }
           if (gain > 0) {
             R.record(state, 'defended', { factionId: L.factionId, place: L.name });
@@ -212,6 +230,7 @@
         } else if (f && (c.hostility || c.fear)) HB.factions.adjust(state, f, { fear: c.fear, hostility: c.hostility }, `fire at ${L.name}`);
       } else if (isLoc) {
         const L = target;
+        if (HB.domain) HB.domain.onRaid(state, L, c);
         L.wealth = Math.max(Math.round(L.wealthMax * 0.08), Math.round(L.wealth - c.stolenValue - c.destroyedValue));
         if (c.famine) { L.wealth = Math.round(L.wealth * 0.6); L.flags.famine = year; }
         if (c.burned >= 3 || (c.burned >= 1 && L.tier === 0)) { L.state = 'burned'; L.flags.burnedYear = year; L.pop = Math.round(L.pop * 0.6); }

@@ -6,6 +6,11 @@ Recorded 11 October 2026.
 
 This document records the proposed next expansion: a dragon's growing influence creates a domain, communities build around its lair, the parchment map reflects its character, and good and evil playstyles lead toward different endgame goals.
 
+**Status (0.8.0):** the domain is built: allegiance statuses, influence, the settlement at your hill, territory
+washes and glyphs, and the deeds that spread or lose your rule (sections 3–7, 10–11; see
+[docs/systems/domain-and-influence.md](../systems/domain-and-influence.md)). Not built yet: the benevolent and tyrannical endgames
+(sections 8–9) and undead settlements (section 7). The rest of this document is the original notes, unchanged.
+
 These are design notes for future implementation. Adding this document does not implement any mechanics. Read DESIGN.md and CLAUDE.md alongside it. The player's latest ideas below establish the direction; suggested rules, pacing, and examples remain proposals until chosen or tested. Do not silently replace existing campaign rules or claim these features already work.
 
 The goal is to give the dragon's activities an accumulating purpose: hoard becomes power, power becomes influence, influence becomes a domain, and the domain prepares the dragon for a world-changing objective.

@@ -7,7 +7,8 @@ Rules for view code (scenes drawn on the one canvas). The UI toolkit is `src/cor
 - In-canvas only: `HB.ui` widgets (Button, Label, ListBox, Meter, Custom, Modal), `HB.CardScene`, `HB.modal`,
   `HB.notice`. Scenes are a stack (`HB.scenes.push/pop/replace`); a scene has `enter/update/draw` and an `opaque` flag.
 - Fixed 1280×720 virtual layout; measure text (`HB.text.paragraphHeight`) and size panels to their content
-  rather than guessing (previews, summaries, cards have overflowed before).
+  rather than guessing (previews, summaries, cards have overflowed before). `CardScene` shrinks its picture and
+  buttons when there are many choices.
 - Class bodies: no commas between methods. Run `node --check` on every file you touch.
 
 ## Fonts and readability

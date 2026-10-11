@@ -278,6 +278,75 @@
       ctx.beginPath(); ctx.moveTo(x - s, y - s); ctx.lineTo(x + s, y + s); ctx.moveTo(x + s, y - s); ctx.lineTo(x - s, y + s); stroke(ctx, 1.6, '#7a2418');
       ctx.beginPath(); ctx.moveTo(x - s * 0.55, y - s * 0.85); ctx.lineTo(x - s * 0.85, y - s * 0.55); ctx.moveTo(x + s * 0.55, y - s * 0.85); ctx.lineTo(x + s * 0.85, y - s * 0.55); stroke(ctx, 1.4, '#7a2418');
     },
+    // ---------- the dragon's domain: blighted and flourishing variants of the land, the settlement at the hill
+    /** a dead tree: trunk and bare branches (tyranny's edge) */
+    treeBare(ctx, x, y, s, rng) {
+      const h = s * (1.9 + rng.next() * 0.5);
+      ctx.beginPath(); ctx.moveTo(x, y + s * 0.5); ctx.lineTo(x + J(rng, s * 0.1), y - h);
+      for (let i = 0; i < 3; i++) { const t = 0.35 + i * 0.2, by = y - h * t, side = i % 2 ? 1 : -1; ctx.moveTo(x, by); ctx.lineTo(x + side * s * (0.5 + rng.next() * 0.3), by - s * (0.45 + rng.next() * 0.3)); }
+      stroke(ctx, 1);
+    },
+    /** a burned husk: charred stump with a broken limb (deep in a tyrant's land) */
+    treeBurned(ctx, x, y, s, rng) {
+      const h = s * (1.1 + rng.next() * 0.5);
+      ctx.beginPath(); ctx.moveTo(x - s * 0.18, y + s * 0.5); ctx.lineTo(x - s * 0.12, y - h); ctx.lineTo(x + s * 0.05, y - h * 0.8); ctx.lineTo(x + s * 0.16, y - h * 1.05); ctx.lineTo(x + s * 0.2, y + s * 0.5); ctx.closePath();
+      ctx.fillStyle = '#3a2a22'; ctx.fill(); stroke(ctx, 0.9, '#1a1010');
+      ctx.beginPath(); ctx.moveTo(x, y - h * 0.55); ctx.lineTo(x + s * 0.55, y - h * 0.85); stroke(ctx, 0.9, '#1a1010');
+    },
+    /** mountains drawn as jagged teeth with ash-dark hatching: a stylised corruption, not new geography */
+    mountainJagged(ctx, x, y, w, h, rng, opts = {}) {
+      const n = 3 + (rng.next() < 0.5 ? 1 : 0), lx = x - w / 2, pts = [[lx, y]];
+      for (let i = 0; i < n; i++) { const t0 = (i + 0.5) / n; const tall = i === Math.floor(n / 2) ? 1 : 0.55 + rng.next() * 0.3; pts.push([lx + w * (t0 - 0.5 / n * 0.6), y - h * tall * 0.35], [lx + w * t0 + J(rng, w * 0.03), y - h * tall], [lx + w * (t0 + 0.5 / n * 0.6), y - h * tall * 0.4]); }
+      pts.push([x + w / 2, y]);
+      ctx.beginPath(); pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); ctx.closePath();
+      ctx.fillStyle = opts.deep ? '#8a7a68' : '#b8a68a'; ctx.fill();
+      ctx.save(); ctx.clip(); ctx.strokeStyle = '#2a1a12'; ctx.lineWidth = 0.9; ctx.globalAlpha *= opts.deep ? 0.8 : 0.6;
+      for (let k = 0; k < Math.round(w / 2.6); k++) { const hx = lx + k * 2.6; ctx.beginPath(); ctx.moveTo(hx, y); ctx.lineTo(hx + h * 0.5, y - h); ctx.stroke(); }
+      ctx.restore();
+      ctx.beginPath(); pts.forEach(([px, py], i) => i ? ctx.lineTo(px, py) : ctx.moveTo(px, py)); stroke(ctx, opts.big ? 1.5 : 1.3, '#1a1010');
+    },
+    /** scattered ash */
+    ash(ctx, x, y, s, rng) { ctx.fillStyle = 'rgba(40,26,20,0.55)'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.arc(x + J(rng, s), y + J(rng, s * 0.6), 0.6 + rng.next() * 0.6, 0, Math.PI * 2); ctx.fill(); } },
+    /** a cultivated field: a small patch of furrows (a protector's land) */
+    field(ctx, x, y, s, rng) {
+      ctx.save(); ctx.translate(x, y); ctx.rotate(J(rng, 0.25));
+      ctx.beginPath(); ctx.rect(-s, -s * 0.45, s * 2, s * 0.9); ctx.fillStyle = 'rgba(176,150,60,0.18)'; ctx.fill(); stroke(ctx, 0.7, INK_SOFT);
+      ctx.beginPath(); for (let i = 1; i < 4; i++) { const fy = -s * 0.45 + i * s * 0.225; ctx.moveTo(-s * 0.9, fy); ctx.lineTo(s * 0.9, fy); } stroke(ctx, 0.6, INK_SOFT);
+      ctx.restore();
+    },
+    /** a small gold fleck in a flourishing grove: restrained colour */
+    blossom(ctx, x, y, s) { ctx.beginPath(); ctx.arc(x, y, Math.max(0.9, s * 0.18), 0, Math.PI * 2); ctx.fillStyle = '#d9b44a'; ctx.fill(); },
+    /** a pennant beside a settlement showing what it is to you */
+    pennant(ctx, x, y, s, color, mark) {
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s * 2.1); stroke(ctx, 1);
+      ctx.beginPath(); ctx.moveTo(x, y - s * 2.1); ctx.lineTo(x + s * 1.3, y - s * 1.8); ctx.lineTo(x + s * 0.9, y - s * 1.6); ctx.lineTo(x + s * 1.3, y - s * 1.4); ctx.lineTo(x, y - s * 1.3); ctx.closePath();
+      ctx.fillStyle = color; ctx.fill(); stroke(ctx, 0.8);
+      if (mark === 'sun') { ctx.beginPath(); ctx.arc(x + s * 0.45, y - s * 1.72, s * 0.17, 0, Math.PI * 2); ctx.fillStyle = '#f3e3a0'; ctx.fill(); }
+      if (mark === 'eye') { ctx.beginPath(); ctx.ellipse(x + s * 0.45, y - s * 1.72, s * 0.22, s * 0.1, 0, 0, Math.PI * 2); ctx.fillStyle = '#d9542a'; ctx.fill(); }
+    },
+    /** the settlement at the foot of the dragon's hill, drawn beside the lair glyph */
+    homeSettlement(ctx, x, y, s, stage, path, rng) {
+      A.setup(ctx);
+      const dark = path === 'tyrannical';
+      const tent = (tx, ty, ts) => { ctx.beginPath(); ctx.moveTo(tx - ts, ty); ctx.lineTo(tx, ty - ts * 1.2); ctx.lineTo(tx + ts, ty); ctx.closePath(); ctx.fillStyle = dark ? '#c9b48c' : FILL; ctx.fill(); stroke(ctx, 0.9); };
+      const darkTower = (tx, ty, ts, hh) => { ctx.beginPath(); ctx.moveTo(tx - ts * 0.4, ty); ctx.lineTo(tx - ts * 0.3, ty - ts * hh); ctx.lineTo(tx - ts * 0.45, ty - ts * hh); ctx.lineTo(tx, ty - ts * (hh + 0.9)); ctx.lineTo(tx + ts * 0.45, ty - ts * hh); ctx.lineTo(tx + ts * 0.3, ty - ts * hh); ctx.lineTo(tx + ts * 0.4, ty); ctx.closePath(); ctx.fillStyle = '#4a3a34'; ctx.fill(); stroke(ctx, 1, '#1a1010'); ctx.beginPath(); ctx.rect(tx - ts * 0.08, ty - ts * hh * 0.6, ts * 0.16, ts * 0.22); ctx.fillStyle = '#d9542a'; ctx.fill(); };
+      const smoke = (sx, sy, ss) => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + ss * 0.4, sy - ss * 0.7, sx - ss * 0.1, sy - ss * 1.3); ctx.quadraticCurveTo(sx + ss * 0.3, sy - ss * 1.8, sx + ss * 0.1, sy - ss * 2.2); stroke(ctx, 1, 'rgba(60,44,36,0.7)'); };
+      const wallArc = (r, col) => { ctx.beginPath(); ctx.arc(x, y + s * 0.2, r, Math.PI * 1.05, Math.PI * 1.95); stroke(ctx, 1.3, col || INK); };
+      if (!dark) {
+        // a refuge of huts → a village with fields → a walled town → a castle and sanctuary
+        if (stage >= 2) { A.field(ctx, x - s * 2.6, y + s * 0.8, s * 0.8, rng); A.field(ctx, x + s * 2.4, y + s * 0.9, s * 0.8, rng); }
+        if (stage === 1) { tent(x - s * 0.9, y + s * 0.2, s * 0.55); A.house(ctx, x + s * 0.8, y + s * 0.3, s * 0.6, rng, { chimney: true }); }
+        if (stage >= 2) { A.house(ctx, x - s * 1.3, y + s * 0.2, s * 0.65, rng); A.house(ctx, x + s * 1.2, y + s * 0.25, s * 0.65, rng, { chimney: true }); A.house(ctx, x, y + s * 0.5, s * 0.6, rng); }
+        if (stage >= 3) { wallArc(s * 2.4); A.towerGlyph(ctx, x - s * 2.1, y + s * 0.3, s * 0.65, rng, { cone: true, h: 1.8, w: 0.6 }); A.house(ctx, x + s * 2.0, y + s * 0.4, s * 0.6, rng); }
+        if (stage >= 4) { A.towerGlyph(ctx, x + s * 2.6, y + s * 0.1, s * 0.85, rng, { h: 2.4, w: 0.8, flag: true, flagColor: '#c9a23a' }); A.star(ctx, x - s * 2.1, y - s * 1.9, s * 0.35, rng); }
+      } else {
+        // a coerced camp → a palisade with watchtowers → a citadel with furnaces → a dark stronghold
+        if (stage === 1) { tent(x - s * 1.0, y + s * 0.3, s * 0.55); tent(x + s * 0.9, y + s * 0.35, s * 0.5); ctx.beginPath(); for (let i = 0; i < 7; i++) { const px = x - s * 1.8 + i * s * 0.6; ctx.moveTo(px, y + s * 0.8); ctx.lineTo(px, y + s * 0.15); } stroke(ctx, 1); }
+        if (stage >= 2) { ctx.beginPath(); for (let i = 0; i < 11; i++) { const px = x - s * 2.6 + i * s * 0.52; ctx.moveTo(px, y + s * 0.9); ctx.lineTo(px, y + s * 0.1); ctx.lineTo(px + s * 0.12, y - s * 0.05); } stroke(ctx, 1); tent(x - s * 1.2, y + s * 0.4, s * 0.5); tent(x + s * 1.3, y + s * 0.45, s * 0.5); A.towerGlyph(ctx, x - s * 2.6, y + s * 0.9, s * 0.6, rng, { h: 2, w: 0.55 }); }
+        if (stage >= 3) { darkTower(x + s * 2.3, y + s * 0.8, s * 0.9, 2.2); smoke(x + s * 2.3, y - s * 1.6, s); darkTower(x - s * 0.2, y + s * 0.8, s * 0.7, 1.6); smoke(x - s * 0.2, y - s * 0.8, s * 0.8); }
+        if (stage >= 4) { darkTower(x - s * 2.0, y + s * 0.8, s * 1.1, 2.8); darkTower(x + s * 3.2, y + s * 0.8, s * 0.8, 2); ctx.beginPath(); ctx.moveTo(x - s * 3.2, y + s * 0.9); ctx.lineTo(x + s * 3.8, y + s * 0.9); stroke(ctx, 1.6, '#1a1010'); }
+      }
+    },
     // ---------- moving pieces
     wagon(ctx, x, y, s, color) {
       ctx.beginPath(); ctx.rect(x - s * 0.8, y - s * 0.9, s * 1.6, s * 0.7); ctx.fillStyle = FILL; ctx.fill(); stroke(ctx, 1);

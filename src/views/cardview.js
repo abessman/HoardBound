@@ -18,17 +18,22 @@
     layout() {
       this.ui.clear();
       const o = this.o;
-      const chH = this.result ? 0 : o.choices.length * 58;
-      this.h = 60 + this.illuH + 16 + this.textH + 20 + chH + (this.result ? HB.text.paragraphHeight(HB.app.ctx, this.result, this.w - 60, { size: 17 }) + 70 : 0) + 24;
-      this.y = (HB.H - this.h) / 2;
+      // many choices: shrink the picture, then tighten the buttons, so the card always fits on the screen
+      let step = 58, bh = 48;
+      this.illuH = 200;
+      const total = () => 60 + this.illuH + 16 + this.textH + 20 + (this.result ? 0 : o.choices.length * step) + (this.result ? HB.text.paragraphHeight(HB.app.ctx, this.result, this.w - 60, { size: 17 }) + 70 : 0) + 24;
+      if (total() > HB.H - 12) this.illuH = Math.max(110, 200 - (total() - (HB.H - 12)));
+      if (total() > HB.H - 12) { step = 50; bh = 44; }
+      this.h = total();
+      this.y = Math.max(6, (HB.H - this.h) / 2);
       let y = this.y + 60 + this.illuH + 16 + this.textH + 20;
       if (!this.result) {
         o.choices.forEach((c, i) => {
-          const b = new HB.ui.Button({ x: this.x + 30, y, w: this.w - 60, h: 48, label: c.label, size: 17, align: 'left', hotkey: `action${i + 1}`, hotkeyLabel: `${i + 1}`, disabled: !!c.disabled, disabledReason: c.disabledReason || 'Not possible now', tooltip: c.desc || '', onClick: () => this.choose(c) });
+          const b = new HB.ui.Button({ x: this.x + 30, y, w: this.w - 60, h: bh, label: c.label, size: 17, align: 'left', hotkey: `action${i + 1}`, hotkeyLabel: `${i + 1}`, disabled: !!c.disabled, disabledReason: c.disabledReason || 'Not possible now', tooltip: c.desc || '', onClick: () => this.choose(c) });
           b.desc = c.desc;
           const origDraw = b.draw.bind(b);
           b.draw = (ctx, ui) => { origDraw(ctx, ui); if (b.desc) HB.text.draw(ctx, b.desc, b.x + b.w - 14, b.y + b.h / 2 + 5, { size: 13, italic: true, align: 'right', color: HB.palette.inkSoft, maxWidth: b.w * 0.5 }); };
-          this.ui.add(b); y += 58;
+          this.ui.add(b); y += step;
         });
         this.ui.focusFirst();
       } else {

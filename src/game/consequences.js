@@ -33,6 +33,7 @@
         loc: isLoc ? { id: target.id, wealth: target.wealth, trust: target.trust, fear: target.fear, state: target.state, threat: target.threat ? Object.assign({}, target.threat) : null } : null,
         threats: W.locations.filter(L => L.threat).map(L => L.id),
         titles: R.titles.length, deeds: Object.assign({}, R.deeds),
+        domain: HB.domain ? { status: isLoc ? HB.domain.statusOf(state, target) : null, reach: HB.domain.influence(state).count, members: HB.domain.members(state).map(m => m.L.id + ':' + m.status), stage: HB.domain.home(state).stage } : null,
       };
     },
     /** value of what is carried, and what storing it at home would do */
@@ -71,6 +72,7 @@
       else if (info.kind === 'escort') headline = `You guarded ${who} on the road.`;
       else if (info.kind === 'tribute') headline = info.success ? `${target.name} agreed to pay you tribute.` : `${target.name} refused your demand.`;
       else if (info.kind === 'protect') headline = `You swore to protect ${target.name}.`;
+      else if (info.kind === 'domain') headline = { 'Take their oath': `${target.name} swore itself to you.`, Occupy: `You occupied ${target.name}.`, 'Crush the resistance': `You crushed the resistance in ${target.name}.`, 'Ease the yoke': `You withdrew your overseers from ${target.name}.`, 'Raze it': `You razed ${target.name}.` }[info.label] || (/^Help rebuild/.test(info.label) ? `You paid to rebuild ${target.name}.` : `${HB.fmt.cap(info.label)} at ${target.name}.`);
       else if (target.kind === 'caravan') headline = (r && r.stolenValue > 0) ? `You robbed ${who}.` : `You attacked ${who} and came away with nothing.`;
       else if (target.kind === 'hero') headline = r && r.kills > 0 ? `You killed ${target.name}, a wandering hero.` : `${target.name} lived through meeting you, and will remember.`;
       else if (r) headline = r.burned > 0 ? `You ${r.stolenValue > 0 ? 'robbed and burned' : 'burned'} ${who}.` : r.stolenValue > 0 ? `You robbed ${who}.` : `You flew over ${who} and took nothing.`;
@@ -91,7 +93,7 @@
       for (const n of (r && r.storyNotes) || []) add(n.text, n.tone);
       for (const c of state.cargo.captives) if (c.sitId && before.cargoCaptives < state.cargo.captives.length) add(`You carry ${c.name}. Free them from your lair for their people’s gratitude, or ransom them.`, 'good');
       if (r && r.goodsReturned === 'returned') add(`You gave back the ${HB.fmt.int(r.recoveredValue)} gold worth the raiders had stolen.`, 'good');
-      else if (!(gainedValue > 0 || caps > 0) && !(r && r.storyNotes) && outcome !== 'defeated' && !['protect', 'tribute', 'defend', 'story'].includes(info.kind)) add('Nothing taken.');
+      else if (!(gainedValue > 0 || caps > 0) && !(r && r.storyNotes) && outcome !== 'defeated' && !['protect', 'tribute', 'defend', 'story', 'domain'].includes(info.kind)) add('Nothing taken.');
       if (r && r.goodsReturned === 'kept') add(`You kept what the raiders had stolen. ${target.name} saw.`);
       if (outcome !== 'defeated' && (state.cargo.gold || state.cargo.items.length)) {
         const sp = cons.storePreview(state);
@@ -109,6 +111,23 @@
         const lost = b.wealth - L.wealth;
         if (lost > 10) add(`${L.name} is poorer (${HB.fmt.int(b.wealth)} → ${HB.fmt.int(L.wealth)} gold worth). Less to take next time; it recovers over the years.`);
         if (L.flags && L.flags.famine === state.time.year && b.state === L.state) add(`The granary burned: famine in ${L.name}.`, 'bad');
+      }
+      // ---- your domain: who is yours now, and how far your influence reaches
+      if (HB.domain && before.domain) {
+        const D = HB.domain, bd = before.domain;
+        if (isLoc) {
+          const now = D.statusOf(state, target);
+          if (now !== bd.status) {
+            if (now && HB.DOMAIN_STATUSES[now].member) add(`${target.name} is now ${HB.DOMAIN_STATUSES[now].name.toLowerCase()}: ${HB.DOMAIN_STATUSES[now].text.charAt(0).toLowerCase() + HB.DOMAIN_STATUSES[now].text.slice(1)}`, HB.DOMAIN_STATUSES[now].side > 0 ? 'good' : 'warn');
+            else if (bd.status && HB.DOMAIN_STATUSES[bd.status] && HB.DOMAIN_STATUSES[bd.status].member) add(`${target.name} is no longer part of your domain${now === 'ruined' ? ': it is ruined' : ''}.`, 'bad');
+          }
+        }
+        const nowIds = new Set(D.members(state).map(m => m.L.id));
+        const lost = bd.members.map(k => Number(k.split(':')[0])).filter(id => !nowIds.has(id)).map(id => state.world.locations[id]).filter(L => L && L !== target);
+        if (lost.length) add(`${HB.fmt.list(lost.slice(0, 3).map(L => L.name))} ${lost.length === 1 ? 'has' : 'have'} left your domain.`, 'warn');
+        const reach = D.influence(state).count;
+        if (reach > bd.reach) add(`Your influence now reaches ${HB.fmt.plural(reach, 'land')} (+${reach - bd.reach}). Places there can be brought into your domain.`, 'good');
+        else if (reach < bd.reach) add(`Your influence shrinks to ${HB.fmt.plural(reach, 'land')}.`, 'warn');
       }
       for (const id of before.threats) { const V = W.locations[id]; if (V && !V.threat && V !== target && (!before.loc || before.loc.id !== id)) add(`${V.name} is spared: its raiders went home to lick their wounds.`, 'good'); }
       // ---- realms: fear, hostility, trust, what they learned

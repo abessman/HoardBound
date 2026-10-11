@@ -14,14 +14,16 @@
     { id: 'herobane', deed: 'heroes', need: 2, name: () => 'Bane of Heroes', verb: 'Slay wandering heroes', effect: '+10 prestige. Seasoned heroes come looking for you.' /* stats, worldsim.spawnHeroes */ },
     { id: 'roadwarden', deed: 'escorted', need: 4, name: () => 'Warden of the Roads', verb: 'Guard caravans on the road', effect: 'Merchants send a share of their profits to your lair each year.' /* sleep.stepYear */ },
     { id: 'overlord', deed: 'tributes', need: 2, name: () => 'the Overlord', verb: 'Win tribute from settlements', effect: '+10 dominance: your demands land harder.' /* stats */ },
+    { id: 'liege', deed: 'allied', need: 3, name: (st) => `Liege of ${st.world.subregions[st.world.home.subId].name}`, verb: 'Take the oaths of settlements', effect: 'Your allies send word when hunters set out: one more warning before they reach you in your sleep.' /* domain.bonuses */ },
+    { id: 'tyrant', deed: 'occupied', need: 2, name: () => 'the Tyrant', verb: 'Occupy settlements', effect: 'Your overseers are feared: resistance in occupied places grows a third more slowly.' /* domain.yearly */ },
   ];
   HB.TITLE_BY_ID = {}; for (const t of HB.TITLES) HB.TITLE_BY_ID[t.id] = t;
-  HB.DEED_ONE = { caravans: 'a caravan robbed', defended: 'a village defended', burned: 'a building burned', released: 'a captive released', castles: 'a castle robbed', heroes: 'a hero slain', tributes: 'a tribute won', tolls: 'a toll taken', protected: 'a pact of protection', escorted: 'a caravan guarded' };
-  const DOING = { caravans: 'robbing caravans', defended: 'defending villages', burned: 'burning buildings', released: 'releasing captives', castles: 'robbing castles', heroes: 'slaying heroes', tributes: 'winning tribute', tolls: 'taking tolls', protected: 'protecting villages', escorted: 'guarding caravans' };
-  const DOING_ONE = { defended: 'defending', castles: 'robbing', protected: 'protecting' };
+  HB.DEED_ONE = { caravans: 'a caravan robbed', defended: 'a village defended', burned: 'a building burned', released: 'a captive released', castles: 'a castle robbed', heroes: 'a hero slain', tributes: 'a tribute won', tolls: 'a toll taken', protected: 'a pact of protection', escorted: 'a caravan guarded', allied: 'an oath taken', occupied: 'a settlement occupied', rebuilt: 'a settlement rebuilt' };
+  const DOING = { caravans: 'robbing caravans', defended: 'defending villages', burned: 'burning buildings', released: 'releasing captives', castles: 'robbing castles', heroes: 'slaying heroes', tributes: 'winning tribute', tolls: 'taking tolls', protected: 'protecting villages', escorted: 'guarding caravans', allied: 'taking oaths', occupied: 'occupying settlements', rebuilt: 'rebuilding settlements' };
+  const DOING_ONE = { defended: 'defending', castles: 'robbing', protected: 'protecting', occupied: 'occupying', rebuilt: 'rebuilding' };
   HB.deedCause = (deed, n, place) => n === 1 && place && DOING_ONE[deed] ? `for ${DOING_ONE[deed]} ${place}` : `for ${DOING[deed]}${n > 1 ? ` (${n} so far)` : ''}`;
   HB.deedPhrase = (deed, n) => n === 1 ? HB.DEED_ONE[deed] : `${n} ${HB.DEED_NAMES[deed]}`;
-  HB.DEED_NAMES = { caravans: 'caravans robbed', defended: 'villages defended', burned: 'buildings burned', released: 'captives released', castles: 'castles robbed', heroes: 'heroes slain', tributes: 'tributes won', tolls: 'tolls taken', protected: 'pacts of protection', escorted: 'caravans guarded' };
+  HB.DEED_NAMES = { caravans: 'caravans robbed', defended: 'villages defended', burned: 'buildings burned', released: 'captives released', castles: 'castles robbed', heroes: 'heroes slain', tributes: 'tributes won', tolls: 'tolls taken', protected: 'pacts of protection', escorted: 'caravans guarded', allied: 'oaths taken', occupied: 'settlements occupied', rebuilt: 'settlements rebuilt' };
 
   const renown = HB.renown = {
     get(state) {

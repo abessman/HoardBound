@@ -14,14 +14,14 @@
     buildUi() {
       const ui = this.ui; ui.clear(); this.tabWidgets = [];
       const st = this.state;
-      const tabs = [['hoard', 'Hoard'], ['build', 'Build'], ['workers', 'Workers'], ['captives', 'Captives'], ['sleep', 'Sleep']];
+      const tabs = [['hoard', 'Hoard'], ['build', 'Build'], ['workers', 'Workers'], ['captives', 'Captives'], ['domain', 'Domain'], ['sleep', 'Sleep']];
       const px0 = 730, pw = 536;
       const tw = (pw - (tabs.length - 1) * 6) / tabs.length;
       tabs.forEach(([id, label], i) => ui.add(new HB.ui.Button({ x: px0 + i * (tw + 6), y: 20, w: tw, h: 36, label, size: 15, primary: this.tab === id, onClick: () => { this.tab = id; this.buildUi(); } })));
       ui.add(new HB.ui.Button({ x: 20, y: HB.H - 56, w: 180, h: 40, label: 'Back to map', size: 16, hotkey: 'cancel', hotkeyLabel: 'Esc', onClick: () => HB.scenes.pop(this) }));
       ui.add(new HB.ui.Button({ x: 210, y: HB.H - 56, w: 180, h: 40, label: 'Rest a season', size: 16, tooltip: 'Pass 90 days at home: heal fully, let construction advance, let the world move. Workers are not paid until year’s end.', onClick: () => this.rest(90) }));
       this.panel = { x: px0, y: 70, w: pw, h: HB.H - 90 };
-      const build = { hoard: this.buildHoardTab, build: this.buildBuildTab, workers: this.buildWorkersTab, captives: this.buildCaptivesTab, sleep: this.buildSleepTab }[this.tab];
+      const build = { hoard: this.buildHoardTab, build: this.buildBuildTab, workers: this.buildWorkersTab, captives: this.buildCaptivesTab, domain: this.buildDomainTab, sleep: this.buildSleepTab }[this.tab];
       build.call(this);
       ui.onCancel = () => HB.scenes.pop(this);
     }
@@ -97,6 +97,54 @@
         ui.add(new HB.ui.Button({ x: p.x + 226, y: y + 6, w: 200, h: 34, label: 'Put to work', size: 14, disabled: !trade, disabledReason: 'Only craftsmen and miners are useful as labour', tooltip: 'Forced labour: no wages, low loyalty, unrest over the years, and their realm will hate you for it.', onClick: () => { const r = HB.lair.enslave(st, c); if (!r.ok) HB.notice('No', r.reason); this.selectedCaptive = null; this.buildUi(); } }));
       }
     }
+    buildDomainTab() {
+      const st = this.state, p = this.panel, ui = this.ui, D = HB.domain;
+      if (!D) return;
+      const members = D.members(st).concat(st.world.locations.filter(L => D.statusOf(st, L) === 'resisting').map(L => ({ L, status: 'resisting' })));
+      const order = { resisting: 0, occupied: 1, allied: 2, protected: 3, tributary: 4 };
+      members.sort((a, b) => order[a.status] - order[b.status] || a.L.name.localeCompare(b.L.name));
+      this.domainListY = p.y + p.h - 236;
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: this.domainListY + 24, w: p.w - 32, h: 196, items: members, itemHeight: 44, emptyText: 'No settlement is yours yet. Protect places that trust you, or make places that fear you pay.',
+        onSelect: (m) => { const map = HB.flow && HB.flow.map; HB.scenes.pop(this); if (map) { map.select(m.L); map.centerOn(m.L.x + 0.5, m.L.y + 0.5, Math.max(map.cam.zoom, 1.4)); } },
+        drawItem: (ctx, m, x, y, w, h) => {
+          const S = HB.DOMAIN_STATUSES[m.status], L = m.L;
+          HB.text.draw(ctx, L.name, x + 10, y + 18, { size: 14, family: 'sc', maxWidth: w - 140 });
+          HB.text.draw(ctx, S.name, x + w - 10, y + 18, { size: 13, align: 'right', family: 'sc', color: S.color });
+          const t = L.tribute && !L.tribute.lapsed ? `${L.tribute.willing ? 'gifts' : 'pays'} ${HB.fmt.int(L.tribute.amount)} a year` : 'pays nothing';
+          const extra = L.occupation ? `resistance ${Math.round(L.occupation.resistance)} of 60` : m.status === 'protected' || m.status === 'allied' ? `trust ${Math.round(L.trust)}` : `fear ${Math.round(L.fear)}`;
+          HB.text.draw(ctx, `${HB.fmt.cap(HB.world.locTypeName(L))} · ${t} · ${extra}`, x + 10, y + 35, { size: 12, italic: true, color: m.status === 'resisting' ? HB.palette.bad : HB.palette.inkSoft, maxWidth: w - 20 });
+        },
+        itemTooltip: (m) => `${HB.DOMAIN_STATUSES[m.status].text}\n\nTap to find it on the map.` }));
+    }
+    drawDomainTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette, D = HB.domain;
+      if (!D) return;
+      const h = D.home(st), S = D.stageInfo(st), nr = D.nextReqs(st), path = D.path(st), x = p.x + 18, w = p.w - 36;
+      let y = p.y + 40;
+      if (S) {
+        HB.text.draw(ctx, `${h.name}: ${S.name}`, x, y + 14, { size: 18, family: 'sc', color: h.path === 'tyrannical' ? '#7a2418' : '#6a5414', maxWidth: w }); y += 22;
+        y += HB.text.paragraph(ctx, S.text, x, y, w, { size: 13, italic: true, color: Pp.inkSoft, lineHeight: 16, maxLines: 2 }) + 4;
+        for (const g of S.gives) { ctx.fillStyle = h.path === 'tyrannical' ? Pp.warn : Pp.good; ctx.beginPath(); ctx.arc(x + 4, y + 8, 2.6, 0, Math.PI * 2); ctx.fill(); y += HB.text.paragraph(ctx, g, x + 14, y, w - 14, { size: 13, lineHeight: 16, maxLines: 1 }) + 1; }
+        if (h.path === 'tyrannical') { HB.text.draw(ctx, `Unrest ${Math.round(h.unrest)} of 60: guards and a guard post hold it down.`, x, y + 12, { size: 13, italic: true, color: h.unrest >= 40 ? Pp.bad : Pp.warn }); y += 18; }
+      } else {
+        HB.text.draw(ctx, 'Nobody lives at the foot of your hill', x, y + 14, { size: 17, family: 'sc' }); y += 22;
+        y += HB.text.paragraph(ctx, 'Once you are a young dragon, people come to live near you: families who trust you build a refuge that can grow into a castle; people you hold by fear are driven into a camp that can grow into a dark stronghold.', x, y, w, { size: 13, italic: true, color: Pp.inkSoft, lineHeight: 16, maxLines: 3 }) + 4;
+      }
+      y += 6; HB.parchment.rule(ctx, x, y, w, { ornament: false }); y += 10;
+      if (nr.target) {
+        HB.text.draw(ctx, h.stage ? `To grow into ${nr.target.noun}` : `To found ${nr.target.noun}`, x, y + 14, { size: 15, family: 'sc' }); y += 22;
+        for (const r of nr.reqs) {
+          reqMark(ctx, x + 2, y + 2, r.done);
+          HB.text.draw(ctx, `${r.label}${r.need !== undefined && !r.done ? ` (${HB.fmt.int(r.cur)} of ${HB.fmt.int(r.need)})` : ''}`, x + 22, y + 13, { size: 13, color: r.done ? Pp.inkSoft : Pp.ink, maxWidth: w - 22 }); y += 17;
+          if (!r.done && r.hint) { y += HB.text.paragraph(ctx, r.hint, x + 22, y, w - 22, { size: 12, italic: true, color: Pp.inkSoft, lineHeight: 14, maxLines: 2 }) + 2; }
+        }
+      } else if (h.stage >= 4) { y += HB.text.paragraph(ctx, `${h.name} has grown as far as it can.`, x, y, w, { size: 13, italic: true, color: Pp.inkSoft }) + 4; }
+      else if (nr.reqs.length) { HB.text.draw(ctx, 'To bring people to your hill', x, y + 14, { size: 15, family: 'sc' }); y += 22; for (const r of nr.reqs) { reqMark(ctx, x + 2, y + 2, r.done); HB.text.draw(ctx, r.label, x + 22, y + 13, { size: 13, maxWidth: w - 22 }); y += 17; if (!r.done && r.hint) y += HB.text.paragraph(ctx, r.hint, x + 22, y, w - 22, { size: 12, italic: true, color: Pp.inkSoft, lineHeight: 14, maxLines: 3 }) + 2; } }
+      const inf = D.influence(st), members = D.members(st).length;
+      const ly = this.domainListY;
+      HB.text.paragraph(ctx, `Your rule: ${path.name.toLowerCase()} (benevolence ${Math.round(st.dragon.alignment)}). ${HB.fmt.cap(HB.fmt.plural(members, 'settlement'))} in your domain; your influence reaches ${HB.fmt.plural(inf.count, 'land')}.`, x, Math.max(y + 4, ly - 34), w, { size: 13, color: Pp.ink, lineHeight: 16, maxLines: 2 });
+      HB.text.draw(ctx, 'What is yours', x, ly + 16, { size: 14, family: 'sc' });
+    }
     buildSleepTab() {
       const st = this.state, p = this.panel, ui = this.ui;
       if (!HB.sleep) { return; }
@@ -149,8 +197,8 @@
       if (dens > 0) HB.text.draw(ctx, `${HB.fmt.cap(HB.hoard.richnessName(st))} · ${HB.fmt.int(dens)} gold per space${this.trophyRects && this.trophyRects.length ? ' · tap a treasure on the wall' : ''}`, fx + 12, fy + 22, { size: 14, italic: true, color: HB.palette.parchmentLight, stroke: 'rgba(20,10,5,0.75)', strokeWidth: 3 });
       // right panel
       const p = this.panel;
-      HB.parchment.panel(ctx, p.x, p.y, p.w, p.h, { tone: 'light', title: { hoard: 'The Hoard', build: 'The Lair', workers: 'Workers', captives: 'Captives', sleep: 'Sleep' }[this.tab] });
-      const drawTab = { hoard: this.drawHoardTab, build: this.drawBuildTab, workers: this.drawWorkersTab, captives: this.drawCaptivesTab, sleep: this.drawSleepTab }[this.tab];
+      HB.parchment.panel(ctx, p.x, p.y, p.w, p.h, { tone: 'light', title: { hoard: 'The Hoard', build: 'The Lair', workers: 'Workers', captives: 'Captives', domain: 'Your Domain', sleep: 'Sleep' }[this.tab] });
+      const drawTab = { hoard: this.drawHoardTab, build: this.drawBuildTab, workers: this.drawWorkersTab, captives: this.drawCaptivesTab, domain: this.drawDomainTab, sleep: this.drawSleepTab }[this.tab];
       drawTab.call(this, ctx);
       this.ui.draw(ctx);
       this.drawTrophyTip(ctx);
@@ -389,5 +437,11 @@
   HB.trophySprite = trophySprite;
   function describeEffect(e) { if (!e) return 'none'; const parts = []; for (const k in e) { if (k === 'mul') for (const kk in e.mul) parts.push(`${kk} ×${e.mul[kk]}`); else parts.push(`${k} ${typeof e[k] === 'number' ? HB.fmt.signed(e[k]) : e[k]}`); } return parts.join(', '); }
   function describeEffects(e) { if (e.space) return `room for ${HB.fmt.int(e.space)} spaces of treasure`; if (e.strongroom) return `locks away your ${e.strongroom} most prized treasures`; const names = { defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
+  /** a drawn tick or cross for a requirement (no font glyphs needed) */
+  function reqMark(ctx, x, y, done) {
+    ctx.save(); ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = done ? HB.palette.good : HB.palette.bad; ctx.beginPath();
+    if (done) { ctx.moveTo(x + 1, y + 7); ctx.lineTo(x + 5, y + 11); ctx.lineTo(x + 12, y + 2); } else { ctx.moveTo(x + 2, y + 2); ctx.lineTo(x + 11, y + 11); ctx.moveTo(x + 11, y + 2); ctx.lineTo(x + 2, y + 11); }
+    ctx.stroke(); ctx.restore();
+  }
   HB.LairScene = LairScene;
 })();

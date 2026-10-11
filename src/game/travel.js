@@ -219,6 +219,10 @@
       const followed = HB.pursuit ? HB.pursuit.onHome(state) : null;
       const offerings = HB.tribute && HB.tribute.collectOfferings ? HB.tribute.collectOfferings(state) : { total: 0, names: [] };
       const summary = HB.hoard.deposit(state);
+      if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
+      // people may settle at the foot of the hill now (shown after the home notice)
+      const domainText = HB.domain ? HB.domain.advance(state, HB.game.rng) : null;
+      if (domainText && HB.isBrowser && HB.notice) HB.notice(HB.domain.home(state).stage === 1 ? 'People Come to Your Hill' : 'Your Domain Grows', `${domainText}\n\n${HB.domain.stageInfo(state).gives.map(g => '• ' + g).join('\n')}\n\nSee Lair → Domain for what it gives and how it grows.`);
       // automatic rest: stamina refills 30%/day, health heals 12%/day
       let days = 0;
       while ((d.stamina < d.stats.maxStamina || d.health < d.stats.maxHealth) && days < 12) { days++; d.stamina = Math.min(d.stats.maxStamina, d.stamina + d.stats.maxStamina * 0.3); d.health = Math.min(d.stats.maxHealth, d.health + d.stats.maxHealth * 0.12 * (1 + (d.stats.healRate || 0))); }
@@ -235,8 +239,7 @@
         }
       } else if (HB.isBrowser && HB.notice && (followed || offerings.total)) HB.notice('Home', `${offerings.total ? `Offerings waiting at the foot of the hill from ${HB.fmt.list(offerings.names)}: ${HB.fmt.int(offerings.total)} gold.` : ''}${followed ? `${offerings.total ? '\n\n' : ''}${followed}` : ''}`);
       else if (map) map.showToast(days ? `Home. You rest for ${HB.fmt.plural(days, 'day')}.` : 'Home.');
-      state.lastHome = { followed, offerings };
-      if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
+      state.lastHome = { followed, offerings, domain: domainText };
       if (HB.petitions) { HB.petitions.expire(state); const p = HB.petitions.onReturn(state, map); if (p) HB.petitions.show(state, p, map); }
       if (HB.save && HB.save.autosave) HB.save.autosave(state);
     },

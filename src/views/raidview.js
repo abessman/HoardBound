@@ -206,7 +206,14 @@
       HB.text.draw(ctx, HB.raid.stageName(r), 352, 63, { size: 14, family: 'sc', color: r.alarm >= 70 ? Pp.bad : Pp.ink });
       // target name + loot summary (right top)
       HB.parchment.panel(ctx, HB.W - 334, 12, 320, 74, { shadow: true, stains: false, vignette: 0.1, flourish: 0 });
-      HB.text.draw(ctx, r.target.name || 'The road', HB.W - 320, 36, { size: 18, family: 'sc', maxWidth: 290 });
+      HB.text.draw(ctx, r.target.name || 'The road', HB.W - 320, 36, { size: 18, family: 'sc', maxWidth: r.scene.night ? 210 : 290 });
+      if (r.scene.night) {
+        // night is when camps sleep: say so plainly, with a moon
+        const mx = HB.W - 92, my = 30;
+        ctx.save(); ctx.fillStyle = '#2e3458'; HB.parchment.roundRect(ctx, mx - 14, my - 13, 82, 24, 4); ctx.fill();
+        ctx.fillStyle = '#f3efd8'; ctx.beginPath(); ctx.arc(mx, my - 1, 7, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#2e3458'; ctx.beginPath(); ctx.arc(mx + 3.5, my - 3, 6, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        HB.text.draw(ctx, 'Night', mx + 12, my + 4, { size: 14, family: 'sc', color: '#f3efd8' });
+      }
       HB.text.draw(ctx, `Taken: ${HB.fmt.int(r.loot.gold)} gold, ${HB.fmt.plural(r.loot.items.length, 'item')}${r.loot.captives.length ? ', ' + HB.fmt.plural(r.loot.captives.length, 'captive') : ''}`, HB.W - 320, 56, { size: 13, color: Pp.inkSoft });
       HB.text.draw(ctx, `Speed: ${r.hold > 1 ? 'fast (Shift)' : r.decision && !D.busy ? 'slowed — choose' : 'flying'} · Q next target · Esc withdraw`, HB.W - 320, 74, { size: 12, italic: true, color: Pp.inkSoft });
       // focus bracket + label

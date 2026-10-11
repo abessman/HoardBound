@@ -15,6 +15,8 @@
       const guards = lair.guardStrength(state);
       v.guardStrength = guards;
       v.defense += Math.round(guards);
+      // the settlement at the foot of the hill: its militia or soldiers, its walls, its watchers
+      if (HB.domain) { const b = HB.domain.bonuses(state); v.guardStrength += b.guard; v.defense += b.guard + b.defense; v.warning += b.warning; }
       return v;
     },
     guardStrength(state) {
@@ -114,6 +116,7 @@
     buildRate(state) {
       let r = 0.2; // the dragon scrapes at the rock itself
       for (const g of state.lair.workers) if (g.task === 'build') r += g.count * HB.WORKER_TYPES[g.type].build * (0.4 + 0.6 * g.loyalty / 100) * 0.2;
+      if (HB.domain) r += HB.domain.bonuses(state).build;
       return r;
     },
     /** how much faster construction would go with a crew from this offer */
@@ -166,6 +169,9 @@
         if (state.lair.workers.some(w => w.from === L.name && w.willing)) continue;
         offers.push({ type: 'human', count: L.type === 'town' ? 4 : 3, fee: 0, wage: Math.round(HB.WORKER_TYPES.human.wage * 0.6), from: L.name, factionId: L.factionId, available: true, willing: true, reason: '' });
       }
+      // the settlement at the foot of your hill sends its own people (a kind domain only)
+      const h = HB.domain ? HB.domain.home(state) : null;
+      if (h && h.stage > 0 && h.path === 'benevolent' && !state.lair.workers.some(w => w.from === h.name && w.willing)) offers.push({ type: 'human', count: 2 + h.stage, fee: 0, wage: Math.round(HB.WORKER_TYPES.human.wage * 0.5), from: h.name, factionId: -1, available: true, willing: true, reason: '' });
       const towns = near(['town', 'city'], 40);
       if (towns.length) { const L = towns[0].L; const f = W.factions[L.factionId]; const ok = f ? f.dragon.hostility < 35 : true; offers.push({ type: 'human', count: 3, fee: 220, wage: HB.WORKER_TYPES.human.wage, from: L.name, factionId: L.factionId, available: ok, reason: `${f ? f.name : 'The town'} is too hostile to send builders` }); }
       return offers;

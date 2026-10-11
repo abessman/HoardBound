@@ -25,11 +25,16 @@
       if (!isEnt && target.flags && target.flags.requires === 'seal') lines.push({ label: 'Sealed', text: HB.caps && HB.caps.has(state, 'seal') ? 'You hold the Deepwarden’s Seal: the door will open.' : 'A dwarf-sealed door. The Deepwarden’s Seal opens it.', tone: HB.caps && HB.caps.has(state, 'seal') ? 'good' : 'warn' });
       if (target.kind === 'hunters') lines.push({ text: HB.hunters.describe(state, target), tone: 'bad' });
       if (!isEnt && target.threat) { const days = Math.max(1, Math.round(target.threat.until - state.time.totalDays)); lines.push({ label: 'Under attack', text: `${HB.fmt.cap(HB.fmt.plural(target.threat.raiders, target.threat.goblin ? 'goblin' : 'outlaw'))} from ${target.threat.campName}; it falls in about ${HB.fmt.plural(days, 'day')}. Drive them off and ${target.name} will trust you.`, tone: 'warn' }); }
-      if (target.type === 'lair') { return { subtitle: 'Your cave. Treasure stored here powers you; treasure carried does not.', lines, flyError: est.blocked ? 'blocked' : null }; }
+      if (target.type === 'lair') {
+        const h = HB.domain ? HB.domain.home(state) : null;
+        if (h && h.stage > 0) { const S = HB.domain.stageInfo(state); lines.push({ label: h.name, text: `${HB.fmt.cap(S.noun)} at the foot of your hill. ${S.text}`, tone: h.path === 'benevolent' ? 'good' : 'warn' }); }
+        return { subtitle: 'Your cave. Treasure stored here powers you; treasure carried does not.', lines, flyError: est.blocked ? 'blocked' : null };
+      }
       // knowledge
       const k = target.knowledge || { scoutedYear: state.time.year, raided: true };
       const intel = s.intel || 0;
-      const stale = k.scoutedYear > 0 ? state.time.year - k.scoutedYear : 99;
+      const yours = !isEnt && HB.domain && ['protected', 'allied', 'tributary', 'occupied'].includes(HB.domain.statusOf(state, target)); // you know your own places
+      const stale = yours ? 0 : k.scoutedYear > 0 ? state.time.year - k.scoutedYear : 99;
       const fuzz = (v, pct) => { const r = new HB.RNG(HB.hash32(`${target.id}:${k.scoutedYear}:${Math.floor(intel)}`)); const e = pct * (1 - Math.min(0.8, intel / 12)); return [Math.round(v * (1 - e) * (0.9 + r.next() * 0.2)), Math.round(v * (1 + e) * (0.9 + r.next() * 0.2))]; };
       const wealth = isEnt ? target.wealth : target.wealth;
       const def = isEnt ? (target.kind === 'caravan' ? 8 + (target.escort || 0) * 12 : 20 + target.level * 15) : target.defense;
@@ -45,13 +50,14 @@
       if (!isEnt) {
         if (target.special && (k.raided || intel >= 4)) { const a = HB.ARTIFACT_BY_ID[target.special]; lines.push({ label: 'Treasure', text: `${a.name} is kept here.`, tone: 'good' }); }
         else if (target.special && intel >= 2) lines.push({ label: 'Rumour', text: 'Something old and valuable is said to be kept here.' });
-        const typeHint = { castle: 'A goblet glints on a tower parapet: a quick theft for a small dragon. The vault needs an adult to break in.', camp: 'Camps sleep at night. Isolated sleepers can be bitten before anyone wakes.', village: 'Livestock to eat, savings in the houses, grain in the granary. Burning the granary ruins them for years.', town: 'A market with exposed goods, a barred town hall with the real coin, a reeve worth a ransom.', city: 'Walls, towers, a treasury and nobles. Not a place for the small.', farm: 'A farmhouse and animals. Easy, and poor.', mine: 'Ore carts by the entrance; miners worth taking as workers.', monastery: 'Books, silver and perhaps a relic. The brothers do not fight; the faithful remember.', ruin: 'Old things below, and something guarding them.', tower: 'A sage who trades in knowledge and does not like threats.', glade: 'Elven wards and archers. Gems on the shrine tree.', hold: 'Iron gates and crossbows. Forges in the yard.', shrine: 'A keeper, a few offerings, and whatever lies beneath the stone.', rivalLair: 'Another dragon’s hoard, and the dragon.', warren: 'Goblins, crude loot, and more goblins.', battlefield: 'Arms and coin among the dead.' }[target.type];
+        const typeHint = { castle: 'A goblet glints on a tower parapet: a quick theft for a small dragon. The vault needs an adult to break in.', camp: 'You come at night, when the camp sleeps. Isolated sleepers can be bitten before anyone wakes.', village: 'Livestock to eat, savings in the houses, grain in the granary. Burning the granary ruins them for years.', town: 'A market with exposed goods, a barred town hall with the real coin, a reeve worth a ransom.', city: 'Walls, towers, a treasury and nobles. Not a place for the small.', farm: 'A farmhouse and animals. Easy, and poor.', mine: 'Ore carts by the entrance; miners worth taking as workers.', monastery: 'Books, silver and perhaps a relic. The brothers do not fight; the faithful remember.', ruin: 'Old things below, and something guarding them.', tower: 'A sage who trades in knowledge and does not like threats.', glade: 'Elven wards and archers. Gems on the shrine tree.', hold: 'Iron gates and crossbows. Forges in the yard.', shrine: 'A keeper, a few offerings, and whatever lies beneath the stone.', rivalLair: 'Another dragon’s hoard, and the dragon.', warren: 'Goblins, crude loot, and more goblins.', battlefield: 'Arms and coin among the dead.' }[target.type];
         if (typeHint) lines.push({ text: typeHint, italic: true });
         // memory
         const mem = target.memory && target.memory[target.memory.length - 1];
         if (mem) lines.push({ label: 'History', text: `You ${mem.burned ? 'burned' : 'raided'} this place in Year ${mem.year}${mem.stolen ? `, taking ${HB.fmt.int(mem.stolen)} gold worth` : ''}.` });
         if (target.flags && target.flags.famine) lines.push({ text: `Famine since Year ${target.flags.famine}.`, tone: 'warn' });
-        if (target.tribute) lines.push({ label: 'Tribute', text: `Pays you ${HB.fmt.int(target.tribute.amount)} gold a year.`, tone: 'good' });
+        if (target.tribute && !target.tribute.lapsed) lines.push({ label: target.tribute.willing ? 'Gifts' : 'Tribute', text: `${target.tribute.willing ? 'Sends' : 'Pays'} you ${HB.fmt.int(target.tribute.amount)} gold a year.`, tone: 'good' });
+        if (HB.domain) { const sl = HB.domain.statusLine(state, target); if (sl) lines.push(sl); }
       } else if (target.kind === 'caravan') lines.push({ text: `${target.escort >= 2 ? 'Well escorted — merchants here have learned.' : target.escort ? 'A few guards.' : 'Barely guarded.'} Rob it, ${HB.renown && HB.renown.canToll(state) ? 'make it pay a toll, ' : ''}or guard it on the road for its realm’s trust.`, italic: true });
       else if (target.kind === 'hero') lines.push({ text: target.level <= 1 ? 'Green, but armed. Bite from the flank or frighten them off.' : 'Experienced. Companions may come running.', italic: true });
       if (f) lines.push({ label: 'Realm', text: preview.moodText(f) + (HB.heat && HB.heat.levelOf(f) ? ` ${HB.heat.describe(f)}` : ''), tone: HB.heat && HB.heat.levelOf(f) >= 2 ? 'warn' : undefined });

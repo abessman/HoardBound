@@ -63,8 +63,9 @@ awaken older into a changed world → repeat.
 | 0.7 | Different starts: generated local stories with capability treasures; good pays out over time, evil is fast but answered | [goals-stories-renown](docs/systems/goals-stories-renown.md) |
 | 0.7 | Heat steps and hunting parties; pursuit instead of "kill witnesses" (from a ChatGPT review); offerings that depend on prosperity and protection; the first sleep never kills | [realms-and-memory](docs/systems/realms-and-memory.md), [travel](docs/systems/travel.md), [sleep-and-growth](docs/systems/sleep-and-growth.md) |
 | 0.7.1 | Docs split: root CLAUDE.md as a map, folder CLAUDE.md files, one doc per system, `next_chat_kickoff.md` | [CLAUDE.md](CLAUDE.md) |
+| 0.8 | The domain (owner's expansion notes): settlements are protected, allied, tributary, occupied, resisting or ruined; influence spreads by land from the lair and its members; a refuge or a camp grows at the hill once the dragon is young; the map shows territory as light washes and changed glyphs; good and evil each have their own deeds, and a home can turn | [domain-and-influence](docs/systems/domain-and-influence.md) |
 
-Ideas not built yet: [domain and endgame](docs/ideas/domain-and-endgame.md).
+Ideas not built yet: the endgames and undead settlements in [domain and endgame](docs/ideas/domain-and-endgame.md).
 
 ## 5. Where the details are
 
@@ -77,6 +78,7 @@ Ideas not built yet: [domain and endgame](docs/ideas/domain-and-endgame.md).
 | Tiers, sleep, thieves, hunters, keeper, awakening | [sleep-and-growth](docs/systems/sleep-and-growth.md) |
 | Milestone, Aims, stories, summaries, titles, reactions | [goals-stories-renown](docs/systems/goals-stories-renown.md) |
 | Factions, heat, hunters, grudges, wars, rivals, alignment | [realms-and-memory](docs/systems/realms-and-memory.md) |
+| Allegiance, influence, the settlement at your hill, territory on the map | [domain-and-influence](docs/systems/domain-and-influence.md) |
 | Generated art, dragon look, sprite replacement | [art-and-sprites](docs/systems/art-and-sprites.md) |
 
 What works, what is simplified and what is deferred: [FEATURE_STATUS](docs/FEATURE_STATUS.md). Controls and how to

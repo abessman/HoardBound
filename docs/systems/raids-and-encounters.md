@@ -32,7 +32,11 @@ resources, never from the dragon's age alone. A realm on Guard locks village val
 - **Caravan arrival**: rob it, demand a toll (needs the Road Thief or adulthood), guard it (2 days; trust, a gift;
   may become an ambush), or let it pass.
 - **Settlement / story arrival card**: drive off raiders, story choices (parley, buy a charm, sealed door…), raid
-  or approach, tribute/protection where it makes sense, scout, fly on.
+  or approach, tribute/protection where it makes sense (farms can be protected; farms open a card only when they
+  trust you, pay you or are burned), domain choices (oath, rebuild, occupy, crush, ease, raze; see
+  [domain-and-influence](domain-and-influence.md)), scout (not for places already yours), fly on. The card's mood
+  line says what the place is to you. Cards with many choices shrink their picture and buttons to fit the screen.
+- **Night**: camp raids happen at night; the raid HUD shows a *Night* tag with a moon and the intro says so.
 - **Decision cards** (`src/data/encounters.js`): loot is bounded by the place's wealth.
 - After every encounter a consequence summary (see [goals-stories-renown](goals-stories-renown.md)).
 
@@ -48,4 +52,4 @@ resources, never from the dragon's age alone. A realm on Guard locks village val
 - The hero duel and rival duel reuse generic staging; monastery and glade are cards, not scenes.
 
 ## Related
-[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md)
+[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [domain-and-influence](domain-and-influence.md)

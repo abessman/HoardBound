@@ -44,6 +44,19 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Good-path income that is not a sleep machine | Functional | Offerings depend on trust, prosperity and safety; ranges shown; raids during sleep can ruin them. |
 | Escort ambush scene | Functional | Guarding a caravan can become an animated defence. |
 
+## The domain (0.8.0)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| People build around the dragon | Functional | Once young: a refuge (trusted) or coerced camp (feared) at the hill, growing through four stages each (castle and sanctuary / dark stronghold) with years, members and lair upgrades; drawn beside the lair; Lair → Domain tab. |
+| Influence shown as territory | Functional | Wash over the lands your rule reaches with a dotted edge and a key; toggle with *Territory* (T); colour by kind or feared rule. Influence is reach, not loyalty. |
+| Settlement statuses | Functional | Protected, allied, tributary, occupied, resisting, ruined; shown in the preview, on arrival cards and as pennants. Undead: deferred. |
+| Spread, convert, subjugate, destroy | Functional | Take oaths, help rebuild, occupy (inside influence), crush or ease resistance, raze; broken promises cost trust everywhere you protect. |
+| Allegiance can weaken | Functional | Resistance grows yearly and ends in revolt and freedom; allies lapse when trust falls; a cruel home revolts; a home turns with your deeds. |
+| Map changes with your rule | Functional | Burned and bare forests, jagged ash-dark mountains, ash near a tyrant; fuller groves and fields near a protector; strongest near the lair. |
+| Sleep advances the domain | Functional | Growth, gifts, unrest, resistance, oaths during sleep; shown in the sleep preview and the awakening. |
+| Endgames (lieutenants, crystals) | Deferred | Next: see `docs/ideas/domain-and-endgame.md` sections 8–9. |
+
 ## Encounters and travel
 
 | Requirement | Status | Notes |
@@ -135,3 +148,4 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 - Labels can crowd at mid zoom in dense kingdoms.
 - The wandering-hero duel uses the generic scene with a campfire; it needs more distinct staging.
 - No hand testing on physical gamepads or touch screens yet.
+- Domain numbers (stage years, gold, unrest, resistance) are first guesses; influence by land can feel large.

@@ -55,6 +55,11 @@ produce hereditary guardians.
 awake (collected at home), yearly while asleep, shown as a range. Raiders may still ruin them while you sleep;
 your guards, loyal guardians and a protection pact raise their chance to hold. An outlaw pact pays a seasonal cut.
 
+**The domain** (0.8.0): the settlement at the foot of your hill sends gifts or levies (collected with offerings),
+adds construction speed, guard strength, defence and warnings, and a kind one offers willing workers; occupied
+places pay 12% of their wealth and send labour. Growing it needs lair upgrades (Guard Post, Forge, Entrance 2).
+Rebuilding a burned village is paid from what you carry, then from the hoard. See [domain-and-influence](domain-and-influence.md).
+
 ## Code
 - Power: `src/game/stats.js` (`HB.CATEGORIES`); treasure tables `src/data/treasures.js`; hoard, bulk, trophies `src/game/hoard.js`.
 - Lair, upgrades, workers, why-now reasons: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`.
@@ -67,4 +72,4 @@ your guards, loyal guardians and a protection pact raise their chance to hold. A
 - Opportunity and offering numbers are first guesses; offerings scale with village wealth (≈4% a season).
 
 ## Related
-[sleep-and-growth](sleep-and-growth.md) · [goals-stories-renown](goals-stories-renown.md) · [realms-and-memory](realms-and-memory.md)
+[sleep-and-growth](sleep-and-growth.md) · [goals-stories-renown](goals-stories-renown.md) · [realms-and-memory](realms-and-memory.md) · [domain-and-influence](domain-and-influence.md)

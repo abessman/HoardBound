@@ -108,7 +108,7 @@
         if (art) { ents.push(art); const tent = ents[0]; art.insideOf = 500; tent.id = 500; }
         if (!goblin && rng.chance(0.3)) ents.push(T.person('villager', 200, 'a captive villager', { prisoner: true }));
         for (let i = 0; i < 2; i++) ents.push(T.person('horse', 260 + i * 16, 'a stolen horse'));
-        return { entities: ents, length, intro: hunter ? 'A hunters’ camp. These people are awake and know what you are.' : `${goblin ? 'Goblin' : 'Bandit'} camp. ${night ? 'Most of them are asleep around the fire.' : 'They are awake.'}`, backdrop: night ? 'night' : 'forest', night, alarmBase: 1.3, escalations: [
+        return { entities: ents, length, intro: hunter ? 'A hunters’ camp at night. These people are awake and know what you are.' : `Night. A ${goblin ? 'goblin' : 'bandit'} camp: ${night ? 'most of them are asleep around the fire.' : 'they are awake.'}`, backdrop: night ? 'night' : 'forest', night, alarmBase: 1.3, escalations: [
           { at: 25, text: 'Someone shouts. The sleepers stir.', effect: (r) => { for (const e of r.entities) if (e.state === 'asleep') e.state = 'alert'; } },
           { at: 55, text: 'They form up with spears and bows.', spawn: [{ kind: goblin ? 'goblinArcher' : 'archer', x: 40, label: goblin ? 'a goblin archer' : 'a bandit archer' }] },
           { at: 85, text: 'Riders come in from the dark.', spawn: [{ kind: goblin ? 'goblin' : 'bandit', x: length + 10, label: 'a rider' }, { kind: goblin ? 'goblin' : 'bandit', x: length + 24, label: 'a rider' }] },

@@ -32,7 +32,9 @@ mercenaries: they cannot be bought, and they lead attacks on the sleeping dragon
 ### Alignment
 `alignment` runs −100 (tyranny) … +100 (benevolence). Burning communities, enslaving, breaking ransom
 bargains and killing captives push negative; protecting, fair bargains, releasing captives and honest tribute
-push positive. It changes appearance and how factions interpret the dragon (fear vs trust gains).
+push positive. It changes appearance and how factions interpret the dragon (fear vs trust gains). It also decides
+which kind of settlement grows at your hill (benevolence ≥ 10 a refuge, ≤ −10 a camp); what each settlement is to
+you (protected, allied, tributary, occupied, resisting, ruined) is in [domain-and-influence](domain-and-influence.md).
 
 ## Code
 - Factions, wars, armies, rivals `src/game/factions.js`; grudges, orders, loyal houses `src/game/history.js`.
@@ -47,4 +49,4 @@ push positive. It changes appearance and how factions interpret the dragon (fear
 - Heat rates and hunter speed are first guesses; tune after playtests.
 
 ## Related
-[raids-and-encounters](raids-and-encounters.md) · [sleep-and-growth](sleep-and-growth.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)
+[raids-and-encounters](raids-and-encounters.md) · [sleep-and-growth](sleep-and-growth.md) · [domain-and-influence](domain-and-influence.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)

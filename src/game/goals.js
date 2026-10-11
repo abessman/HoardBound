@@ -9,6 +9,7 @@
     fear: { label: 'Build fear', color: '#8f2b1f' },
     secure: { label: 'Secure your sleep', color: '#2f4a66' },
     renown: { label: 'Become known', color: '#6a4a85' },
+    domain: { label: 'Grow your domain', color: '#7a5a14' },
   };
   const pct = (p) => Math.round(p * 100) + '%';
 
@@ -27,7 +28,8 @@
         const seen = regions.filter(R => state.know.regionSeen[R.id]).map(R => R.name);
         out.push(`Cross the storm walls into ${seen.length ? HB.fmt.list(seen.slice(0, 2)) + (regions.length > seen.length ? ' and lands beyond' : '') : HB.fmt.plural(regions.length, 'new land') + ' beyond your vale'}`);
       }
-      if (toTier === 1) out.push('Demand tribute from settlements that fear you', 'Sleep up to 50 years at a time');
+      if (toTier === 1) out.push('Demand tribute from settlements that fear you', 'People begin to settle at the foot of your hill: a refuge if they trust you, a camp if they fear you (your domain)', 'Sleep up to 50 years at a time');
+      if (toTier === 2) out.push('Your settlement can grow into a castle, or a dark stronghold');
       if (toTier === 2) out.push('Land and smash open vaults, gates and wagons', 'Make caravans pay tolls', 'Sleep up to a century');
       if (toTier === 3) out.push('Fly over the sea to the far isles', 'Sleep up to two centuries');
       return out;
@@ -82,6 +84,7 @@
       const m = goals.milestone(state);
       // ---- local stories first: each approach is its own opportunity
       if (HB.situations) out.push(...HB.situations.opportunities(state));
+      if (HB.domain) out.push(...HB.domain.opportunities(state));
       // ---- grow stronger: the best haul for its danger that you can reach
       const prey = [];
       for (const e of (HB.worldsim ? HB.worldsim.visibleEntities(state) : [])) if (e.kind === 'caravan' && !e.tolled) { const r = reach(e); if (r.ok) prey.push({ t: e, haul: goals.haulOf(state, e), risk: 8 + (e.escort || 0) * 12, back: r.back }); }

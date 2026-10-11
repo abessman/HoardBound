@@ -37,6 +37,9 @@ Awakening screen compares before/after, lists new capabilities, how the world an
   **The first sleep never kills**: hunters who break in wake the hatchling to fight; later sleeps can slay
   (Legend mode ends the campaign; Mythic mode forces a century's slumber).
 - Keeper: optional, one or two illustrated care episodes per sleep that modify the same simulation.
+- Each sleeping year the domain moves (`HB.domain.yearly`): the home settlement is founded or grows, sends gold,
+  gathers unrest (cruel) and may revolt; occupied places resist; protected places ask to swear. Hunters inside the
+  lair frighten a kind home's settlers. The preview and the awakening show it ([domain-and-influence](domain-and-influence.md)).
 
 ## Code
 - `src/game/sleep.js` (durations, preview, stopChances, stepYear, tryGrow, thieves, hunters, finish), `src/game/keeper.js`, view `src/views/sleepview.js`.

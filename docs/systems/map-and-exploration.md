@@ -40,6 +40,10 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 ### On the map
 - Story places carry a red seal; wind-locked crags show swirls; places under outlaw attack show crossed swords;
   hunting parties and story heroes are drawn over the cloud when near (see [goals-stories-renown](goals-stories-renown.md)).
+- Your territory (0.8.0): a light wash over the lands your rule reaches (gold-green kind, rust feared, sepia reach)
+  with a dotted edge, toggled by *Territory* (T); pennants beside your settlements; the settlement at your hill
+  beside the lair; blighted or flourishing glyphs near your rule. The chunk cache is cleared when the domain changes.
+  See [domain-and-influence](domain-and-influence.md).
 
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).
@@ -57,4 +61,4 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - One seed in many lacks a rival lair (test "rival lairs exist" is seed-dependent).
 
 ## Related
-[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [art-and-sprites](art-and-sprites.md)
+[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [art-and-sprites](art-and-sprites.md) · [domain-and-influence](domain-and-influence.md)

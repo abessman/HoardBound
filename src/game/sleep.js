@@ -80,6 +80,17 @@
         if (loose.length) lines.push({ text: `Thieves go for small, valuable things first: ${HB.fmt.plural(loose.length, 'treasure')} worth ${HB.fmt.int(loose.reduce((a, b) => a + b.value, 0))} could fit in a thief’s sack${lockedN ? `; ${lockedN} more ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom` : '. A strongroom would lock the best of them away'}.`, tone: 'warn' });
         else if (lockedN) lines.push({ text: `Your ${HB.fmt.plural(lockedN, 'most prized treasure')} ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom.`, tone: 'good' }); }
       if (HB.tribute && years >= 1) { const oe = HB.tribute.offeringEstimate(state, years); if (oe.places.length) { const rc = HB.worldsim ? Math.round(oe.places.reduce((a, L) => a + HB.worldsim.repelChance(state, L), 0) / oe.places.length * 100) : 0; lines.push({ text: `${HB.fmt.list(oe.places.slice(0, 3).map(L => L.name))} ${oe.places.length === 1 ? 'trusts' : 'trust'} you: offerings of about ${HB.fmt.int(oe.lo)}–${HB.fmt.int(oe.hi)} gold over the sleep, if raiders do not ruin them. Without you they drive raiders off about ${rc}% of the time; guards on duty and loyal guardians help.`, tone: 'good' }); } }
+      if (HB.domain && years >= 1) {
+        const h = HB.domain.home(state), nr = HB.domain.nextReqs(state);
+        if (h.stage > 0 && nr.target) {
+          const yrs = nr.reqs.find(r => r.key === 'years'), other = nr.reqs.filter(r => r.key !== 'years' && !r.done);
+          if (!other.length && yrs) lines.push({ text: `${h.name} grows into ${nr.target.noun} ${yrs.done ? 'in the first year' : `in about ${yrs.need - yrs.cur} years`}${yrs.done || yrs.need - yrs.cur <= years ? ', within this sleep' : ', after this sleep'}.`, tone: 'good' });
+          else if (other.length) lines.push({ text: `${h.name} cannot grow into ${nr.target.noun} until it has: ${HB.domain.missingText(nr, true)}.` });
+        }
+        if (h.stage > 0 && h.path === 'tyrannical') { const S = HB.domain.stageInfo(state), calm = HB.lair.guardStrength(state) / 3 + (HB.lair.level(state, 'guardpost') ? 3 : 0), rate = S.unrest - calm; if (rate > 0) { const yrsTo = Math.ceil((60 - h.unrest) / rate); lines.push({ text: `Unrest in ${h.name} is ${Math.round(h.unrest)} and rises about ${rate.toFixed(0)} a year: ${yrsTo <= years ? `expect a revolt in about ${HB.fmt.plural(yrsTo, 'year')}` : 'no revolt this sleep'}. Guards and a guard post hold it down.`, tone: yrsTo <= years ? 'warn' : undefined }); } }
+        const occ = HB.domain.members(state).filter(m => m.status === 'occupied');
+        if (occ.length) lines.push({ text: `${HB.fmt.list(occ.slice(0, 3).map(m => m.L.name))} ${occ.length === 1 ? 'resists' : 'resist'} your overseers a little more each year; left alone, a revolt breaks a place free in three years.`, tone: 'warn' });
+      }
       if (HB.keeper && HB.keeper.enabled(state) && years >= 5) lines.push({ text: 'The Keeper will tend you: expect one or two moments where its choices matter.' });
       const warning = pHunt > 0.5 && !t.sleepSafety ? `Hunters are likely (${sleep.likelihood(pHunt)}) and nothing stands between them and the sleeper.` : pThief > 0.6 ? 'Thieves are likely; the hoard is exposed.' : null;
       return { lines, warning, pThief, pHunt };
@@ -116,6 +127,7 @@
       if (HB.history) { const ev = []; HB.history.yearly(state, rng, ev); for (const e of ev) log(e.text, e.kind, e.bad); }
       if (HB.tribute) for (const e of HB.tribute.yearly(state, rng)) log(e.text, 'tribute', e.bad);
       for (const e of HB.lair.yearlyWorkers(state, rng)) log(e.text, e.kind, e.bad);
+      if (HB.domain) for (const e of HB.domain.yearly(state, rng)) log(e.text, e.kind, e.bad);
       // attention decays with concealment
       const v = HB.lair.values(state);
       state.lair.attention = Math.max(0, (state.lair.attention || 0) - 0.6 - v.concealment * 0.15);
@@ -247,6 +259,7 @@
     breach(state, sl, log, rng, party, woke) {
       const v = HB.lair.values(state), d = state.dragon, s = d.stats;
       if (state.problems && !woke) state.problems.breaches++;
+      if (HB.domain) HB.domain.onBreach(state, log);
       const power = (s.bite + s.breath) * 3 + s.defense * 2 + d.health / 4 + d.tier * 20;
       if (woke) return sleep.fight(state, sl, log, rng, party, power, 'awake');
       if (v.sleepSafety >= 1 + sl.mods.ward / 100) {

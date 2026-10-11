@@ -4,6 +4,24 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.8.0 — 2026-10-11 · The domain
+- People build around you. Once you are a young dragon, families who trust you build a refuge at the foot of your
+  hill (village → flourishing town → castle and sanctuary); people you hold by fear are driven into a coerced camp
+  (fortified settlement → citadel → dark stronghold). It grows while you sleep, with years, the settlements that
+  serve you and the right lair upgrades, and gives gold, faster building, guards, defence and warnings. A cruel
+  one gathers unrest and can revolt; a kind one loses heart when hunters reach your door. It turns if your deeds do.
+- What each settlement is to you: protected, allied, tributary, occupied, resisting or ruined, shown when you
+  select it, on its arrival card and as a pennant on the map.
+- New deeds: take the oath of a place you protect, help rebuild a burned village, occupy a place inside your
+  influence, crush or ease its resistance, raze it (and lose its tribute for good). Raiding a place you swore to
+  protect breaks your word with everyone you protect. Farms can now be protected.
+- Your territory on the map: a light gold-green or rust wash with a dotted edge (toggle *Territory*, T), burned
+  forests and jagged ash-dark mountains near a tyrant, fuller groves and fields near a protector.
+- Lair → Domain tab; a *Grow your domain* aim on the Aims board; domain lines in summaries, the sleep preview and
+  the awakening; two new titles (Liege of your vale, the Tyrant).
+- Night raids say so: a *Night* tag with a moon in the raid, and the intro and preview mention it.
+- Fixes: cards with many choices fit on the screen; battlefields made during play keep their place after a load.
+
 ## 0.7.1 — 2026-10-11
 - iPad fix: dragging (especially with a mouse) or a long press could select the page and tint the whole map pale.
   The page can no longer be selected, dragged or long-pressed.

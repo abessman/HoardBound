@@ -22,7 +22,7 @@ Saves live in the browser's localStorage (autosave on every return home and afte
 
 | Where | Mouse / touch | Keyboard | Gamepad |
 | --- | --- | --- | --- |
-| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **G** aims, **C** chronicle, **F** realms, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
+| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **G** aims, **C** chronicle, **F** realms, **T** territory, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
 | Flight | Pause / Speed / Turn back buttons | **P** pause, hold **Shift** fast, hold **Ctrl** slow | RB fast, LB slow |
 | Raid | click a highlighted target or a chip in the bar; click an action | **1–9** actions, **Space** pass, **Q** next target, **W** withdraw, **Shift** fast | A first action, X pass, B withdraw |
 | Panels | click | arrows move focus, Enter select, Esc back | d-pad / stick, A, B |
@@ -39,6 +39,7 @@ Tooltips explain every action, cost and disabled button.
 5. Fly home with what you can carry. Only treasure stored at home powers you.
 6. At the lair: spend gold on upgrades (with cost, balance and stat change shown first), hire or enslave workers, ransom or release captives, demand tribute from the frightened or protection money from the grateful.
 7. Sleep: five years, twenty, fifty, a century. You heal and grow (if the hoard can feed the change); towns grow, lords die, wars move borders, thieves and hunters test the lair. Wake into the same world, changed.
+8. Build a domain (once you are a young dragon): people who trust you build a refuge at the foot of your hill, people you hold by fear are driven into a camp. Protect places and take their oaths, rebuild what burned, or make them pay and occupy them. Your territory shows on the map (**Territory**, T); the settlement grows while you sleep (Lair → Domain).
 
 ## Project layout
 

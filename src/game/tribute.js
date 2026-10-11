@@ -25,6 +25,7 @@
         L.tribute = { amount: t.amount, since: state.time.year, lapsed: false, willing: false, paidTotal: 0 };
         L.fear = Math.min(100, L.fear + 10);
         state.counters.tributes++;
+        if (HB.domain) HB.domain.bump(state);
         state.dragon.alignment = HB.clamp(state.dragon.alignment - 1, -100, 100);
         if (f && HB.factions) HB.factions.adjust(state, f, { fear: 4, hostility: 2 }, `tribute from ${L.name}`);
         HB.game.chronicle(state, `${L.name} agreed to pay ${HB.fmt.int(t.amount)} gold a year in tribute.`, 'tribute', L.id);
@@ -43,7 +44,7 @@
     },
     canProtect(state, L) {
       const f = L.factionId >= 0 ? state.world.factions[L.factionId] : null;
-      if (!['village', 'town', 'city'].includes(L.type)) return { ok: false, show: false };
+      if (!['farm', 'village', 'town', 'city'].includes(L.type)) return { ok: false, show: false };
       if (L.state !== 'normal') return { ok: false, show: false };
       if (L.tribute && !L.tribute.lapsed) return { ok: false, show: false };
       const trust = Math.max(L.trust, f ? f.dragon.trust : 0);
@@ -57,6 +58,7 @@
       L.tribute = { amount, since: state.time.year, lapsed: false, willing: true, paidTotal: 0 };
       L.trust = Math.min(100, L.trust + 15);
       L.flags.protected = state.time.year;
+      if (HB.domain) HB.domain.bump(state);
       state.dragon.alignment = HB.clamp(state.dragon.alignment + 4, -100, 100);
       if (f && HB.factions) HB.factions.adjust(state, f, { trust: 5 }, `protects ${L.name}`);
       HB.game.chronicle(state, `Swore to protect ${L.name}; they will send gifts of ${HB.fmt.int(amount)} gold a year.`, 'tribute', L.id);
@@ -89,6 +91,7 @@
       let total = 0; const names = [];
       for (const L of state.world.locations) { const g = Math.floor(L.flags.offering || 0); if (g > 0) { total += g; names.push(L.name); L.flags.offering -= g; } }
       if (state.pactGold) { total += Math.round(state.pactGold); names.push('your outlaw partners'); state.pactGold = 0; }
+      if (HB.domain) { const g = HB.domain.collect(state); if (g) { total += g; names.push(HB.domain.home(state).name); } }
       if (total) state.hoard.gold += total;
       return { total, names };
     },
@@ -103,6 +106,13 @@
       const ev = []; const W = state.world; let total = 0;
       for (const L of W.locations) {
         const t = L.tribute; if (!t || t.lapsed) continue;
+        if (L.occupation && L.state === 'normal') {
+          // overseers take what there is, fear or no fear; a revolt pays nothing
+          if (L.occupation.resisting) continue;
+          const pay = Math.min(Math.round(L.wealth * 0.3), t.amount); L.wealth -= pay; t.paidTotal += pay;
+          if (Math.hypot(L.x - W.home.x, L.y - W.home.y) < 25) { state.hoard.gold += pay; total += pay; } else t.due = (t.due || 0) + pay;
+          continue;
+        }
         if (L.state !== 'normal' || L.wealth < t.amount * 2) { t.lapsed = true; ev.push({ text: `${L.name} can no longer pay tribute: it is ${L.state !== 'normal' ? L.state : 'too poor'}.`, bad: true }); continue; }
         const f = L.factionId >= 0 ? W.factions[L.factionId] : null;
         if (!t.willing && (Math.max(L.fear, f ? f.dragon.fear : 0) < 15 || (L.ruler && L.ruler.since === state.time.year))) { t.lapsed = true; ev.push({ text: `${L.name} stopped paying tribute${L.ruler && L.ruler.since === state.time.year ? ' under its new ruler' : ': they no longer fear you'}.`, bad: true }); continue; }
