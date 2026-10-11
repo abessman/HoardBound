@@ -10,7 +10,7 @@
     },
     makeArtifact(aid, source, year) {
       const a = HB.ARTIFACT_BY_ID[aid];
-      return { id: HB.nextId('it'), artifactId: a.id, name: a.name, cat: a.cat, value: a.value, weight: a.weight, effect: a.effect, mutation: a.mutation || null, lore: a.lore, source: source || '', year: year || 0, named: true };
+      return { id: HB.nextId('it'), artifactId: a.id, name: a.name, cat: a.cat, value: a.value, weight: a.weight, effect: a.effect, mutation: a.mutation || null, lore: a.lore, capability: a.capability || null, source: source || '', year: year || 0, named: true };
     },
     /** distribute named artifacts across suitable locations at world creation */
     placeArtifacts(state, rng) {

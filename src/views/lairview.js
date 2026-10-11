@@ -40,7 +40,7 @@
       const items = st.hoard.items.slice().sort((a, b) => (b.named ? 1 : 0) - (a.named ? 1 : 0) || b.value - a.value);
       this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 228, w: p.w - 32, h: p.h - 250, items, itemHeight: 40, emptyText: st.hoard.gold > 0 ? 'Only coin so far. Treasures you bring home will be listed here.' : 'The hoard is empty. Everything you bring home will be counted here.',
         drawItem: (ctx, it, x, y, w, h, s) => { const lk = this._locked && this._locked.has(it.id); HB.text.draw(ctx, HB.hoard.itemLabel(it), x + 10, y + 18, { size: 14, family: it.named ? 'sc' : 'body', maxWidth: w - 150 }); HB.text.draw(ctx, `${lk ? 'In the strongroom · ' : ''}${HB.hoard.catName(it.cat)} · from ${it.source || '?'}${it.year ? ', Year ' + it.year : ''}`, x + 10, y + 33, { size: 11, italic: true, color: lk ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 150 }); HB.text.draw(ctx, HB.fmt.int(it.value) + ' g', x + w - 12, y + 24, { size: 14, align: 'right' }); },
-        itemTooltip: (it) => it.named ? `${it.lore}\n\nEffect: ${describeEffect(it.effect)}` : `${HB.hoard.catName(it.cat)}: ${HB.CATEGORIES[it.cat] ? HB.CATEGORIES[it.cat].desc : ''}` }));
+        itemTooltip: (it) => it.named ? `${it.lore}\n\n${it.capability && HB.ARTIFACT_BY_ID[it.artifactId] ? HB.ARTIFACT_BY_ID[it.artifactId].capText + '\n\n' : ''}Effect: ${describeEffect(it.effect)}` : `${HB.hoard.catName(it.cat)}: ${HB.CATEGORIES[it.cat] ? HB.CATEGORIES[it.cat].desc : ''}` }));
     }
     buildBuildTab() {
       const st = this.state, p = this.panel, ui = this.ui;

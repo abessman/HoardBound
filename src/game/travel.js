@@ -29,6 +29,7 @@
       if (L.kind === 'point' && Math.hypot(L.x - state.dragon.x, L.y - state.dragon.y) < 1) return 'You are already here.';
       const e = travel.estimate(state, L);
       if (e.blocked) { const R = state.world.regions[e.blocked.regionId]; return `The storms over ${R.name} will not let ${HB.fmt.a(HB.TIERS[state.dragon.tier].name.toLowerCase())} pass. Grow, or find a way through.`; }
+      if (L.flags && L.flags.requires === 'wind' && !(HB.caps && HB.caps.has(state, 'wind'))) return `Winds tear around the crag of ${L.name}. No wings your size can climb them — but the Gale-Feather Charm would carry you.`;
       // home is always reachable: if stamina runs out you come down, rest, and fly on
       if (!e.canReach && L.type !== 'lair') return `Too far: that flight needs ${Math.ceil(e.there.stamina)} stamina and you have ${Math.floor(state.dragon.stamina)}. Rest first, or pick somewhere closer.`;
       return null;
@@ -50,10 +51,13 @@
       if (state.phase !== 'planning') return 'You can only rest when you are on the ground.';
       const days = 2;
       HB.game.advanceDays(state, days); if (HB.worldsim) HB.worldsim.tickDays(state, days);
-      d.stamina = Math.min(d.stats.maxStamina, Math.round(d.stamina + d.stats.maxStamina * 0.5));
-      d.health = Math.min(d.stats.maxHealth, Math.round(d.health + d.stats.maxHealth * 0.1));
+      // a village that trusts you lets you rest in its barn: full strength, and nobody talks
+      const roost = W.locations.find(L => L.flags.roost && L.state === 'normal' && Math.hypot(L.x - d.x, L.y - d.y) < 1.5);
+      d.stamina = Math.min(d.stats.maxStamina, Math.round(d.stamina + d.stats.maxStamina * (roost ? 1 : 0.5)));
+      d.health = Math.min(d.stats.maxHealth, Math.round(d.health + d.stats.maxHealth * (roost ? 0.4 : 0.1)));
       const fid = HB.world.factionAt(W, d.x, d.y);
-      if (fid >= 0) state.lair.attention = (state.lair.attention || 0) + 0.5;
+      if (fid >= 0 && !roost) state.lair.attention = (state.lair.attention || 0) + 0.5;
+      if (roost) { const msg = `You rest two days in ${roost.name}'s barn. Stamina ${Math.floor(d.stamina)}/${d.stats.maxStamina}; nobody will tell.`; if (map) map.showToast(msg, 3); return msg; }
       const sid = HB.world.subAt(W, d.x, d.y);
       const msg = `You rest two days in ${sid >= 0 ? W.subregions[sid].name : 'the wilds'}. Stamina ${Math.floor(d.stamina)}/${d.stats.maxStamina}.`;
       if (map) map.showToast(msg, 3);
@@ -88,6 +92,7 @@
       const tr = state.travel;
       if (!tr || !(state.phase === 'traveling' || state.phase === 'returning')) return;
       if (tr.paused || travel.modalOpen) return;
+      if (state.ambush) { state.travel = null; state.phase = 'planning'; return; }
       const inp = HB.isBrowser ? HB.input : null;
       if (inp) {
         if (inp.pressed('pause')) { tr.paused = true; return; }
@@ -188,6 +193,8 @@
       if (!L) { state.phase = 'planning'; return; }
       d.x = L.x; d.y = L.y;
       if (L.type === 'lair') { travel.arriveHome(state, map); return; }
+      const lost = HB.pursuit ? HB.pursuit.onArrive(state, L) : null;
+      if (lost && map) map.showToast(lost, 3);
       if (L.kind === 'point') {
         state.phase = 'planning';
         const res = HB.world.reveal(state, d.x, d.y, d.stats.vision + 0.5);
@@ -209,6 +216,8 @@
       const d = state.dragon;
       state.phase = 'home';
       const energyBefore = Math.round(HB.stats.hoardEnergy(state));
+      const followed = HB.pursuit ? HB.pursuit.onHome(state) : null;
+      const offerings = HB.tribute && HB.tribute.collectOfferings ? HB.tribute.collectOfferings(state) : { total: 0, names: [] };
       const summary = HB.hoard.deposit(state);
       // automatic rest: stamina refills 30%/day, health heals 12%/day
       let days = 0;
@@ -222,9 +231,11 @@
         state.lastDeposit = { lines: HB.consequences ? HB.consequences.depositSummary(state, summary, energyBefore) : [], days };
         if (HB.isBrowser && HB.notice) {
           const m = HB.goals ? HB.goals.milestone(state) : null;
-          HB.notice('Home', `${state.lastDeposit.lines.join('\n')}${days ? `\nYou rest for ${HB.fmt.plural(days, 'day')}.` : ''}${summary.rumors ? '\n\nThe maps you carried sketch lands you have not flown.' : ''}${m ? `\n\nNext: ${m.nextStep}` : ''}`);
+          HB.notice('Home', `${state.lastDeposit.lines.join('\n')}${offerings.total ? `\nOfferings waiting at the foot of the hill from ${HB.fmt.list(offerings.names)}: ${HB.fmt.int(offerings.total)} gold.` : ''}${days ? `\nYou rest for ${HB.fmt.plural(days, 'day')}.` : ''}${followed ? `\n\n${followed}` : ''}${summary.rumors ? '\n\nThe maps you carried sketch lands you have not flown.' : ''}${m ? `\n\nNext: ${m.nextStep}` : ''}`);
         }
-      } else if (map) map.showToast(days ? `Home. You rest for ${HB.fmt.plural(days, 'day')}.` : 'Home.');
+      } else if (HB.isBrowser && HB.notice && (followed || offerings.total)) HB.notice('Home', `${offerings.total ? `Offerings waiting at the foot of the hill from ${HB.fmt.list(offerings.names)}: ${HB.fmt.int(offerings.total)} gold.` : ''}${followed ? `${offerings.total ? '\n\n' : ''}${followed}` : ''}`);
+      else if (map) map.showToast(days ? `Home. You rest for ${HB.fmt.plural(days, 'day')}.` : 'Home.');
+      state.lastHome = { followed, offerings };
       if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
       if (HB.petitions) { HB.petitions.expire(state); const p = HB.petitions.onReturn(state, map); if (p) HB.petitions.show(state, p, map); }
       if (HB.save && HB.save.autosave) HB.save.autosave(state);

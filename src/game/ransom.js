@@ -49,6 +49,8 @@
       state.counters.released++;
       if (HB.history) HB.history.onRelease(state, c);
       if (HB.renown) HB.renown.record(state, 'released', { factionId: c.factionId, place: c.from });
+      if (HB.situations) HB.situations.onRelease(state, c);
+      { const f2 = c.factionId >= 0 ? state.world.factions[c.factionId] : null; if (f2 && HB.heat) HB.heat.add(state, f2, -10); }
       if (HB.consequences) HB.consequences.react(state, `${c.house || 'The family of ' + c.name} remembers your mercy. They may send gifts, and warning of hunters.`, `because you let ${c.name} go unharmed`);
       HB.game.chronicle(state, `Released ${c.name} unharmed.`, 'ransom');
     },
@@ -63,7 +65,7 @@
         const p = c.pending; c.pending = null;
         const f = c.factionId >= 0 ? state.world.factions[c.factionId] : null;
         const roll = rng.next();
-        const remove = () => { const i = state.lair.captives.indexOf(c); if (i >= 0) state.lair.captives.splice(i, 1); c.ransomed = true; state.counters.ransoms++; };
+        const remove = () => { const i = state.lair.captives.indexOf(c); if (i >= 0) state.lair.captives.splice(i, 1); c.ransomed = true; state.counters.ransoms++; if (HB.situations) HB.situations.onRansomed(state, c); };
         if (roll < p.rescueRisk) {
           // rescue attempt against the lair
           const def = HB.lair.values(state).defense + (state.phase === 'home' ? 15 : 0);

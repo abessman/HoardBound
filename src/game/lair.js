@@ -150,7 +150,7 @@
       for (const f of W.factions) {
         if (f.kind !== 'dwarf') continue;
         const hostile = f.dragon.hostility > 40;
-        const fee = Math.round(300 * (1 + f.dragon.hostility / 50) * (1 - Math.min(0.4, f.dragon.trust / 100)));
+        const fee = f.dragon.friend ? 0 : Math.round(300 * (1 + f.dragon.hostility / 50) * (1 - Math.min(0.4, f.dragon.trust / 100)));
         offers.push({ type: 'dwarf', count: 4, fee, wage: HB.WORKER_TYPES.dwarf.wage, from: f.name, factionId: f.id, available: !hostile && (f.dragon.known || d.prestige > 10 || f.dragon.trust > 0 || state.counters.raids >= 1), reason: hostile ? `${f.name} will not deal with you` : 'No dwarves have heard of you yet' });
       }
       for (const f of W.factions) {

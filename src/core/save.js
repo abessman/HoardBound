@@ -17,6 +17,7 @@
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
         renown: state.renown, reactions: state.reactions, problems: state.problems,
+        situations: state.situations || [], pursuit: state.pursuit || null, pactGold: state.pactGold || 0,
         locations: locs, factions: W.factions, extraLocations: W.locations.length,
         know: { revealed: b64(state.know.revealed), rumor: b64(state.know.rumor), subSeen: b64(state.know.subSeen), regionSeen: b64(state.know.regionSeen) },
         regionTiers: W.regions.map(R => R.tier), subFactions: W.subregions.map(S => S.factionId),
@@ -40,6 +41,7 @@
         version: 1, seed: data.seed, created: data.created, name: data.name, world, know,
         dragon: data.dragon, hoard: data.hoard, cargo: data.cargo, lair: data.lair, time: data.time, phase: data.phase || 'home', travel: null, encounter: null,
         chronicle: data.chronicle, entities: data.entities || [], flags: data.flags, memory: data.memory, counters: data.counters, playRng: data.playRng,
+        situations: data.situations || [], pursuit: data.pursuit || null, pactGold: data.pactGold || 0, ambush: null,
         renown: data.renown || { deeds: {}, titles: [], known: {}, places: {} }, reactions: data.reactions || [], problems: data.problems || { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 },
       };
       HB.setIdCounter(Math.max(HB.getIdCounter(), data.idCounter || 1));

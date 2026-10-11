@@ -8,7 +8,7 @@
     enter() {
       const st = this.state, ui = this.ui;
       this.m = HB.goals.milestone(st);
-      this.opps = HB.goals.opportunities(st).sort((a, b) => (b.urgent ? 1 : 0) - (a.urgent ? 1 : 0));
+      this.opps = HB.goals.opportunities(st).sort((a, b) => (b.urgent ? 2 : b.story ? 1 : 0) - (a.urgent ? 2 : a.story ? 1 : 0));
       this.cols = { goal: { x: 20, y: 20, w: 400, h: 630 }, opp: { x: 432, y: 20, w: 470, h: 630 }, ren: { x: 914, y: 20, w: 346, h: 630 } };
       const c = this.cols.opp;
       this.list = ui.add(new HB.ui.ListBox({ x: c.x + 14, y: c.y + 70, w: c.w - 28, h: c.h - 86, items: this.opps, itemHeight: 110, gap: 6, selected: 0, emptyText: 'Fly out and explore: there is nothing in sight yet.',
@@ -86,9 +86,9 @@
       const known = st.world.factions.filter(f => f.dragon.known).sort((a, b) => (b.dragon.fear + b.dragon.hostility + b.dragon.trust) - (a.dragon.fear + a.dragon.hostility + a.dragon.trust));
       if (!known.length) { HB.text.draw(ctx, 'No one. Not yet.', x, y + 12, { size: 13, italic: true, color: P.inkSoft }); y += 20; }
       for (const f of known.slice(0, 4)) {
-        const m2 = f.dragon, word = m2.trust > Math.max(m2.fear, m2.hostility) && m2.trust >= 8 ? 'trusts you' : m2.hostility >= 25 ? 'hates you' : m2.fear >= 20 ? 'fears you' : 'has heard of you';
+        const m2 = f.dragon, hl = HB.heat ? HB.heat.levelOf(f) : 0, word = hl >= 1 ? HB.HEAT_LEVELS[hl].name.toLowerCase() : m2.trust > Math.max(m2.fear, m2.hostility) && m2.trust >= 8 ? 'trusts you' : m2.hostility >= 25 ? 'hates you' : m2.fear >= 20 ? 'fears you' : 'has heard of you';
         HB.text.draw(ctx, `${f.name}`, x, y + 13, { size: 13, family: 'sc', maxWidth: w * 0.58 });
-        HB.text.draw(ctx, word, x + w, y + 13, { size: 13, italic: true, align: 'right', color: word === 'trusts you' ? P.good : word === 'hates you' ? P.bad : word === 'fears you' ? P.warn : P.inkSoft });
+        HB.text.draw(ctx, word, x + w, y + 13, { size: 13, italic: true, align: 'right', color: word === 'trusts you' ? P.good : word === 'hates you' || word === 'hunting' || word === 'guarded' ? P.bad : word === 'fears you' || word === 'wary' ? P.warn : P.inkSoft });
         y += 19;
       }
       const reacts = (st.reactions || []).slice(-3).reverse();

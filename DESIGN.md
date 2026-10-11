@@ -94,6 +94,34 @@ Possession bonuses from treasure stored at home (never from cargo), with diminis
 
 Formula shape: `bonus = cap * (1 - exp(-value / scale))` per category, plus flat artifact effects.
 
+## 3b. The first valley: stories, heat, pursuit (0.7.0)
+
+Agreed after the owner (and a second opinion from ChatGPT) found the early game a grind: rob without killing was
+safe and optimal, and good play was a pay cut. The fix is *something you want next beyond the bar*, and a world
+that answers.
+
+- **Local situations** (`src/game/situations.js`): generated from real actors near the lair, one chosen per world
+  (starts differ), more after long sleeps. Templates: *raided farm* (defend), *stolen tribute* (steal the chest
+  and be hunted by the captain / kill the captain and return it for trust, a hidden ruin and a safe barn / parley
+  for a seasonal cut that heats the realm and may talk), *taken envoy* (seize and free him for the Deepwarden's
+  Seal and fee-less dwarves / ransom him for gold and dwarven hatred), *slayer's bounty* (ambush him for his purse
+  and the Smoke-Glass / turn the paying villages by trust or fear / let him come). Each approach is listed on the
+  Aims board with what it opens.
+- **Capability treasures** open places: wind-gated crags (`L.flags.requires = 'wind'`), seal-gated vaults.
+- **Heat** (`src/game/heat.js`, `f.dragon.heat`): thefts, fire and captives raise it; time and good deeds cool it.
+  Calm → Wary (escorts) → Guarded (convoys; villages lock valuables away and post watchmen) → Hunting (a named
+  party walks toward you; fight, flee, or pay mercenaries). Robbing outlaws cools it. Theft hurts a treasury that
+  recovers; burning damages recovery itself.
+- **Pursuit** replaces "kill witnesses": witnesses only add attention; riders follow a loud raid and, if you fly
+  straight home, learn where you sleep (`learned.lairFound` raises sleep threats). Lose them by landing 8+ leagues
+  away, waiting 6 days, or the Smoke-Glass.
+- **Offerings** from trusting villages (trust ≥ 30, prosperous, unthreatened, within 30 leagues): seasonal while
+  awake, yearly while asleep, shown as a range. Raiders may still ruin them while you sleep; your guards, loyal
+  guardians and a protection pact raise their chance to hold.
+- **Tuning from a headless robber bot**: always robbing and flying straight home reaches hoard strength 1 000 in
+  ~10–18 trips but heats realms to Hunting, draws sworn hunters and usually fails the first growth sleep. The first
+  sleep never kills (hunters who break in wake the hatchling to fight); later sleeps can.
+
 ## 3a. Goals and feedback (the opening cycle)
 
 Agreed with the owner after the first playtest: systems alone did not give clear goals, understandable

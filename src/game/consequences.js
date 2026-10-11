@@ -29,7 +29,7 @@
       return {
         energy: HB.stats.hoardEnergy(state), alignment: state.dragon.alignment, health: state.dragon.health,
         cargoGold: state.cargo.gold, cargoItems: state.cargo.items.map(i => i.id), cargoCaptives: state.cargo.captives.length,
-        factions: W.factions.map(f => ({ fear: f.dragon.fear, hostility: f.dragon.hostility, trust: f.dragon.trust, learned: Object.assign({}, f.learned) })),
+        factions: W.factions.map(f => ({ fear: f.dragon.fear, hostility: f.dragon.hostility, trust: f.dragon.trust, heat: HB.heat ? HB.heat.levelOf(f) : 0, learned: Object.assign({}, f.learned) })),
         loc: isLoc ? { id: target.id, wealth: target.wealth, trust: target.trust, fear: target.fear, state: target.state, threat: target.threat ? Object.assign({}, target.threat) : null } : null,
         threats: W.locations.filter(L => L.threat).map(L => L.id),
         titles: R.titles.length, deeds: Object.assign({}, R.deeds),
@@ -63,6 +63,9 @@
       // ---- headline
       let headline, title = 'What Changed';
       if (outcome === 'defeated') { headline = `You were beaten at ${target.name || 'the road'} and lost everything you carried.`; title = 'Defeat'; }
+      else if (info.kind === 'defend' && target.kind === 'caravan') headline = outcome === 'defended' ? `You drove the outlaws off the ${target.name}.` : `You left the ${target.name} to the outlaws.`;
+      else if (info.kind === 'story') headline = `${HB.fmt.cap(info.label)}.`;
+      else if (target.kind === 'hunters') headline = r && r.kills > 0 ? `You broke ${target.name}.` : `${HB.fmt.cap(target.name)} are still after you.`;
       else if (info.kind === 'defend') headline = outcome === 'defended' ? `You drove the raiders of ${(before.loc && before.loc.threat && before.loc.threat.campName) || 'the hills'} out of ${target.name}.` : `You left ${target.name} to the raiders.`;
       else if (info.kind === 'toll') headline = info.success ? `${HB.fmt.cap(who)} paid you to let them pass.` : `${HB.fmt.cap(who)} refused to pay.`;
       else if (info.kind === 'escort') headline = `You guarded ${who} on the road.`;
@@ -84,8 +87,11 @@
         if (gainedItems.length > 3) parts.push(`${gainedItems.length - 3} more pieces`);
         if (caps > 0) parts.push(HB.fmt.plural(caps, 'captive'));
         add(`+${HB.fmt.list(parts)} carried${gainedValue ? `: ${HB.fmt.int(gainedValue)} gold worth` : ''}.`, 'good');
-      } else if (r && r.goodsReturned === 'returned') add(`You gave back the ${HB.fmt.int(r.recoveredValue)} gold worth the raiders had stolen.`, 'good');
-      else if (outcome !== 'defeated' && !['protect', 'tribute', 'defend'].includes(info.kind)) add('Nothing taken.');
+      }
+      for (const n of (r && r.storyNotes) || []) add(n.text, n.tone);
+      for (const c of state.cargo.captives) if (c.sitId && before.cargoCaptives < state.cargo.captives.length) add(`You carry ${c.name}. Free them from your lair for their people’s gratitude, or ransom them.`, 'good');
+      if (r && r.goodsReturned === 'returned') add(`You gave back the ${HB.fmt.int(r.recoveredValue)} gold worth the raiders had stolen.`, 'good');
+      else if (!(gainedValue > 0 || caps > 0) && !(r && r.storyNotes) && outcome !== 'defeated' && !['protect', 'tribute', 'defend', 'story'].includes(info.kind)) add('Nothing taken.');
       if (r && r.goodsReturned === 'kept') add(`You kept what the raiders had stolen. ${target.name} saw.`);
       if (outcome !== 'defeated' && (state.cargo.gold || state.cargo.items.length)) {
         const sp = cons.storePreview(state);
@@ -93,7 +99,7 @@
         const e0 = Math.round(HB.stats.hoardEnergy(state)), e1 = Math.round(e0 + sp.energyGain);
         const prior = sp.carried - gainedValue > 0.5;
         add(`Stored at home${prior ? ' (with everything you carry)' : ''} → ${sp.diff.length ? cons.diffText(sp.diff) : 'no stronger yet'}. Hoard strength ${HB.fmt.int(e0)} → ${HB.fmt.int(e1)}${next ? ` of ${HB.fmt.int(next.energy)}` : ''}.`, sp.diff.length ? 'good' : undefined);
-        if (r && r.pursued) add('Riders are following you. Fly home before they catch a heavy dragon.', 'warn');
+
       }
       // ---- the place itself
       if (isLoc && before.loc) {
@@ -108,14 +114,19 @@
       // ---- realms: fear, hostility, trust, what they learned
       let trustGained = false;
       if (isLoc && before.loc && target.trust - before.loc.trust >= 1) { trustGained = true; add(`${target.name} trusts you more (+${Math.round(target.trust - before.loc.trust)}).`, 'good'); }
+      else if (isLoc && before.loc && before.loc.trust - target.trust >= 1) add(`${target.name} trusts you less (−${Math.round(before.loc.trust - target.trust)}).`, 'bad');
       W.factions.forEach((f, i) => {
         const b = before.factions[i]; if (!b) return;
         const df = Math.round(f.dragon.fear - b.fear), dh = Math.round(f.dragon.hostility - b.hostility), dt = Math.round(f.dragon.trust - b.trust);
         const bits = [];
-        if (df >= 1) bits.push(`fear +${df}`); if (dh >= 1) bits.push(`hostility +${dh}`); if (dh <= -1) bits.push(`hostility ${dh}`); if (dt >= 1) { bits.push(`trust +${dt}`); trustGained = true; }
+        if (df >= 1) bits.push(`fear +${df}`); if (dh >= 1) bits.push(`hostility +${dh}`); if (dh <= -1) bits.push(`hostility ${dh}`); if (dt >= 1) { bits.push(`trust +${dt}`); trustGained = true; } if (dt <= -1) bits.push(`trust ${dt}`);
         if (bits.length) add(`${f.name}: ${bits.join(', ')}.`, dh >= 3 ? 'warn' : dt >= 1 ? 'good' : undefined);
         for (const k in LEARNED) if ((f.learned[k] || 0) > (b.learned[k] || 0)) add(LEARNED[k](f), 'warn');
       });
+      // heat steps: how hard each realm now pushes back
+      W.factions.forEach((f, i) => { const b = before.factions[i]; if (!b || !HB.heat) return; const lv = HB.heat.levelOf(f); if (lv > b.heat) add(`${f.name} is now ${HB.HEAT_LEVELS[lv].name}: ${HB.HEAT_LEVELS[lv].effect.charAt(0).toLowerCase() + HB.HEAT_LEVELS[lv].effect.slice(1)}`, lv >= 2 ? 'bad' : 'warn'); else if (lv < b.heat) add(`${f.name} calms down (${HB.HEAT_LEVELS[lv].name}).`, 'good'); });
+      if (info.pursuitText) add(info.pursuitText, 'good');
+      else if (state.pursuit && HB.pursuit) add(HB.pursuit.hint(state), 'warn');
       if (!trustGained && outcome !== 'defeated') add('No trust gained.');
       // ---- your name
       const daRaw = state.dragon.alignment - before.alignment, da = Math.abs(daRaw) >= 1.5 ? Math.round(daRaw) : 0;

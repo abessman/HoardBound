@@ -11,7 +11,7 @@ const LOGIC_FILES = [
   // later modules are appended here as they are written (world/state/game logic)
   'src/world/world.js', 'src/data/treasures.js', 'src/data/upgrades.js', 'src/data/encounters.js', 'src/data/events.js',
   'src/game/stats.js', 'src/game/hoard.js', 'src/game/state.js', 'src/game/travel.js', 'src/game/preview.js', 'src/game/raid/raid.js', 'src/game/raid/templates.js', 'src/game/encounter.js',
-  'src/game/lair.js', 'src/game/ransom.js', 'src/game/tribute.js', 'src/game/factions.js', 'src/game/history.js', 'src/game/worldsim.js', 'src/game/keeper.js', 'src/game/sleep.js', 'src/game/petitions.js', 'src/game/renown.js', 'src/game/consequences.js', 'src/game/goals.js', 'src/core/save.js',
+  'src/game/lair.js', 'src/game/ransom.js', 'src/game/tribute.js', 'src/game/factions.js', 'src/game/history.js', 'src/game/heat.js', 'src/game/worldsim.js', 'src/game/situations.js', 'src/game/keeper.js', 'src/game/sleep.js', 'src/game/petitions.js', 'src/game/renown.js', 'src/game/consequences.js', 'src/game/goals.js', 'src/core/save.js',
 ];
 
 module.exports = function load(opts = {}) {

@@ -4,6 +4,17 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.7.0 — 2026-10-11 · The first valley
+- Every new world opens with one of four local stories built from the places around your cave: outlaws sacking a farm; a captain holding a village's tribute chest (and wearing a wind charm); a dwarf envoy held for ransom (with a seal that opens a vault); a dragon-slayer raising a bounty (carrying a smoke-glass). Each has several ways in that lead to different futures. A new story appears after each long sleep when none is open.
+- Treasures that open things: the Gale-Feather Charm reaches a wind-locked crag, the Deepwarden's Seal opens a dwarf-sealed vault, the Smoke-Glass shakes off riders and hunters.
+- Heat: realms step through Calm → Wary → Guarded → Hunting as you rob and burn. Escorts grow, villages lock valuables away and post watchmen, and a named hunting party tracks you across the map. Fight, flee or pay them off. Good deeds and time cool it.
+- Pursuit: loud raids send riders after you. Fly straight home and they learn where you sleep (more thieves and hunters later). Land far away or wait them out to lose them.
+- Offerings: villages that trust you bring gifts each season, and every year you sleep, while they prosper. When raiders strike them while you sleep, your guards help them hold.
+- Guarding a caravan can turn into an animated ambush fight. Warden of the Roads now needs four guarded caravans.
+- Map: story places marked, wind swirls on crags, hunters and slayers shown; a story line on the goal panel and an alerts panel for riders and hunters.
+- The first sleep forgives: hunters who reach the sleeping hatchling wake it to fight instead of killing it. The next step warns when hunters are likely and someone has sworn to kill you.
+- Fixes: armies no longer vanish at the first daily tick; gender-neutral story text.
+
 ## 0.6.1 — 2026-10-11
 - Version number and date shown on the title screen and in the in-game menu; saves record the version they were made with.
 - This changelog.

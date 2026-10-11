@@ -49,7 +49,7 @@
     tickDays(state, days) {
       const W = state.world, rng = HB.game.rng;
       for (const e of state.entities) {
-        if (e.dead) continue;
+        if (e.dead || e.kind === 'hunters' || e.kind === 'army') continue; // hunters walk cross-country; armies move yearly
         const R = W.roads[e.roadIdx]; if (!R) { e.dead = true; continue; }
         const len = Math.max(1, R.cells.length);
         e.t += e.dir * (e.speed * days) / len;
@@ -63,8 +63,13 @@
         }
         sim.placeOnRoad(state, e);
       }
+      if (HB.hunters) HB.hunters.tick(state, days);
       state.entities = state.entities.filter(e => !e.dead);
       sim.updateThreats(state, days, rng);
+      if (HB.heat) HB.heat.decay(state, days);
+      if (HB.pursuit && HB.pursuit.tick(state) && HB.isBrowser && HB.flow && HB.flow.map) HB.flow.map.showToast('The riders give up the chase', 3);
+      if (HB.situations) HB.situations.tick(state, days);
+      if (HB.tribute && HB.tribute.accrueOfferings) HB.tribute.accrueOfferings(state, days);
       sim.spawnCaravans(state, 1);
       if (rng.chance(days * 0.05)) sim.spawnHeroes(state);
       if (HB.lair && HB.lair.tickDays) { const done = HB.lair.tickDays(state, days); if (done.length && HB.isBrowser && HB.flow.map) HB.flow.map.showToast(`${HB.UPGRADE_BY_ID[done[0].id].name} is finished`); }
@@ -113,7 +118,20 @@
       if (active < 2 && rng.chance(days >= 300 ? 0.15 : Math.min(0.5, days * 0.015))) sim.spawnThreat(state, rng);
     },
     /** nobody came: the raiders take what they want */
+    /** chance a village that trusts you drives raiders off without you (your guards, its guardians, its own pluck) */
+    repelChance(state, L) {
+      const pact = L.tribute && L.tribute.willing && !L.tribute.lapsed;
+      if (L.trust < 30 && !pact) return 0;
+      const guards = HB.lair ? HB.lair.guardStrength(state) : 0;
+      const guardians = state.memory.loyalties.filter(l => l.kind === 'guardians').length;
+      return HB.clamp(0.15 + guards / 30 + guardians * 0.15 + (pact ? 0.1 : 0), 0, 0.8);
+    },
     threatFalls(state, L, rng) {
+      if (rng.chance(sim.repelChance(state, L))) {
+        const t0 = L.threat; L.threat = null; L.flags.noThreatUntil = state.time.totalDays + 360; L.trust = Math.min(100, L.trust + 3);
+        if (HB.consequences) HB.consequences.react(state, `${L.name} drove off the raiders of ${t0.campName} without you.`, 'because they trust you, and your guards and their own people stood together');
+        return;
+      }
       const W = state.world, t = L.threat; L.threat = null; L.flags.noThreatUntil = state.time.totalDays + 360;
       const loss = Math.round(L.wealth * 0.4);
       L.wealth -= loss;
@@ -173,6 +191,8 @@
       // refresh moving things after a long sleep
       state.entities = state.entities.filter(e => e.kind === 'army');
       sim.spawnCaravans(state, 1); sim.spawnHeroes(state);
+      state.ambush = null; state.pursuit = null;
+      if (HB.situations) HB.situations.afterSleep(state, HB.game.rng);
       // hunting parties from grudges appear on the roads near the lair
       const W = state.world, rng = HB.game.rng;
       const lead = HB.history ? HB.history.leadHunter(state) : null;
@@ -183,7 +203,7 @@
       }
     },
     /** entities visible on the map (within revealed cells) */
-    visibleEntities(state) { const W = state.world, K = state.know.revealed; return state.entities.filter(e => !e.dead && HB.world.inBounds(W, Math.round(e.x), Math.round(e.y)) && K[Math.round(e.y) * W.w + Math.round(e.x)]); },
+    visibleEntities(state) { const W = state.world, K = state.know.revealed, d = state.dragon; return state.entities.filter(e => !e.dead && HB.world.inBounds(W, Math.round(e.x), Math.round(e.y)) && (K[Math.round(e.y) * W.w + Math.round(e.x)] || ((e.kind === 'hunters' || e.sitId) && Math.hypot(e.x - d.x, e.y - d.y) <= 30))); },
     drawEntities(ctx, map, state) {
       const A = HB.mapart, z = HB.MAP_CELL * map.cam.zoom;
       const s = Math.max(3, Math.min(9, 7 * Math.sqrt(map.cam.zoom)));

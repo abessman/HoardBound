@@ -173,7 +173,7 @@
     kill(r, e, how) {
       e.dead = true; e.state = 'dead';
       if (e.civilian) { r.civiliansKilled++; }
-      else if (e.defender) { r.kills++; if (e.raider) r.raidersKilled++; }
+      else if (e.defender) { r.kills++; if (e.raider) r.raidersKilled++; if (e.leader) r.leaderKilled = true; }
       if (e.animal) r.ate += 0;
       raid.msg(r, `${HB.fmt.cap(e.label || e.kind)} ${how === 'burned' ? 'burns' : 'falls'}.`);
       // loot carried by the fallen
@@ -300,6 +300,7 @@
     },
     takeLoot(r, e) {
       const L = e.loot;
+      if (L.tag) (r.tags = r.tags || []).push(L.tag);
       if (L.recovered) { r.recoveredValue += L.value || L.gold || 0; if (L.gold) r.recoveredGold += L.gold; else if (L.item) L.item.recovered = r.target.id; }
       if (L.gold) { r.loot.gold += L.gold; if (!L.recovered) r.stolenValue += L.gold; raid.msg(r, L.recovered ? `You take back ${HB.fmt.int(L.gold)} stolen gold.` : `You snatch ${HB.fmt.int(L.gold)} gold.`, 'good'); }
       else if (L.item) { r.loot.items.push(L.item); if (!L.recovered) r.stolenValue += L.item.value; raid.msg(r, `You take ${L.recovered ? 'back ' : ''}${L.item.name}.`, 'good'); if (L.item.named) r.tookArtifact = L.item; }
@@ -357,7 +358,7 @@
     },
     applyCapture(r, e) {
       e.dead = true; r.captured++;
-      const c = { id: HB.nextId('cap'), name: e.personName || e.label, kind: e.captiveKind || 'noble', weight: e.captiveWeight || 2, from: r.target.name || '', factionId: r.target.factionId !== undefined ? r.target.factionId : -1, house: e.house || null, year: r.state.time.year, ransomed: false };
+      const c = { id: HB.nextId('cap'), name: e.personName || e.label, kind: e.captiveKind || 'noble', weight: e.captiveWeight || 2, from: r.target.name || '', factionId: e.captiveFaction !== undefined ? e.captiveFaction : r.target.factionId !== undefined ? r.target.factionId : -1, house: e.house || null, year: r.state.time.year, ransomed: false, sitId: e.sitId || null };
       r.loot.captives.push(c);
       r.alarm = Math.min(100, r.alarm + 16);
       raid.msg(r, `You seize ${e.label}. Shouts go up behind you.`, 'good');
@@ -384,7 +385,7 @@
         const archers = r.entities.filter(e => !e.dead && e.ranged && e.kind !== 'ballista').length;
         if (archers) { const dmg = Math.round(Math.max(0, archers * 2.2 - r.state.dragon.stats.defense * 0.5)); if (dmg > 0) { r.dragon.hp = Math.max(1, r.dragon.hp - dmg); r.damageTaken += dmg; raid.msg(r, `A parting volley follows you: ${dmg} damage.`, 'hurt'); } }
       }
-      r.pursued = r.alarm >= 70 || r.captured > 0;
+      r.pursued = r.mode !== 'defend' && outcome === 'withdrew' && (r.alarm >= 50 || r.captured > 0) && r.entities.some(e => e.defender && !e.dead && !e.raider);
     },
     /** a wounded or terrified raider breaks and runs for the hills */
     maybeRout(r, e) { if (!e.raider || e.dead || e.routed) return false; if (e.hp < e.maxHp * 0.5 && Math.random() < 0.7) { raid.rout(r, e); return true; } return false; },

@@ -73,6 +73,31 @@
       state.phase = 'planning';
       return `${L.name} hands over ${HB.fmt.int(paid)} gold.`;
     },
+    // ---------- offerings: villages that trust you bring gifts while they prosper and stay safe
+    offeringPlaces(state) {
+      const W = state.world, H = W.home;
+      return W.locations.filter(L => ['farm', 'village', 'town'].includes(L.type) && L.state === 'normal' && !L.threat && L.trust >= 30 && L.wealth >= L.wealthMax * 0.4 && !(L.tribute && !L.tribute.lapsed) && Math.hypot(L.x - H.x, L.y - H.y) <= 30);
+    },
+    seasonOffering(L) { return Math.round(4 + L.wealth * 0.04); },
+    yearOffering(L) { return Math.round(8 + L.wealth * 0.06); },
+    /** while awake: offerings pile up at the foot of the hill, collected when you come home */
+    accrueOfferings(state, days) {
+      if (days >= 300) return;
+      for (const L of tribute.offeringPlaces(state)) L.flags.offering = (L.flags.offering || 0) + tribute.seasonOffering(L) * days / 90;
+    },
+    collectOfferings(state) {
+      let total = 0; const names = [];
+      for (const L of state.world.locations) { const g = Math.floor(L.flags.offering || 0); if (g > 0) { total += g; names.push(L.name); L.flags.offering -= g; } }
+      if (state.pactGold) { total += Math.round(state.pactGold); names.push('your outlaw partners'); state.pactGold = 0; }
+      if (total) state.hoard.gold += total;
+      return { total, names };
+    },
+    /** what trusting villages might bring over a sleep of `years` (a range: raiders may ruin some of them) */
+    offeringEstimate(state, years) {
+      const places = tribute.offeringPlaces(state);
+      const full = places.reduce((a, L) => a + tribute.yearOffering(L), 0) * Math.max(0, Math.floor(years));
+      return { places, lo: Math.round(full * 0.5), hi: full };
+    },
     /** yearly accrual; returns events. Tribute accumulates as 'due' and is delivered to the lair if the settlement is near and willing, else held until collected. */
     yearly(state, rng) {
       const ev = []; const W = state.world; let total = 0;
@@ -88,6 +113,10 @@
         L.fear = Math.max(0, L.fear - 2);
       }
       if (total) ev.push({ text: `Tribute delivered to the lair: ${HB.fmt.int(total)} gold.` });
+      // offerings from villages that trust you, while they prosper
+      const off = tribute.offeringPlaces(state); let og = 0;
+      for (const L of off) { const g = tribute.yearOffering(L); state.hoard.gold += g; og += g; }
+      if (og) ev.push({ text: `Offerings from ${HB.fmt.list(off.slice(0, 3).map(L => L.name))}${off.length > 3 ? ' and others' : ''}: ${HB.fmt.int(og)} gold.`, kind: 'loyal' });
       return ev;
     },
   };

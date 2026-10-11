@@ -57,7 +57,11 @@
         const sleepFor = opt ? opt.label.toLowerCase() : yrs + ' years';
         const exposed = HB.lair && !HB.lair.level(state, 'entrance') && !state.lair.construction.some(c => c.id === 'entrance');
         const spare = energy - next.energy;
-        if (exposed) nextStep = `Before you sleep, reinforce the entrance (Lair → Build): thieves who rob you before you come of age stop the change. Then sleep ${sleepFor}.`;
+        const t = HB.sleep ? HB.sleep.threatEstimate(state) : { hunt: 0 };
+        const chamber = HB.lair && (HB.lair.level(state, 'sleeping') || state.lair.construction.some(c => c.id === 'sleeping'));
+        const hunted = state.entities.some(e => e.kind === 'hunters' && !e.dead) || (HB.history && HB.history.leadHunter(state));
+        if ((t.hunt >= 0.06 || hunted) && !chamber) nextStep = `Hunters will come for you while you sleep (${Math.round(t.hunt * 100)}% a year${hunted ? ', and someone has sworn to kill you' : ''}): build a sleeping chamber, deal with them first, or let your realms cool down. Then sleep ${sleepFor}.`;
+        else if (exposed) nextStep = `Before you sleep, reinforce the entrance (Lair → Build): thieves who rob you before you come of age stop the change. Then sleep ${sleepFor}.`;
         else if (spare < 250) nextStep = `Gather a little more (only ${HB.fmt.int(spare)} to spare against thieves), or sleep ${sleepFor} now and hope the door holds.`;
         else nextStep = `Sleep ${sleepFor} in your lair to come of age.`;
       } else nextStep = `You are ready. Sleep in your lair to grow into ${HB.fmt.a(next.name.toLowerCase())}.`;
@@ -76,6 +80,8 @@
       const reach = (t) => { const e = HB.travel.estimate(state, t); return { ok: !e.blocked && e.canReach, back: e.canReturn }; };
       const dist = (t) => Math.round(Math.hypot(t.x - d.x, t.y - d.y));
       const m = goals.milestone(state);
+      // ---- local stories first: each approach is its own opportunity
+      if (HB.situations) out.push(...HB.situations.opportunities(state));
       // ---- grow stronger: the best haul for its danger that you can reach
       const prey = [];
       for (const e of (HB.worldsim ? HB.worldsim.visibleEntities(state) : [])) if (e.kind === 'caravan' && !e.tolled) { const r = reach(e); if (r.ok) prey.push({ t: e, haul: goals.haulOf(state, e), risk: 8 + (e.escort || 0) * 12, back: r.back }); }

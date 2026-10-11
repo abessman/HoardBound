@@ -14,8 +14,9 @@
       state.phase = 'encounter';
       // settlements (and any place under attack) offer a choice on arrival; so do caravans
       const settlement = !target.kind && (['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type) || target.threat);
+      const story = !target.kind && HB.situations && (HB.situations.isStoryPlace(state, target) || HB.situations.choicesFor(state, target, map).length > 0);
       if (!opts.direct && HB.isBrowser && HB.CardScene) {
-        if (settlement) { enc.arrivalCard(state, target, map); return; }
+        if (settlement || story) { enc.arrivalCard(state, target, map); return; }
         if (target.kind === 'caravan') { enc.caravanCard(state, target, map); return; }
       }
       enc.before = HB.consequences.snapshot(state, target);
@@ -38,8 +39,9 @@
       const kind = enc.kindOf(target);
       const t = target.threat;
       if (t) choices.push({ label: 'Drive off the raiders', desc: `${HB.fmt.cap(HB.fmt.plural(t.raiders, t.goblin ? 'goblin' : 'outlaw'))} from ${t.campName}. Saving ${target.name} wins its trust.`, tooltip: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses as readily as raiders. Afterwards you choose whether to give back what you recover.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true, defend: true }), 0); return false; } });
+      if (HB.situations) for (const ch of HB.situations.choicesFor(state, target, map)) { const fn = ch.onChoose; choices.push(Object.assign({}, ch, { onChoose: () => { const before = HB.consequences.snapshot(state, target); const res = fn(); if (res !== false) enc.pendingSummary = { before, info: { kind: 'story', label: ch.label } }; return res; } })); }
       if (kind !== 'none') choices.push({ label: kind === 'raid' ? (t ? 'Raid it yourself' : 'Raid') : 'Approach', desc: kind === 'raid' ? 'Enter the animated raid: take what you can, leave when you must.' : 'Deal with the place as it is.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true }), 0); return false; } });
-      if (HB.tribute && target.type !== 'farm') {
+      if (HB.tribute && ['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type)) {
         const tr = HB.tribute.canDemand(state, target);
         if (target.tribute && !target.tribute.lapsed) choices.push({ label: 'Collect tribute', desc: `They owe ${HB.fmt.int(target.tribute.amount)} gold a year. Collect what is due.`, onChoose: () => HB.tribute.collect(state, target) });
         else choices.push({ label: 'Demand tribute', desc: tr.ok ? `Likely to accept: ${tr.chanceText}. Yearly payment about ${HB.fmt.int(tr.amount)} gold.` : tr.reason, disabled: !tr.ok, disabledReason: tr.reason, onChoose: () => { const before = HB.consequences.snapshot(state, target); const txt = HB.tribute.demand(state, target); enc.pendingSummary = { before, info: { kind: 'tribute', success: !!(target.tribute && !target.tribute.lapsed) } }; return txt; } });
@@ -48,7 +50,8 @@
       }
       choices.push({ label: 'Scout and move on', desc: 'Learn its wealth and defences exactly. No alarm, nothing taken.', onChoose: () => { target.knowledge.scoutedYear = state.time.year; target.knowledge.raided = target.knowledge.raided || false; target.knowledge.exact = true; state.phase = 'planning'; return `You circle ${target.name} twice, counting roofs and spears. ${target.defense > 45 ? 'Too strong to fight; perhaps not too strong to rob.' : 'Nothing here you could not handle with care.'}`; } });
       choices.push({ label: 'Fly on', desc: '', onChoose: () => { state.phase = 'planning'; return 'You fly on.'; } });
-      const threatText = t ? `Smoke rises from ${target.name}: raiders from ${t.campName} are looting it. ` : '';
+      const storyText = HB.situations ? HB.situations.arrivalText(state, target) : '';
+      const threatText = (t ? `Smoke rises from ${target.name}: raiders from ${t.campName} are looting it. ` : '') + (storyText && !t ? storyText + ' ' : '');
       const card = new HB.CardScene({ title: `Above ${target.name}`, illustration: target.type === 'castle' ? 'ransom' : target.type === 'glade' || target.type === 'monastery' ? 'monastery' : 'petition', text: `${threatText}${HB.preview.describe(state, target).subtitle}. ${f ? HB.preview.moodText(f) : 'No realm claims it.'} ${target.memory.length ? 'They remember you.' : 'They have never seen a dragon.'}`, choices, onClose: () => { const p = enc.pendingSummary; enc.pendingSummary = null; if (p && map) enc.showSummary(state, target, p.before, p.info, map); } });
       HB.scenes.push(card);
     },
@@ -59,7 +62,7 @@
       const choices = [
         { label: 'Rob it', desc: `You could carry off about ${HB.fmt.int(HB.goals.haulOf(state, e))} gold worth. Its realm will hire more guards.`, tooltip: 'Enter the animated raid. The strongbox on the first wagon is easy; the best goods ride in the last.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, e, map, { direct: true }), 0); return false; } },
         { label: 'Demand a toll', desc: toll.ok ? `About ${HB.fmt.int(toll.amount)} gold to pass (${toll.chanceText}). Nobody dies.` : toll.reason, disabled: !toll.ok, disabledReason: toll.reason, tooltip: 'Merchants who fear you pay to pass. Fear grows a little; nobody is hurt; the caravan lives to trade again.', onChoose: () => { const before = HB.consequences.snapshot(state, e); const res = enc.toll(state, e); enc.pendingSummary = { before, info: { kind: 'toll', success: res.success } }; return res.text; } },
-        { label: 'Guard it to the next town', desc: 'Two days flying escort. Its realm will trust you.', tooltip: 'Fly above the wagons until they reach safety. Outlaws may try their luck. Merchants pay a little and talk a lot: three guarded caravans make you Warden of the Roads.', onChoose: () => { const before = HB.consequences.snapshot(state, e); const res = enc.escort(state, e, map); enc.pendingSummary = { before, info: { kind: 'escort' } }; return res; } },
+        { label: 'Guard it to the next town', desc: 'Two days flying escort. Its realm will trust you.', tooltip: 'Fly above the wagons until they reach safety. Outlaws may try their luck. Merchants pay a little and talk a lot: three guarded caravans make you Warden of the Roads.', onChoose: () => { const before = HB.consequences.snapshot(state, e); const res = enc.escort(state, e, map, { interactive: true }); if (res.ambush) { HB.scenes.pop(card); setTimeout(() => enc.begin(state, e, map, { direct: true, defend: true }), 0); return false; } enc.pendingSummary = { before, info: { kind: 'escort' } }; return res.text; } },
         { label: 'Let it pass', desc: '', onChoose: () => { state.phase = 'planning'; return 'The wagons roll on. The drivers do not look up.'; } },
       ];
       const card = new HB.CardScene({ title: `The ${e.name}`, illustration: 'petition', text: `${HB.fmt.cap(e.name)} creaks along the road with about ${HB.fmt.int(e.wealth)} gold of goods. ${e.escort >= 2 ? 'Spears glint around the wagons.' : e.escort ? 'A few guards walk beside it.' : 'Nobody guards it but the drivers.'}`, choices, onClose: () => { const p = enc.pendingSummary; enc.pendingSummary = null; if (p && map) enc.showSummary(state, e, p.before, p.info, map); } });
@@ -91,27 +94,35 @@
       HB.game.chronicle(state, `Took ${HB.fmt.int(t.amount)} gold in toll from the ${e.name}.`, 'raid');
       return { success: true, text: `A strongbox is set down in the road and opened: ${HB.fmt.int(t.amount)} gold. The wagons roll on faster than they came.` };
     },
-    escort(state, e, map) {
-      const W = state.world, d = state.dragon, rng = HB.game.rng, f = e.factionId >= 0 ? W.factions[e.factionId] : null;
-      const origin = W.locations[e.originId];
+    /** fly above a caravan for two days. Outlaws may strike: an animated defence when played, a quick roll headless. */
+    escort(state, e, map, opts = {}) {
+      const W = state.world, d = state.dragon, rng = HB.game.rng;
       state.phase = 'planning';
       HB.game.advanceDays(state, 2); if (HB.worldsim) HB.worldsim.tickDays(state, 2);
       d.stamina = Math.max(0, Math.round(d.stamina - d.stats.maxStamina * 0.15));
       if (!e.dead) { d.x = e.x; d.y = e.y; const res = HB.world.reveal(state, d.x, d.y, d.stats.vision); if (map) map.onReveal(res); }
-      let text, trust = 4;
-      if (rng.chance(0.35)) {
+      const ambush = rng.chance(0.45);
+      if (ambush && opts.interactive && HB.isBrowser && map) return { ambush: true };
+      let text;
+      if (ambush) {
         const dmg = Math.max(1, Math.round(rng.between(2, 10) - d.stats.defense * 0.5));
-        d.health = Math.max(1, d.health - dmg); trust += 3; state.counters.kills += 2;
-        text = `On the second day outlaws came out of the trees. You dropped among them (${dmg} wounds) and they scattered. The drivers will tell this story for years.`;
+        d.health = Math.max(1, d.health - dmg); state.counters.kills += 2;
+        text = `On the second day outlaws came out of the trees. You dropped among them (${dmg} wounds) and they scattered.`;
       } else text = 'Two quiet days above the wagons. Nothing on the road dared show itself.';
-      const gift = Math.min(Math.round(e.wealth * 0.05), Math.max(0, d.stats.capacity - HB.game.cargoWeight(state)) * 100);
-      if (gift > 0) { state.cargo.gold += gift; text += ` At the gate the caravan master leaves you ${HB.fmt.int(gift)} gold, and does not quite meet your eye.`; }
+      return { text: text + ' ' + enc.escortReward(state, e, ambush) };
+    },
+    /** the caravan reached safety under your wings */
+    escortReward(state, e, fought) {
+      const W = state.world, d = state.dragon, f = e.factionId >= 0 ? W.factions[e.factionId] : null, origin = W.locations[e.originId];
+      let text = '';
+      const gift = Math.min(Math.round(e.wealth * (fought ? 0.1 : 0.05)), Math.max(0, d.stats.capacity - HB.game.cargoWeight(state)) * 100);
+      if (gift > 0) { state.cargo.gold += gift; text += `At the gate the caravan master leaves you ${HB.fmt.int(gift)} gold${fought ? ', with thanks' : ', and does not quite meet your eye'}.`; }
       e.escorted = true;
-      if (f) HB.factions.adjust(state, f, { trust: trust, hostility: -2 }, `guarded the ${e.name}`);
-      if (origin) origin.trust = Math.min(100, origin.trust + 6);
+      if (f) { HB.factions.adjust(state, f, { trust: fought ? 7 : 4, hostility: -2 }, `guarded the ${e.name}`); HB.heat.add(state, f, -8); }
+      if (origin) origin.trust = Math.min(100, origin.trust + (fought ? 10 : 6));
       state.dragon.alignment = HB.clamp(state.dragon.alignment + 2, -100, 100);
       HB.renown.record(state, 'escorted', { factionId: e.factionId, place: origin ? origin.name : null });
-      HB.game.chronicle(state, `Guarded the ${e.name} on the road.`, 'deed');
+      HB.game.chronicle(state, `Guarded the ${e.name} on the road${fought ? ' and fought off an ambush' : ''}.`, 'deed');
       return text;
     },
     beginCard(state, target, map) {
@@ -143,7 +154,7 @@
       // merge loot (unless defeated: loot is lost)
       let lostLoot = null;
       if (outcome === 'defeated') { lostLoot = r.loot; d.health = Math.max(1, Math.round(d.stats.maxHealth * 0.2)); d.injury = Math.min(1, d.injury + 0.6); d.scars++; state.counters.defeats++; }
-      else { state.cargo.gold += r.loot.gold; for (const it of r.loot.items) state.cargo.items.push(it); for (const c of r.loot.captives) state.cargo.captives.push(c); }
+      else { state.cargo.gold += r.loot.gold; for (const it of r.loot.items) state.cargo.items.push(it); for (const c of r.loot.captives) { state.cargo.captives.push(c); if (HB.situations) HB.situations.onCaptured(state, c); } }
       const rival = r.entities.find(e => e.kind === 'rivalDragon');
       const rivalSlain = !!(rival && rival.dead);
       if (rivalSlain && target.dragon) { HB.game.chronicle(state, `Slew ${target.dragon.name}${target.dragon.tier >= 3 ? ', the elder wyrm,' : ''} in its own lair.`, 'legend'); d.prestige += target.dragon.tier >= 3 ? 60 : 25; state.counters.kills++; if (target.dragon.tier >= 3) state.flags.legend = true; target.state = 'ruin'; target.dragon = null; target.name = 'The Dead Wyrm’s Lair'; }
@@ -162,10 +173,11 @@
       if (HB.petitions && HB.petitions.onRaid && !defend) HB.petitions.onRaid(state, target, r);
       const before = enc.before || HB.consequences.snapshot(state, target);
       enc.before = null;
-      const info = { kind: defend ? 'defend' : 'raid', outcome, r };
-      if (defend && outcome === 'defended' && (r.recoveredValue > 0)) enc.returnGoodsCard(state, target, r, map, () => enc.showSummary(state, target, before, info, map));
-      else if (map) enc.showSummary(state, target, before, info, map);
-      else state.lastConsequence = HB.consequences.summarize(state, target, before, info);
+      const info = { kind: defend ? 'defend' : 'raid', outcome, r, pursuitText: HB.pursuit.start(state, target, r) };
+      const next = () => enc.showSummary(state, target, before, info, map);
+      const afterStory = () => { if (!HB.situations || !HB.situations.onRaidEnd(state, target, r, map, next)) next(); };
+      if (defend && outcome === 'defended' && (r.recoveredValue > 0)) enc.returnGoodsCard(state, target, r, map, afterStory);
+      else afterStory();
       if (rivalSlain && state.flags.legend && !state.flags.legendShown && HB.isBrowser && HB.LegendScene) { state.flags.legendShown = true; HB.scenes.push(new HB.LegendScene(state)); }
     },
     applyConsequences(state, target, c, map) {
@@ -190,7 +202,7 @@
           const gain = Math.max(0, 25 - c.burned * 10 - c.civiliansKilled * 6) * R.trustMul(state);
           L.trust = Math.min(100, L.trust + gain); L.fear = Math.min(100, L.fear + 2);
           L.flags.savedYear = year;
-          if (f) HB.factions.adjust(state, f, { trust: gain > 0 ? 6 : 0, fear: c.fear, hostility: c.hostility }, `drove the raiders of ${t ? t.campName : 'the hills'} from ${L.name}`);
+          if (f) { HB.factions.adjust(state, f, { trust: gain > 0 ? 6 : 0, fear: c.fear, hostility: c.hostility }, `drove the raiders of ${t ? t.campName : 'the hills'} from ${L.name}`); HB.heat.add(state, f, -12); }
           if (gain > 0) {
             R.record(state, 'defended', { factionId: L.factionId, place: L.name });
             HB.consequences.react(state, `${L.name} trusts you. Its people will work for you willingly and would accept your protection.`, `because you drove off the raiders of ${t ? t.campName : 'the hills'}`);
@@ -221,6 +233,9 @@
           if (L.type === 'castle' || L.type === 'city' || c.captured || c.burned >= 2) learn(f, 'hunters', c.burned >= 2 ? `because you burned ${L.name}` : c.captured ? `because you took captives at ${L.name}` : `because you dared to raid ${L.name}`);
           if (c.burned >= 2 || c.civiliansKilled >= 3) f.history.push({ year, text: `${d.name} burned ${L.name}.` });
           if (HB.history) HB.history.onRaid(state, L, f, c);
+          // heat: short-term answer to theft and fire (robbing outlaws cools it instead)
+          if (L.type === 'camp' || L.type === 'warren') { if (c.kills || c.stolenValue) HB.heat.add(state, f, -5); }
+          else { const h = (c.stolenValue > 0 ? 10 + Math.min(10, c.stolenValue / 60) : 0) + c.burned * 8 + c.civiliansKilled * 3 + c.captured * 12 + (L.type === 'castle' && c.stolenValue > 0 ? 10 : 0); HB.heat.add(state, f, h, `you ${c.burned ? 'burned' : c.captured ? 'carried people off from' : 'robbed'} ${L.name}`); }
         }
         if (c.outcome !== 'defeated') {
           for (let i = 0; i < c.burned; i++) R.record(state, 'burned', { factionId: L.factionId, place: L.name });
@@ -239,17 +254,32 @@
         if (L.type === 'rivalLair' && c.duel && c.outcome === 'withdrew' && c.stolenValue > 0 && L.dragon) { /* rival survives; its hoard reduced */ }
         if (L.type === 'rivalLair' && c.duel && c.rivalSlain) { L.state = 'ruin'; L.type = 'ruin'; }
       } else {
-        // entity (caravan, hero)
+        // entity (caravan, hero, hunting party)
         const e = target;
         const f = e.factionId >= 0 ? W.factions[e.factionId] : null;
         const origin = e.originId !== undefined ? W.locations[e.originId] : null;
+        if (c.defend && e.kind === 'caravan') {
+          if (c.outcome === 'defended') c.escortText = enc.escortReward(state, e, true);
+          else { e.wealth = Math.round(e.wealth * 0.5); if (origin) origin.trust = Math.max(0, origin.trust - 3); HB.consequences.react(state, `Outlaws robbed the ${e.name} while you watched.`, 'because you left them to it'); }
+        } else if (e.kind === 'hunters') {
+          if (c.kills > 0 && c.outcome !== 'defeated') {
+            e.dead = true; d.prestige += 3;
+            for (const g of state.memory.grudges) if (g.entityId === e.id) g.active = false;
+            R.record(state, 'heroes', { factionId: e.factionId, place: e.name });
+            if (f) HB.factions.adjust(state, f, { fear: 6, hostility: 4 }, `killed ${e.name}`);
+            HB.consequences.react(state, `${e.name} will hunt no one again.`, 'because you turned and fought');
+          } else if (c.outcome !== 'defeated') { e.restUntil = state.time.totalDays + 3; const ang = Math.atan2(e.y - d.y, e.x - d.x); e.x = d.x + Math.cos(ang) * 5; e.y = d.y + Math.sin(ang) * 5; }
+        } else {
         if (f) { const adj = { fear: c.fear, hostility: c.hostility, trust: 0 }; if (HB.factions) HB.factions.adjust(state, f, adj, `${c.label} on ${e.name}`); else { f.dragon.fear += adj.fear; f.dragon.hostility += adj.hostility; } f.dragon.known = true; if (e.kind === 'caravan') { learn(f, 'escorts', `because you robbed the ${e.name}`); f.history.push({ year, text: `${d.name} plundered a caravan near ${e.name}.` }); } if (HB.history) HB.history.onRaid(state, e, f, c); }
         if (e.kind === 'caravan') { e.wealth = Math.max(0, e.wealth - c.stolenValue - c.destroyedValue); e.raided = true; if (c.outcome !== 'defeated') e.dead = true; if (c.outcome !== 'defeated' && c.stolenValue > 0) { R.record(state, 'caravans', { factionId: e.factionId, place: origin ? origin.name : null }); if (origin) origin.trust = Math.max(0, origin.trust - 6); } }
         if (e.kind === 'hero') { if (c.kills > 0 || c.outcome === 'withdrew') { e.dead = c.kills > 0; if (c.kills > 0 && HB.history) HB.history.onHeroSlain(state, e); else if (HB.history) HB.history.onHeroSurvived(state, e); if (c.kills > 0) R.record(state, 'heroes', { factionId: e.factionId, place: e.name }); } }
+        if (e.kind === 'caravan' && f && c.stolenValue > 0 && c.outcome !== 'defeated') HB.heat.add(state, f, 12 + Math.min(8, c.stolenValue / 80), `you robbed the ${e.name}`);
+        }
       }
       // dragon
       d.alignment = HB.clamp(d.alignment + (c.alignment || 0), -100, 100);
-      state.lair.attention = (state.lair.attention || 0) + (c.pursued ? 3 : 0) + c.burned * 1 + (c.stolenValue > 800 ? 1 : 0);
+      // witnesses know a dragon did it (attention); riders who follow you home learn where you sleep (pursuit.onHome)
+      state.lair.attention = (state.lair.attention || 0) + (c.stolenValue > 0 && !c.defend ? 0.5 : 0) + c.burned * 1 + (c.stolenValue > 800 ? 1 : 0);
       if (c.damageTaken > 0 && c.outcome !== 'defeated' && HB.game.rng.chance(Math.min(0.5, c.damageTaken / 80))) d.scars++;
       // chronicle
       const name = target.name || 'the road';

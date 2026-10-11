@@ -20,6 +20,10 @@
       lines.push({ label: 'Stamina', text: costText, tone: est.canReturn ? 'good' : est.canReach ? 'warn' : 'bad' });
       if (est.blocked) lines.push({ text: `Storms wall off ${W.regions[est.blocked.regionId].name}. You are too small to cross them.`, tone: 'bad' });
       else if (est.canReach && !est.canReturn) lines.push({ text: 'You could reach it, but not fly home without resting somewhere on the way.', tone: 'warn' });
+      if (!isEnt && HB.situations) { const story = HB.situations.arrivalText(state, target); if (story) lines.push({ label: 'Story', text: story, tone: 'warn' }); }
+      if (!isEnt && target.flags && target.flags.requires === 'wind') lines.push({ label: 'Crag', text: HB.caps && HB.caps.has(state, 'wind') ? 'The Gale-Feather Charm will carry you up the winds.' : 'Winds no hatchling can climb. The Gale-Feather Charm would carry you.', tone: HB.caps && HB.caps.has(state, 'wind') ? 'good' : 'bad' });
+      if (!isEnt && target.flags && target.flags.requires === 'seal') lines.push({ label: 'Sealed', text: HB.caps && HB.caps.has(state, 'seal') ? 'You hold the Deepwarden’s Seal: the door will open.' : 'A dwarf-sealed door. The Deepwarden’s Seal opens it.', tone: HB.caps && HB.caps.has(state, 'seal') ? 'good' : 'warn' });
+      if (target.kind === 'hunters') lines.push({ text: HB.hunters.describe(state, target), tone: 'bad' });
       if (!isEnt && target.threat) { const days = Math.max(1, Math.round(target.threat.until - state.time.totalDays)); lines.push({ label: 'Under attack', text: `${HB.fmt.cap(HB.fmt.plural(target.threat.raiders, target.threat.goblin ? 'goblin' : 'outlaw'))} from ${target.threat.campName}; it falls in about ${HB.fmt.plural(days, 'day')}. Drive them off and ${target.name} will trust you.`, tone: 'warn' }); }
       if (target.type === 'lair') { return { subtitle: 'Your cave. Treasure stored here powers you; treasure carried does not.', lines, flyError: est.blocked ? 'blocked' : null }; }
       // knowledge
@@ -50,7 +54,7 @@
         if (target.tribute) lines.push({ label: 'Tribute', text: `Pays you ${HB.fmt.int(target.tribute.amount)} gold a year.`, tone: 'good' });
       } else if (target.kind === 'caravan') lines.push({ text: `${target.escort >= 2 ? 'Well escorted — merchants here have learned.' : target.escort ? 'A few guards.' : 'Barely guarded.'} Rob it, ${HB.renown && HB.renown.canToll(state) ? 'make it pay a toll, ' : ''}or guard it on the road for its realm’s trust.`, italic: true });
       else if (target.kind === 'hero') lines.push({ text: target.level <= 1 ? 'Green, but armed. Bite from the flank or frighten them off.' : 'Experienced. Companions may come running.', italic: true });
-      if (f) lines.push({ label: 'Realm', text: preview.moodText(f) });
+      if (f) lines.push({ label: 'Realm', text: preview.moodText(f) + (HB.heat && HB.heat.levelOf(f) ? ` ${HB.heat.describe(f)}` : ''), tone: HB.heat && HB.heat.levelOf(f) >= 2 ? 'warn' : undefined });
       const flyError = HB.travel.canBegin(state, target);
       return { subtitle, lines, flyError };
     },

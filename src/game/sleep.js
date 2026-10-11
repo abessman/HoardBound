@@ -22,10 +22,11 @@
       const attention = state.lair.attention || 0;
       const host = HB.factions ? HB.factions.maxHostility(state) : 0;
       const hunters = state.world.factions.reduce((a, f) => a + f.learned.hunters, 0);
-      const thief = HB.clamp((state.dragon.tier === 0 ? 0.02 : 0.04) + value / 40000 + attention * 0.01 - v.concealment * 0.012 + (HB.lair.hoardOverflow(state) > 0 ? 0.05 : 0), 0.02, 0.5);
-      let hunt = HB.clamp((host / 100) * 0.12 + hunters * 0.025 + attention * 0.012 - v.concealment * 0.012 + (state.dragon.alignment < -40 ? 0.03 : 0) + (state.dragon.stats.prestige > 50 ? 0.02 : 0) + (HB.history ? HB.history.activeOrders(state).length * 0.03 : 0), 0, 0.45);
+      const found = HB.pursuit ? HB.pursuit.lairFoundCount(state) : 0; // realms whose riders followed you home
+      const thief = HB.clamp((state.dragon.tier === 0 ? 0.02 : 0.04) + found * 0.02 + value / 40000 + attention * 0.01 - v.concealment * 0.012 + (HB.lair.hoardOverflow(state) > 0 ? 0.05 : 0), 0.02, 0.5);
+      let hunt = HB.clamp(found * 0.03 + (host / 100) * 0.12 + hunters * 0.025 + attention * 0.012 - v.concealment * 0.012 + (state.dragon.alignment < -40 ? 0.03 : 0) + (state.dragon.stats.prestige > 50 ? 0.02 : 0) + (HB.history ? HB.history.activeOrders(state).length * 0.03 : 0), 0, 0.45);
       // hunters come for dragons that have made enemies; a hatchling nobody fears is a rumour, not a quarry
-      const enemies = host >= 20 || hunters >= 2 || attention >= 3 || (HB.history && (HB.history.leadHunter(state) || HB.history.activeOrders(state).length));
+      const enemies = found > 0 || host >= 20 || hunters >= 2 || attention >= 3 || (HB.history && (HB.history.leadHunter(state) || HB.history.activeOrders(state).length));
       if (state.dragon.tier === 0) hunt *= 0.4;
       if (!enemies) hunt *= 0.5;
       return { thief, hunt, defense: v.defense, traps: v.traps, ward: v.ward, guards: v.guardStrength, warnings: v.warning + (HB.history ? HB.history.loyalWarning(state) : 0), sleepSafety: v.sleepSafety };
@@ -78,6 +79,7 @@
       { const locked = HB.hoard.protectedIds(state); const loose = state.hoard.items.filter(i => !locked.has(i.id) && HB.hoard.itemDensity(i) >= 300); const lockedN = locked.size;
         if (loose.length) lines.push({ text: `Thieves go for small, valuable things first: ${HB.fmt.plural(loose.length, 'treasure')} worth ${HB.fmt.int(loose.reduce((a, b) => a + b.value, 0))} could fit in a thief’s sack${lockedN ? `; ${lockedN} more ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom` : '. A strongroom would lock the best of them away'}.`, tone: 'warn' });
         else if (lockedN) lines.push({ text: `Your ${HB.fmt.plural(lockedN, 'most prized treasure')} ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom.`, tone: 'good' }); }
+      if (HB.tribute && years >= 1) { const oe = HB.tribute.offeringEstimate(state, years); if (oe.places.length) { const rc = HB.worldsim ? Math.round(oe.places.reduce((a, L) => a + HB.worldsim.repelChance(state, L), 0) / oe.places.length * 100) : 0; lines.push({ text: `${HB.fmt.list(oe.places.slice(0, 3).map(L => L.name))} ${oe.places.length === 1 ? 'trusts' : 'trust'} you: offerings of about ${HB.fmt.int(oe.lo)}–${HB.fmt.int(oe.hi)} gold over the sleep, if raiders do not ruin them. Without you they drive raiders off about ${rc}% of the time; guards on duty and loyal guardians help.`, tone: 'good' }); } }
       if (HB.keeper && HB.keeper.enabled(state) && years >= 5) lines.push({ text: 'The Keeper will tend you: expect one or two moments where its choices matter.' });
       const warning = pHunt > 0.5 && !t.sleepSafety ? `Hunters are likely (${sleep.likelihood(pHunt)}) and nothing stands between them and the sleeper.` : pThief > 0.6 ? 'Thieves are likely; the hoard is exposed.' : null;
       return { lines, warning, pThief, pHunt };
@@ -251,6 +253,12 @@
         log(`Hunters broke into the hoard chamber. The sleeping chamber’s door held long enough: you woke to the sound of rams.`, 'hunters', true);
         sl.forced = true;
         return sleep.fight(state, sl, log, rng, party, power * 0.75, 'forced');
+      }
+      // the first sleep teaches rather than ends the campaign: the dragon wakes as the first blade falls
+      if (state.counters.sleeps === 0) {
+        log(`${party.leaderName} reached the sleeper. You woke as the first blade fell. (The first sleep is the only one that forgives this.)`, 'hunters', true);
+        sl.forced = true;
+        return sleep.fight(state, sl, log, rng, party, power * 0.6, 'startled');
       }
       // slaying attempt on the sleeper
       const slayChance = HB.clamp(party.strength / (party.strength + power * 0.6 + v.ward + sl.mods.ward), 0.05, 0.9);

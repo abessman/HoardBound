@@ -13,17 +13,18 @@
       return m[target.type] || null;
     },
     build(state, target, rng, opts = {}) {
-      const id = opts.defend ? 'defend' : T.pick(target);
+      const id = opts.defend ? (target.kind === 'caravan' ? 'ambush' : 'defend') : T.pick(target);
       const builder = T.builders[id];
       const scene = builder(state, target, rng, T.ctx(state, target));
       scene.templateId = id;
+      if (HB.situations) HB.situations.decorateScene(state, target, scene, rng);
       scene.entities.forEach((e, i) => { e.id = i + 1; });
       return scene;
     },
     ctx(state, target) {
       const W = state.world;
       const f = target.factionId >= 0 ? W.factions[target.factionId] : null;
-      return { W, f, learned: f ? f.learned : { escorts: 0, vaults: 0, rescue: 0, hunters: 0, wards: 0 }, tier: state.dragon.tier, year: state.time.year, hostility: f ? f.dragon.hostility : 0, fear: f ? f.dragon.fear : 0 };
+      return { W, f, learned: f ? f.learned : { escorts: 0, vaults: 0, rescue: 0, hunters: 0, wards: 0 }, tier: state.dragon.tier, year: state.time.year, hostility: f ? f.dragon.hostility : 0, fear: f ? f.dragon.fear : 0, guarded: !!(f && HB.heat && HB.heat.levelOf(f) >= 2) };
     },
     // helpers
     lootNode(rng, item, x, access, label, extra) { return Object.assign({ kind: item.gold ? 'coins' : item.cat === 'gems' ? 'gem' : item.cat === 'royal' ? 'crown' : item.cat === 'books' ? 'book' : item.cat === 'arms' ? 'sword' : 'chest', x, y: G(), w: 10, h: 8, loot: item.gold ? { gold: item.gold, value: item.gold, weight: Math.max(0.3, item.gold / 100) } : { item, value: item.value, weight: item.weight }, access: access || 'exposed', label: label || (item.gold ? `${HB.fmt.int(item.gold)} gold` : HB.hoard.itemLabel(item)) }, extra || {}); },
@@ -100,7 +101,7 @@
           ents.push(T.person(kind, x, goblin ? 'a goblin' : hunter ? 'a hunter' : 'a bandit', { state: asleep ? 'asleep' : 'idle' }));
         }
         const leaderX = 90;
-        ents.push(T.person(goblin ? 'goblin' : 'captain', leaderX + 10, target.ruler ? target.ruler.name : 'the captain', { hp: goblin ? 14 : 20, attack: goblin ? 5 : 7, drop: loot.items[0] ? { item: loot.items[0], value: loot.items[0].value, weight: loot.items[0].weight, label: HB.hoard.itemLabel(loot.items[0]) } : null }));
+        ents.push(T.person(goblin ? 'goblin' : 'captain', leaderX + 10, target.ruler ? target.ruler.name : 'the captain', { leader: true, hp: goblin ? 14 : 20, attack: goblin ? 5 : 7, drop: loot.items[0] ? { item: loot.items[0], value: loot.items[0].value, weight: loot.items[0].weight, label: HB.hoard.itemLabel(loot.items[0]) } : null }));
         loot.piles.forEach((p, i) => ents.push(T.lootNode(rng, p, 100 + i * 60 + rng.int(20), i === 0 ? 'exposed' : 'exposed', i === 0 ? 'a sack of coin by the fire' : 'a strongbox')));
         loot.items.slice(1).forEach((it, i) => ents.push(T.lootNode(rng, it, 120 + i * 70, 'exposed')));
         const art = T.artifactNode(state, target, leaderX + 4, 'inside', { container: 'the captain’s chest', insideOf: null });
@@ -198,6 +199,8 @@
         for (let i = 0; i < n; i++) ents.push(T.person(tier >= 2 && i % 3 === 1 ? 'archer' : 'guard', 120 + i * (length - 160) / Math.max(1, n), tier >= 2 ? 'a watchman' : 'a militiaman', { hp: tier >= 2 ? 14 : 9, attack: tier >= 2 ? 5 : 3 }));
         if (tier >= 3) { ents.push({ kind: 'tower', x: 110, y: G(), w: 18, h: 60, label: 'the gate tower', building: true, sprite: 'towerSeg' }); ents.push(T.person('archer', 112, 'a tower archer', { y: G() - 56, onTower: true, range: 170 })); ents.push(T.person('archer', 118, 'a tower archer', { y: G() - 56, onTower: true, range: 170 })); if (def >= 55) ents.push({ kind: 'ballista', x: 160, y: G() - 22, w: 14, h: 10, label: 'the ballista', onWall: true }); }
         if (ctx.learned.vaults >= 1 && tier >= 1) for (const e of ents) if (e.loot && e.access === 'exposed' && e.loot.item && e.loot.item.cat === 'gems') { e.access = 'inside'; e.container = 'a locked chest'; }
+        // a realm on guard locks its valuables away and posts watchmen
+        if (ctx.guarded) { for (const e of ents) if (e.loot && e.access === 'exposed') { e.access = 'inside'; e.container = 'a barred door'; } for (let i = 0; i < 2; i++) ents.push(T.person('guard', length / 3 + i * length / 3, 'a posted watchman', { hp: 12, attack: 4 })); }
         if (rng.chance(0.4 + tier * 0.2) && tier >= 1) ents.push(T.captiveFor(target, 'smith', 90 + rng.int(100), rng, culture));
         const nameType = HB.world.locTypeName(target);
         return { entities: ents, length, intro: `${target.name}, a ${nameType}. ${tier === 0 ? 'A farmhouse, a barn, a few animals.' : tier === 1 ? 'Houses, a granary, livestock in the pens.' : 'Streets, a market, a barred treasury.'}`, backdrop: tier >= 2 ? 'town' : 'village', alarmBase: 1.5 + tier * 0.2, escalations: [
@@ -294,6 +297,27 @@
           { at: 30, text: 'The raiders set another roof alight.', effect: (r) => HB.raid.raiderFire(r) },
           { at: 60, text: 'More outlaws come down from the hills.', spawn: [{ kind, x: -24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }, { kind, x: length + 24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }] },
           { at: 90, text: 'They torch the barn.', effect: (r) => HB.raid.raiderFire(r, 'barn') },
+        ] };
+      },
+      /** outlaws ambush a caravan you are guarding: defend the wagons */
+      ambush(state, target, rng, ctx) {
+        const ents = [], length = 420;
+        const wagons = Math.min(3, 1 + Math.floor((target.wealth || 300) / 300));
+        for (let i = 0; i < wagons; i++) {
+          const x = 110 + i * 90;
+          ents.push({ kind: 'wagon', x, y: G(), w: 16, h: 12, label: `wagon ${i + 1}`, building: true, sprite: i === wagons - 1 ? 'wagonRich' : 'wagon', contents: 'The merchants’ goods. Your fire would burn them too.' });
+          ents.push(T.person('horse', x + 22, 'a draft horse')); ents.push(T.person('merchant', x - 12, 'a driver'));
+        }
+        const goods = HB.hoard.generateLoot(rng, Object.assign({}, target, { type: 'town', name: 'the caravan', wealth: (target.wealth || 300) * 0.3 }), 1, state.time.year);
+        const drops = [];
+        if (goods.gold > 0) drops.push({ gold: goods.gold, value: goods.gold, weight: Math.max(0.3, goods.gold / 100), label: 'a stolen strongbox', recovered: true });
+        for (const it of goods.items) drops.push({ item: it, value: it.value, weight: it.weight, label: `${HB.hoard.itemLabel(it)} (stolen)`, recovered: true });
+        const n = 3 + Math.min(2, Math.floor(state.dragon.tier));
+        for (let i = 0; i < n; i++) ents.push(T.person('bandit', 60 + i * (length - 100) / n + rng.int(20), i === 0 ? 'the ambush leader' : 'an outlaw', { raider: true, courage: i === 0 ? 1.4 : 1, hp: i === 0 ? 16 : 10, attack: i === 0 ? 5 : 4, drop: drops.shift() || null }));
+        for (let i = 0; i < Math.min(2, target.escort || 0); i++) ents.push(T.person('guard', 150 + i * 90, 'a caravan guard'));
+        return { mode: 'defend', entities: ents, length, intro: `Outlaws pour out of the trees onto the wagons of the ${target.name || 'caravan'}.`, hint: 'Drive them off: bite, burn, roar. Fire will burn the wagons too.', backdrop: 'road', alarmBase: 1.0, escalations: [
+          { at: 40, text: 'An outlaw sets a wagon cover alight.', effect: (r) => { const w = r.entities.find(e => e.kind === 'wagon' && !e.burning && !e.burnedDown); if (w) { w.burning = 8; w.raiderFire = true; } } },
+          { at: 70, text: 'More outlaws come out of the trees.', spawn: [{ kind: 'bandit', x: -24, label: 'an outlaw', raider: true, hp: 10, attack: 4 }, { kind: 'bandit', x: length + 24, label: 'an outlaw', raider: true, hp: 10, attack: 4 }] },
         ] };
       },
       dragonDuel(state, target, rng, ctx) {

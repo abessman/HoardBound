@@ -47,14 +47,14 @@ try {
   await shot('04b-explore-point');
   await ev(`HB.flow.map.selected = null;`);
   // helpers: fly to the selected target and answer cards with the first choice; play a raid; settle what follows
-  const flyAndArrive = async (tag) => {
+  const flyAndArrive = async (tag, prefer) => {
     await ev(`const st=HB.state, m=HB.flow.map; HB.travel.begin(st, m.selected, m);`);
     await page.waitForTimeout(1200); await shot(tag + '-flight');
     let cardShot = false;
     for (let i = 0; i < 120; i++) {
       const top = await ev(`return HB.scenes.top().constructor.name + ':' + HB.state.phase;`);
       if (top.startsWith('CardScene') && !cardShot && top.endsWith('encounter')) { cardShot = true; await shot(tag + '-arrival'); }
-      const ph = await ev(`const t=HB.scenes.top(); if (t instanceof HB.CardScene && !t.result) { t.choose(t.o.choices[0]); } else if (t instanceof HB.CardScene && t.result) { t.close(); } return HB.state.phase + ':' + HB.scenes.top().constructor.name;`);
+      const ph = await ev(`const t=HB.scenes.top(); if (t instanceof HB.CardScene && !t.result) { const re = ${prefer ? prefer.toString() : 'null'}; const ch = (re && t.o.choices.find(c => !c.disabled && re.test(c.label))) || t.o.choices.find(c => !c.disabled); t.choose(ch); } else if (t instanceof HB.CardScene && t.result) { t.close(); } return HB.state.phase + ':' + HB.scenes.top().constructor.name;`);
       if (ph.startsWith('encounter') && ph.includes('RaidScene')) break;
       if (ph.startsWith('planning') && !ph.includes('Card')) break;
       await page.waitForTimeout(250);
@@ -77,11 +77,11 @@ try {
       await page.waitForTimeout(200);
     }
   };
-  // 1) a good deed: the farm or village under attack
-  const threatened = await ev(`const st=HB.state, m=HB.flow.map; const L=st.world.locations.find(L=>L.threat && L.knowledge.seen); if(!L) return null; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {name:L.name, type:L.type, camp:L.threat.campName};`);
-  console.log('threatened', threatened);
-  await page.waitForTimeout(500); await shot('05-preview-threat');
-  if (threatened) { await flyAndArrive('06'); await playRaid('07'); await settle('08'); }
+  // 1) the opening story (differs per world): fly to its place and take it on
+  const story = await ev(`const st=HB.state, m=HB.flow.map; const sit=HB.situations.open(st)[0]; const o=HB.goals.opportunities(st).find(o=>(o.story||o.urgent) && o.ref && o.ref.kind==='loc' && !HB.travel.canBegin(st, st.world.locations[o.ref.id])); if(!o) return {sit: sit && sit.t}; const L=st.world.locations[o.ref.id]; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {sit: sit && sit.t, title: o.title, place: L.name, type: L.type};`);
+  console.log('story', story);
+  await page.waitForTimeout(500); await shot('05-preview-story');
+  if (story && story.place) { await flyAndArrive('06', /Drive off|^Raid/); await playRaid('07'); await settle('08'); }
   const after1 = await ev(`const st=HB.state; return {titles: st.renown.titles.map(t=>t.name), reactions: st.reactions.length};`);
   console.log('after defend', after1);
   // 2) a theft: the nearest easy target that is not under attack

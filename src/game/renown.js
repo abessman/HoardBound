@@ -12,7 +12,7 @@
     { id: 'merciful', deed: 'released', need: 2, name: () => 'the Merciful', verb: 'Release captives', effect: 'Families bargain in good faith: ransom refusals are rarer and every gain in trust is half again as large.' /* ransom, factions.adjust */ },
     { id: 'castlethief', deed: 'castles', need: 1, name: () => 'the Castle-Thief', verb: 'Steal from a castle', effect: 'Your daring is told in every hall: +10 prestige.' /* stats */ },
     { id: 'herobane', deed: 'heroes', need: 2, name: () => 'Bane of Heroes', verb: 'Slay wandering heroes', effect: '+10 prestige. Seasoned heroes come looking for you.' /* stats, worldsim.spawnHeroes */ },
-    { id: 'roadwarden', deed: 'escorted', need: 3, name: () => 'Warden of the Roads', verb: 'Guard caravans on the road', effect: 'Merchants send a share of their profits to your lair each year.' /* sleep.stepYear */ },
+    { id: 'roadwarden', deed: 'escorted', need: 4, name: () => 'Warden of the Roads', verb: 'Guard caravans on the road', effect: 'Merchants send a share of their profits to your lair each year.' /* sleep.stepYear */ },
     { id: 'overlord', deed: 'tributes', need: 2, name: () => 'the Overlord', verb: 'Win tribute from settlements', effect: '+10 dominance: your demands land harder.' /* stats */ },
   ];
   HB.TITLE_BY_ID = {}; for (const t of HB.TITLES) HB.TITLE_BY_ID[t.id] = t;

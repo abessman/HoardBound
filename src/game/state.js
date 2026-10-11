@@ -42,6 +42,7 @@
         memory: { grudges: [], loyalties: [], orders: [] },
         renown: { deeds: {}, titles: [], known: {}, places: {} },   // titles earned by deeds (renown.js)
         reactions: [],                                              // how the world answered, with causes (consequences.js)
+        situations: [], pursuit: null, ambush: null, pactGold: 0,
         problems: { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 }, // what has gone wrong, for 'why build this'
         counters: { raids: 0, goldStolen: 0, kills: 0, captures: 0, burned: 0, released: 0, ransoms: 0, tributes: 0, sleeps: 0, defeats: 0, artifactsFound: 0 },
         playRng: playRng.getState(),
@@ -61,7 +62,8 @@
         if (n && n.d <= 18) HB.world.sight(state, n.L, types[0] === 'castle' ? 1.2 : 1.6);
       }
       // something to do on day one that is not theft: outlaws are sacking the nearest farm or village
-      if (HB.worldsim && HB.worldsim.spawnThreat) HB.worldsim.spawnThreat(state, playRng, { first: true });
+      // every world opens with one local situation, chosen from what lies around the cave (so starts differ)
+      if (HB.situations) { if (!HB.situations.spawn(state, playRng, { first: true })) HB.situations.spawn(state, playRng, { only: 'raidedFarm', first: true }); }
       const S = world.subregions[world.home.subId];
       game.chronicle(state, `${state.dragon.name} hatched in a cave in ${S.name}, in ${world.regions[0].name}. The world did not notice.`, 'birth');
       return state;

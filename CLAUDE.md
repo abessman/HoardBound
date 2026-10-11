@@ -34,7 +34,7 @@ through decades while the world changes and remembers. Played on desktop and iPa
 
 ## Verify before pushing
 ```
-node tools/test.js              # 109 headless checks: world, travel, raid, economy, ransom, sleep, save, defeat, goals/defend/renown/consequences
+node tools/test.js              # ~155 headless checks (count varies by seed): world, travel, raid, economy, sleep, save, goals, situations, heat, pursuit, offerings
 node tools/test.js other-seed   # try a second seed
 for f in src/**/*.js; do node --check $f; done   # syntax (class bodies: no commas between methods!)
 node tools/playthrough.mjs <outDir>              # scripted browser run with screenshots (Playwright, preinstalled Chromium)
@@ -54,6 +54,7 @@ sprite sheet; `?scene=map&seed=…` jumps straight into a world.
 - Lair/workers/upgrades: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`.
 - Ransom/tribute/petitions: `src/game/ransom.js`, `tribute.js`, `petitions.js`.
 - Goals and feedback (see DESIGN §3a): milestone + Aims board `src/game/goals.js` / `src/views/aimsview.js`; consequence summaries and the world-reaction log `src/game/consequences.js` / `src/views/consequenceview.js`; titles `src/game/renown.js`; outlaw threats `worldsim.spawnThreat/updateThreats`; defend raid `templates.defend` + `raid.mode === 'defend'`; caravan toll/escort in `encounter.js`; why-now reasons `lair.whyNow`; turn-back chances `sleep.stopChances`.
+- Local stories (see DESIGN §3b): `src/game/situations.js` (templates, capability gates `HB.caps`, scene decoration, story hooks); heat, hunting parties, pursuit `src/game/heat.js`; offerings in `tribute.js`; escort ambush `templates.ambush`.
 - Sleep/keeper/awakening: `src/game/sleep.js`, `keeper.js`, view `src/views/sleepview.js`.
 - World memory: `src/game/factions.js` (wars, armies, rivals), `history.js` (grudges, orders, loyal houses), `worldsim.js` (caravans, heroes, yearly settlement change).
 
@@ -67,13 +68,15 @@ sprite sheet; `?scene=map&seed=…` jumps straight into a world.
 - The owner tests on an iPad: check touch flows (tap to select, drag to pan) and readability at that size.
 
 ## Open backlog (most valuable next)
-1. Playtest the opening cycle on iPad (defend raid feel, Aims board readability, summary length); tune hoard-strength pacing.
-2. Raid balance pass (town watch may be too strong for hatchlings; castles are deadly by design).
-3. Distinct staging for the wandering-hero duel and rival-dragon duel; more good deeds (rescue a captive from a camp, escort a pilgrim) and their own scenes.
-4. Visual seasons on the map; armies that move day by day.
-5. A persistent low-res overview canvas for the fully zoomed-out map (performance).
-6. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
-7. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
+1. Playtest the first valley on iPad: do the stories create competing wants in ten minutes? Tune heat rates, hunter speed, offerings.
+2. Seasonal calendar events (tax convoy, harvest, pilgrims, winter) and more story templates.
+3. CLAUDE.md split into components + `next_chat_kickoff.md` (proposed to the owner; waiting for a go).
+4. Raid balance pass (town watch may be too strong for hatchlings; castles are deadly by design).
+5. Distinct staging for the wandering-hero duel and rival-dragon duel; more good deeds (rescue a captive from a camp, escort a pilgrim) and their own scenes.
+6. Visual seasons on the map; armies that move day by day.
+7. A persistent low-res overview canvas for the fully zoomed-out map (performance).
+8. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
+9. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
 
 ## Versioning (keep doing this)
 Every update you push bumps `HB.VERSION` and `HB.VERSION_DATE` in `src/core/namespace.js` (shown on the title screen

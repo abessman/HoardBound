@@ -180,6 +180,8 @@ section('goals, good deeds, renown, consequences');
 {
   const g = HB.game.newCampaign({ seed: seed + '-goals', name: 'Goalwyrm', breed: 'red', keeper: false });
   const GW = g.world;
+  // this section exercises the raided-farm opening; other openings are tested below
+  if (!GW.locations.some(L => L.threat)) HB.worldsim.spawnThreat(g, HB.game.rng, { first: true });
   ok(HB.TIERS[1].energy === 1000 && HB.TIERS[1].minAge === 8, 'young dragon needs hoard strength 1000 and age 8');
   const m = HB.goals.milestone(g);
   ok(m.title === 'Become a young dragon' && m.reqs.length === 2 && m.reqs[0].need === 1000 && m.reqs[1].need === 8, 'milestone shows real requirements');
@@ -259,6 +261,103 @@ section('goals, good deeds, renown, consequences');
   const g2 = HB.save.deserialize(HB.save.serialize(g));
   ok(g2.renown.titles.length === g.renown.titles.length && g2.reactions.length === g.reactions.length && g2.problems.thefts === 2, 'renown, reactions and problems saved');
   ok(!V3 || (g2.world.locations[V3.id].threat && g2.world.locations[V3.id].threat.campName === V3.threat.campName), 'threats saved');
+}
+
+section('situations, heat, hunters, pursuit, offerings');
+{
+  // every world opens with a situation, and openings differ between worlds
+  const kinds = new Set();
+  for (const sd of ['sit-a', 'sit-b', 'sit-c', 'sit-d', 'sit-e', 'sit-f', 'sit-g', 'sit-h']) { const w = HB.game.newCampaign({ seed: seed + sd, name: 'S', keeper: false }); const o = HB.situations.open(w); ok(o.length >= 1, 'world opens with a situation: ' + sd); if (o[0]) kinds.add(o[0].t); }
+  ok(kinds.size >= 2, 'openings differ between worlds: ' + [...kinds].join(', '));
+  const fresh = (tag) => HB.game.newCampaign({ seed: seed + '-' + tag, name: 'S', keeper: false });
+  const force = (st, id) => HB.situations.open(st).find(x => x.t === id) || HB.situations.spawn(st, HB.game.rng, { only: id });
+  const playRaid = (st, r, pick) => { let n = 0; while (!r.ended && n++ < 20000) { HB.raid.update(r, 1 / 30, {}); const f = HB.raid.focus(r); if (f && !r.dragon.busy) { const acts = HB.raid.actionsFor(r, f).filter(a => a.enabled).map(a => a.id); const p = pick(f, acts, r); HB.raid.perform(r, p || 'wait', f); } if (r.dragon.passes >= 3) HB.raid.perform(r, 'withdraw'); } };
+  const strong = (st) => { st.dragon.tier = 2; HB.stats.recompute(st); st.dragon.health = st.dragon.stats.maxHealth; st.dragon.stamina = st.dragon.stats.maxStamina; };
+
+  // the stolen tribute chest: steal it without killing, give it back, and the captain comes for you
+  let st = fresh('chest'); let sit = force(st, 'stolenChest');
+  if (sit) {
+    const C = st.world.locations[sit.a.campId], V = st.world.locations[sit.a.villageId], K = st.world.locations[sit.a.cragId];
+    ok(K.flags.requires === 'wind' && /Gale-Feather/.test(HB.travel.canBegin(st, K) || ''), 'the crag needs the Gale-Feather Charm');
+    ok(HB.goals.opportunities(st).filter(o => o.story).length >= 3, 'the Aims board offers the story\'s approaches');
+    strong(st); st.dragon.x = C.x; st.dragon.y = C.y; st.phase = 'planning';
+    const r = HB.encounter.begin(st, C, null, { direct: true });
+    ok(r.entities.some(e => e.loot && e.loot.tag === 'chest:' + sit.id) && r.entities.some(e => e.leader && e.drop && e.drop.item && e.drop.item.capability === 'wind'), 'camp scene has the chest and the captain wears the charm');
+    playRaid(st, r, (f, acts, rr) => { if (f.loot && f.loot.tag && acts.includes('grab')) return 'grab'; if ((rr.tags || []).length) { HB.raid.perform(rr, 'withdraw'); return null; } return 'wait'; });
+    ok((r.tags || []).includes('chest:' + sit.id), 'stole the chest');
+    HB.encounter.finishRaid(st, C, r, null);
+    ok(sit.outcome === 'returned' && V.trust >= 25 && V.flags.roost, 'returning the chest earns trust and a safe barn');
+    ok(!sit.a.hiddenId || st.world.locations[sit.a.hiddenId].knowledge.seen, 'the reeve reveals a hidden place');
+    if (!sit.a.captainDead) { HB.game.advanceDays(st, 6); HB.worldsim.tickDays(st, 6); ok(st.entities.some(e => e.kind === 'hunters' && /Captain/.test(e.name)), 'the robbed captain hunts you'); }
+    // buying the charm opens the crag
+    const st2 = fresh('chest2'); const s2 = force(st2, 'stolenChest');
+    if (s2) { const C2 = st2.world.locations[s2.a.campId], K2 = st2.world.locations[s2.a.cragId]; st2.cargo.gold = 300; st2.dragon.x = C2.x; st2.dragon.y = C2.y; const buy = HB.situations.choicesFor(st2, C2, null).find(c => /Gale-Feather/.test(c.label)); ok(buy && !buy.disabled, 'the charm can be bought'); buy.onChoose(); ok(HB.caps.has(st2, 'wind') && !/Gale-Feather/.test(HB.travel.canBegin(st2, K2) || ''), 'with the charm the crag is reachable');
+      // parley: a cut each season
+      const parley = HB.situations.choicesFor(st2, C2, null).find(c => /Parley/.test(c.label)); parley.onChoose(); ok(s2.a.pact, 'bargain struck with the captain'); HB.game.advanceDays(st2, 95); HB.worldsim.tickDays(st2, 95); ok((st2.pactGold || 0) > 0, 'the outlaws pay a cut each season'); const col = HB.tribute.collectOfferings(st2); ok(col.total > 0 && col.names.includes('your outlaw partners'), 'cut collected at home'); }
+  } else ok(true, 'stolen chest not possible here (skipped)');
+
+  // the taken envoy: seize him, release him, open the sealed door
+  st = fresh('envoy'); sit = force(st, 'takenEnvoy');
+  if (sit) {
+    const C = st.world.locations[sit.a.campId], S = st.world.locations[sit.a.vaultId];
+    ok(HB.situations.choicesFor(st, S, null).some(c => c.disabled && /sealed/i.test(c.label)), 'the vault is sealed');
+    strong(st); st.dragon.x = C.x; st.dragon.y = C.y; st.phase = 'planning';
+    const r = HB.encounter.begin(st, C, null, { direct: true });
+    playRaid(st, r, (f, acts, rr) => { if (f.sitId && acts.includes('capture')) return 'capture'; if (rr.captured) { HB.raid.perform(rr, 'withdraw'); return null; } return 'wait'; });
+    HB.encounter.finishRaid(st, C, r, null);
+    const c = st.cargo.captives.find(x => x.sitId === sit.id);
+    ok(c && sit.a.carried, 'envoy carried off');
+    if (c) { st.lair.captives.push(c); st.cargo.captives = st.cargo.captives.filter(x => x !== c); HB.ransom.release(st, c); ok(sit.outcome === 'freed' && HB.caps.has(st, 'seal'), 'releasing the envoy brings the Deepwarden\'s Seal'); const open = HB.situations.choicesFor(st, S, null).find(x => /Seal/.test(x.label)); ok(open && !open.disabled, 'the seal opens the door'); const g0 = st.cargo.gold; open.onChoose(); ok(st.cargo.gold > g0, 'the vault gives up its gold'); ok(HB.lair.hireOffers(st).some(o => o.type === 'dwarf' && o.fee === 0), 'grateful dwarves work without a fee'); }
+  } else ok(true, 'taken envoy not possible here (skipped)');
+
+  // the slayer's purse: turn the villages, or let him come
+  st = fresh('slayer'); sit = force(st, 'slayerBounty');
+  if (sit) {
+    ok(st.entities.some(e => e.id === sit.a.heroId && e.kind === 'hero'), 'the slayer is on the road');
+    for (const id of sit.a.funders) { const L = st.world.locations[id]; L.trust = 20; const ch = HB.situations.choicesFor(st, L, null).find(x => /Ask/.test(x.label)); ok(ch && !ch.disabled, 'a trusting village can be asked'); ch.onChoose(); }
+    ok(sit.outcome === 'abandoned' && st.memory.loyalties.some(l => l.name === sit.a.hero), 'with no purse the slayer leaves and will warn you');
+    const st3 = fresh('slayer2'); const s3 = force(st3, 'slayerBounty');
+    if (s3) { s3.deadline = st3.time.totalDays; HB.worldsim.tickDays(st3, 1); ok(st3.entities.some(e => e.kind === 'hunters' && e.sitId === s3.id), 'at the deadline the slayer comes for you'); }
+  } else ok(true, 'slayer bounty not possible here (skipped)');
+
+  // heat steps change the world; hunting parties walk to you; fleeing and fighting
+  st = fresh('heat'); const f = st.world.factions.find(x => x.kind !== 'goblin');
+  const car = st.entities.find(e => e.kind === 'caravan' && e.factionId === f.id);
+  const esc0 = car ? car.escort : 0;
+  HB.heat.add(st, f, 30, 'test');
+  ok(HB.heat.level(f).id === 'wary' && (!car || car.escort > esc0), 'Wary: merchants hire guards');
+  HB.heat.add(st, f, 50, 'test');
+  const party = st.entities.find(e => e.kind === 'hunters' && e.factionId === f.id);
+  ok(HB.heat.level(f).id === 'hunting' && party, 'Hunting: a party sets out');
+  ok(st.reactions.some(x => /wary/i.test(x.text)) && st.reactions.some(x => /sent/.test(x.text)), 'heat steps are logged as reactions');
+  party.x = st.dragon.x + 1; party.y = st.dragon.y; st.dragon.x += 0; st.phase = 'planning';
+  const homeX = st.world.home.x; st.dragon.x = homeX + 5; party.x = st.dragon.x + 1; party.y = st.dragon.y;
+  HB.hunters.tick(st, 1);
+  ok(st.ambush === party.id, 'the party catches up: ambush');
+  const fleeText = HB.hunters.resolveAmbush(st, 'flee', null);
+  ok(!st.ambush && party.restUntil > st.time.totalDays && typeof fleeText === 'string', 'fleeing buys a few days');
+  HB.heat.decay(st, 250);
+  ok(HB.heat.level(f).id !== 'hunting' && party.dead, 'hired hunters go home when the realm cools');
+
+  // pursuit: riders follow a loud raid home unless you lose them
+  st = fresh('pursuit'); const V = st.world.locations.find(L => L.type === 'village' && L.factionId >= 0);
+  HB.pursuit.start(st, V, { pursued: true, outcome: 'withdrew' });
+  ok(HB.pursuit.active(st) && /on your trail/.test(HB.pursuit.hint(st)), 'riders on your trail');
+  const far = st.world.locations.find(L => Math.hypot(L.x - V.x, L.y - V.y) > 10);
+  ok(/lose/.test(HB.pursuit.onArrive(st, far) || '') && !HB.pursuit.active(st), 'landing far away loses them');
+  HB.pursuit.start(st, V, { pursued: true, outcome: 'withdrew' });
+  const t0 = HB.sleep.threatEstimate(st).thief, a0 = st.lair.attention || 0;
+  ok(/followed you home/.test(HB.pursuit.onHome(st) || '') && st.lair.attention > a0 && HB.sleep.threatEstimate(st).thief > t0, 'flying straight home shows them the lair');
+
+  // offerings: villages that trust you bring gifts while they prosper
+  st = fresh('offer'); const OV = st.world.locations.filter(L => (L.type === 'village' || L.type === 'farm') && Math.hypot(L.x - st.world.home.x, L.y - st.world.home.y) < 25)[0];
+  if (OV) { OV.trust = 40; OV.threat = null; OV.wealth = OV.wealthMax; HB.tribute.accrueOfferings(st, 90); const got = HB.tribute.collectOfferings(st); ok(got.total > 0 && got.names.includes(OV.name), 'offerings collected: ' + got.total); const est = HB.tribute.offeringEstimate(st, 20); ok(est.hi > est.lo && est.lo > 0, 'offerings over a sleep shown as a range'); OV.state = 'burned'; ok(!HB.tribute.offeringPlaces(st).includes(OV), 'a burned village brings nothing'); }
+  // guarding caravans takes longer to earn a name now
+  ok(HB.TITLE_BY_ID.roadwarden.need === 4, 'Warden of the Roads needs four guarded caravans');
+  // saves keep stories and pursuit
+  st = fresh('save'); force(st, 'stolenChest'); HB.pursuit.start(st, st.world.locations[1], { pursued: true, outcome: 'withdrew' });
+  const st4 = HB.save.deserialize(HB.save.serialize(st));
+  ok(st4.situations.length === st.situations.length && st4.situations[0].t === st.situations[0].t && !!st4.pursuit === !!st.pursuit, 'situations and pursuit saved');
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

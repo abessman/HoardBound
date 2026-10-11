@@ -37,6 +37,10 @@
     { id: 'ironbanner', name: 'The Iron Banner', cat: 'artifacts', value: 700, weight: 2, effect: { roar: 1, dominance: 8 }, lore: 'Soldiers who see it break a little sooner.', placeIn: ['castle', 'camp', 'city'] },
     { id: 'honeycomb', name: 'The Golden Comb', cat: 'artifacts', value: 450, weight: 1, effect: { healRate: 0.5 }, mutation: 'goldenSheen', lore: 'A hive of gold. The dragon that sleeps near it wakes whole.', placeIn: ['glade', 'monastery', 'farm'] },
     { id: 'tide', name: 'The Tidewright’s Chart', cat: 'artifacts', value: 600, weight: 0.5, effect: { vision: 1, rumorOnDeposit: 14 }, lore: 'Sea-roads and the coasts beyond them, drawn by someone who sailed them.', placeIn: ['city', 'tower', 'ruin'] },
+    // capability treasures: each opens something new. Never placed at random; local situations put them in play (situations.js).
+    { id: 'galefeather', name: 'The Gale-Feather Charm', cat: 'artifacts', value: 420, weight: 0.1, capability: 'wind', effect: { mul: { staminaCost: 0.9 } }, lore: 'A grey feather bound in silver wire. Whoever keeps it rides the high winds as if they were stairs.', capText: 'Lets you ride the winds around crags that no hatchling could climb, and flights cost a little less.', placeIn: [] },
+    { id: 'deepseal', name: 'The Deepwarden’s Seal', cat: 'artifacts', value: 380, weight: 0.3, capability: 'seal', effect: { intel: 1 }, lore: 'A ring of black iron cut with runes. Dwarven doors remember it.', capText: 'Opens doors the dwarves sealed long ago.', placeIn: [] },
+    { id: 'smokeglass', name: 'The Smoke-Glass', cat: 'artifacts', value: 400, weight: 0.2, capability: 'smoke', effect: { mul: { alarmRate: 0.92 } }, lore: 'A lens of dark glass. Look through it and you are not quite where you seem to be.', capText: 'Riders on your trail lose you, and hunters lose your scent when you flee.', placeIn: [] },
   ];
   HB.ARTIFACT_BY_ID = {}; for (const a of HB.ARTIFACTS) HB.ARTIFACT_BY_ID[a.id] = a;
 
@@ -49,6 +53,7 @@
     knight: { label: 'knight', weight: 3, ransom: [300, 800], payer: 'house', desc: 'A sworn knight. Worth a ransom, and a grudge.' },
     smith: { label: 'master smith', weight: 2, ransom: [150, 400], payer: 'guild', desc: 'Skilled hands. Could be ransomed, or put to work.' },
     engineer: { label: 'engineer', weight: 2, ransom: [150, 450], payer: 'realm', desc: 'Builds siege engines, or traps.' },
+    envoy: { label: 'dwarven envoy', weight: 2, ransom: [400, 900], payer: 'realm', desc: 'An envoy of the dwarves. His people will pay well, or be grateful if he walks home.' },
     miner: { label: 'miner', weight: 2, ransom: [60, 160], payer: 'guild', desc: 'Knows how to dig. Could be ransomed, or put to work.' },
   };
 })();

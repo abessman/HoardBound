@@ -32,6 +32,18 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Upgrades tied to problems | Functional | Build tab sorts upgrades with a reason first and shows thief/hunter turn-back chances before and after; sleep preview shows what the door turns back and whether a theft could stop growth. |
 | Awaken with new capabilities | Functional | Growth happens in the year you come of age during a sleep; the awakening lists new capabilities, world reactions with causes, and the next goal. |
 
+## The first valley (0.7.0)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Different starts | Functional | Four opening templates generated from nearby actors; seeded choice per world; tested across seeds. |
+| Something to want beyond gold | Functional | Capability treasures (wind charm, dwarven seal, smoke-glass) open crags, vaults and escapes. |
+| Choices that change the future | Functional | Each story's approaches lead to different follow-ups (a hunting captain, a patron's hidden ruin and barn, a seasonal outlaw cut, a slayer who warns you). |
+| Realms push back while you are awake | Functional | Heat steps with visible effects; named hunting parties on the map; ambush card (fight / flee / pay). |
+| Pursuit and escape | Functional | Riders follow loud raids; flying home reveals the lair; lose them by distance, time or the Smoke-Glass. |
+| Good-path income that is not a sleep machine | Functional | Offerings depend on trust, prosperity and safety; ranges shown; raids during sleep can ruin them. |
+| Escort ambush scene | Functional | Guarding a caravan can become an animated defence. |
+
 ## Encounters and travel
 
 | Requirement | Status | Notes |
@@ -39,7 +51,7 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Caravan: easy chest, dangerous second wagon | Functional | Moving caravans on roads; escorts grow with faction learning. On arrival: rob, demand a toll (Road Thief or adult), guard it for its realm's trust, or let it pass. |
 | Camp rewards timing/isolation | Functional | Sleepers; waking at alarm 25; isolated-bite rule. |
 | Castle quick theft without conquest | Functional | Parapet goblet reachable by a hatchling; vault needs an adult to smash; ballista manned at alarm 40. |
-| Novice hero | Functional | Wandering heroes on roads; lance variant; survivors become named hunters. |
+| Novice hero | Functional | Wandering heroes on roads; lance variant; survivors become named hunters; hunting parties and slayers fight in the same scene. |
 | Village / monastery / ruin scenarios | Functional | Village/town/city scene (granary famine, barred treasury); defend scene for villages under outlaw attack; monastery, shrine, ruin, tower, glade, hold as decision cards (loot bounded by the place's wealth). |
 | Animation reflects actions; alarm brings threats | Functional | Swoop, breath flame, roar rings, fire particles; escalation spawns militia/archers/knights/champion. |
 | Cargo limits loot and captives | Functional | |
@@ -117,6 +129,8 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 
 - Raid balance is first-pass: castles are deadly to hatchlings who linger (by design), but town watchmen may still be too strong early.
 - Opening pacing (tested by a headless bot): about 10–18 short expeditions to reach hoard strength 1 000; with a reinforced entrance, three of four seeds grew in the first 20-year sleep. Thieves can still undo an unprotected first sleep, which the preview now warns about.
+- Story templates are few (four) and their scenes reuse the camp, hero and defend layouts; more templates and a seasonal calendar (tax convoy, harvest, pilgrims, winter) are next.
+- Hunting parties walk straight toward you and ignore terrain; they vanish over a long sleep (sworn ones live on as grudges).
 - Opportunity ranking is heuristic: it prefers reachable hauls with low risk and can suggest small farms repeatedly.
 - Labels can crowd at mid zoom in dense kingdoms.
 - The wandering-hero duel uses the generic scene with a campfire; it needs more distinct staging.

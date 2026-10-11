@@ -62,11 +62,26 @@
       this.btnRest.visible = away && st.dragon.stamina < st.dragon.stats.maxStamina;
       const flying = st.phase === 'traveling' || st.phase === 'returning';
       this.btnPause.visible = flying; this.btnSpeed.visible = flying; this.btnTurn.visible = st.phase === 'traveling';
+      if (this.goalPanel) this.goalPanel.h = HB.situations && HB.situations.hint(st, true) ? 128 : 92;
       if (flying && tr) { this.btnPause.label = tr.paused ? 'Resume' : 'Pause'; this.btnSpeed.label = `Speed ×${tr.speedMul}`; }
     }
     openLair() { if (HB.LairScene) HB.scenes.push(new HB.LairScene(this.state)); else HB.notice('Lair', 'The lair view is not built yet.'); }
     openChronicle() { if (HB.ChronicleScene) HB.scenes.push(new HB.ChronicleScene(this.state)); else HB.notice('Chronicle', this.state.chronicle.map(c => `Year ${c.year}: ${c.text}`).slice(-8).join('\n')); }
     openRealms() { if (HB.RealmsScene) HB.scenes.push(new HB.RealmsScene(this.state)); else HB.notice('Realms', 'Not built yet.'); }
+    showAmbush() {
+      const st = this.state, e = HB.hunters.find(st, st.ambush);
+      if (!e) { st.ambush = null; return; }
+      if (this._ambushShown === e.id + ':' + st.time.totalDays) return;
+      this._ambushShown = e.id + ':' + st.time.totalDays;
+      st.travel = null; if (st.phase === 'traveling' || st.phase === 'returning') st.phase = 'planning';
+      const price = HB.hunters.price(e), smoke = HB.caps.has(st, 'smoke');
+      const card = new HB.CardScene({ title: 'Hunters!', illustration: 'defeat', text: `${HB.hunters.describe(st, e)} They have caught up with you${Math.hypot(st.dragon.x - st.world.home.x, st.dragon.y - st.world.home.y) < 0.5 ? ' at your own door' : ''}.`, choices: [
+        { label: 'Turn and fight', desc: 'An animated fight. Win and they hunt no one again.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => HB.hunters.resolveAmbush(st, 'fight', this), 0); return false; } },
+        { label: smoke ? 'Vanish with the Smoke-Glass' : 'Flee', desc: smoke ? 'They lose your trail for good.' : 'Costs a quarter of your stamina; they find your trail again in a few days.', onChoose: () => HB.hunters.resolveAmbush(st, 'flee', this) },
+        { label: `Pay them off (${price} gold)`, desc: e.mercenary ? 'Hired hunters can be bought. Their realm cools a little.' : 'Sworn enemies cannot be bought.', disabled: !e.mercenary || st.cargo.gold < price, disabledReason: !e.mercenary ? `${e.leader} swore an oath; gold will not break it` : `You carry ${st.cargo.gold} gold`, onChoose: () => HB.hunters.resolveAmbush(st, 'pay', this) },
+      ], onClose: () => { if (st.ambush) st.ambush = null; } });
+      HB.scenes.push(card);
+    }
     openAims() { if (HB.AimsScene) HB.scenes.push(new HB.AimsScene(this.state, this)); }
     openMenu() { if (HB.MenuScene) HB.scenes.push(new HB.MenuScene(this.state)); else HB.scenes.push(new HB.SettingsScene({ inGame: true })); }
 
@@ -104,7 +119,7 @@
       if (ptr.released && !ptr.dragging && !overUi && HB.dist(ptr.x, ptr.y, ptr.clickX, ptr.clickY) < 10) {
         if (this.hoverEntity) this.select(this.hoverEntity);
         else if (this.hoverLoc) this.select(this.hoverLoc);
-        else if (!this.previewContains(ptr.x, ptr.y) && !HB.pointInRect(ptr.x, ptr.y, 14, 12, 330, 96)) {
+        else if (!this.previewContains(ptr.x, ptr.y) && !HB.pointInRect(ptr.x, ptr.y, 14, 12, 330, 96) && !(this._alertRect && HB.pointInRect(ptr.x, ptr.y, this._alertRect.x, this._alertRect.y, this._alertRect.w, this._alertRect.h))) {
           // tap on empty map: offer to fly there and explore
           if (st.phase === 'home' || st.phase === 'planning' || st.phase === 'traveling' || st.phase === 'returning') { const w = this.screenToWorld(ptr.x, ptr.y); this.select(HB.travel.makePoint(st, w.x - 0.5, w.y - 0.5)); }
           else this.selected = null;
@@ -118,6 +133,8 @@
       if (this.pendingReveal.length) { for (const i of this.pendingReveal) this.revealAnim.add(i); this.pendingReveal.length = 0; }
       if (this.revealAnim && this.revealAnim.size) { const rate = dt * 1.6; for (const i of this.revealAnim) { F[i] -= rate; if (F[i] <= 0) { F[i] = 0; this.revealAnim.delete(i); } } }
       else if (this.frame % 30 === 0) { /* lazy sync: revealed cells cleared, rumoured cells sketched (e.g. after load or rumours) */ const R = st.know.rumor; for (let i = 0; i < F.length; i++) { if (K[i]) { if (F[i] > 0 && !this.revealAnim.has(i)) F[i] = 0; } else if (R[i] && F[i] > RUMOR_ALPHA) F[i] = RUMOR_ALPHA; } }
+      // hunters caught up with you
+      if (st.ambush && HB.scenes.top() === this) this.showAmbush();
       // travel / world ticks
       if (HB.travel && HB.travel.update) HB.travel.update(st, dt, this);
       if (HB.worldsim && HB.worldsim.tickRealtime) HB.worldsim.tickRealtime(st, dt);
@@ -347,6 +364,7 @@
       this.drawFog(ctx, tl, br);
       this.drawHazyPlaces(ctx, tl, br);
       this.drawThreats(ctx, tl, br);
+      this.drawStoryMarks(ctx, tl, br);
       // labels
       this.drawLabels(ctx, tl, br);
       // selection ring / hover
@@ -539,6 +557,19 @@
       const cargoW = HB.game.cargoWeight(st);
       drawMeter(ctx, x + 14, y + 76, mw, 14, cargoW, s.capacity, '#9c6b1c', 'Cargo');
       HB.text.draw(ctx, `Hoard ${HB.fmt.int(HB.game.hoardValue(st))}g`, x + 26 + mw + mw / 2, y + 87, { size: 13, align: 'center', family: 'sc', color: P.ink });
+      // alerts: riders on your trail, hunters closing in
+      const alerts = [];
+      if (HB.pursuit && st.pursuit) alerts.push(HB.pursuit.short(st));
+      for (const e of st.entities) if (e.kind === 'hunters' && !e.dead) { const dd = Math.round(Math.hypot(e.x - d.x, e.y - d.y)); alerts.push(`${HB.fmt.cap(e.name)} ${dd <= 2 ? 'are upon you' : `are ${dd} leagues away`}: ${e.reason}.`); }
+      if (alerts.length) {
+        const ay = 114 + (this.goalPanel ? this.goalPanel.h : 92) + 8, aw = 330;
+        const hs = alerts.slice(0, 3).map(a => HB.text.paragraphHeight(ctx, a, aw - 28, { size: 13, lineHeight: 16 }));
+        const ah = 16 + hs.reduce((a, b) => a + b + 4, 0);
+        this._alertRect = { x: 14, y: ay, w: aw, h: ah };
+        HB.parchment.panel(ctx, 14, ay, aw, ah, { shadow: true, stains: false, vignette: 0.2, flourish: 0 });
+        ctx.save(); ctx.strokeStyle = '#8f2b1f'; ctx.lineWidth = 2; HB.parchment.roundRect(ctx, 16, ay + 2, aw - 4, ah - 4, 4); ctx.stroke(); ctx.restore();
+        let yy = ay + 8; alerts.slice(0, 3).forEach((a, i) => { HB.text.paragraph(ctx, a, 28, yy, aw - 28, { size: 13, lineHeight: 16, color: '#7a2418' }); yy += hs[i] + 4; });
+      } else this._alertRect = null;
       // phase hint
       const tap = HB.input.lastDevice === 'touch' ? 'Tap' : 'Click';
       const hint = st.phase === 'home' || st.phase === 'planning' ? (HB.settings.hints ? `${tap} a place to inspect it, or ${tap.toLowerCase()} anywhere to fly there and explore. Dotted ring: how far your stamina carries you.` : '') : st.phase === 'traveling' ? 'Flying… Shift speeds up, P pauses.' : st.phase === 'returning' ? 'Returning home with cargo.' : '';
@@ -558,6 +589,33 @@
         goalMeter(ctx, x + 26 + bw, y + 30, w - 40 - bw, 15, age.cur, age.need, '#3f6d3a', age.done ? 'Age: enough' : `Age ${Math.floor(age.cur)} / ${age.need}`, 0);
       }
       HB.text.paragraph(ctx, 'Next: ' + m.nextStep, x + 14, y + 52, w - 28, { size: 13, italic: true, maxLines: 2, lineHeight: 16, color: P.ink });
+      const story = HB.situations ? HB.situations.hint(st, true) : '';
+      if (story) HB.text.paragraph(ctx, 'Story: ' + story, x + 14, y + 88, w - 28, { size: 13, maxLines: 2, lineHeight: 16, color: '#7a2418' });
+    }
+    /** a red seal over places in a local story; wind swirls over crags; hunting parties shown even through cloud */
+    drawStoryMarks(ctx, tl, br) {
+      const st = this.state, W = st.world, z = CELL * this.cam.zoom;
+      if (!HB.situations) return;
+      for (const L of W.locations) {
+        if (!HB.world.known(L) || L.x < tl.x - 2 || L.x > br.x + 2 || L.y < tl.y - 2 || L.y > br.y + 2 || L.threat) continue;
+        if (!HB.situations.isStoryPlace(st, L)) continue;
+        const p = this.worldToScreen(L.x + 0.5, L.y - 0.3), r = HB.clamp(z * 0.32, 5, 9);
+        ctx.save();
+        if (L.flags.requires === 'wind') {
+          ctx.strokeStyle = 'rgba(47,74,102,0.85)'; ctx.lineWidth = 1.5;
+          for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r * (0.6 + k * 0.45), Math.PI * (0.2 + k * 0.3) + this.t, Math.PI * (1.3 + k * 0.3) + this.t); ctx.stroke(); }
+        }
+        ctx.fillStyle = '#8f2b1f'; ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r, 0, Math.PI * 2); ctx.fill();
+        HB.text.draw(ctx, L.flags.requires ? '?' : '!', p.x, p.y - r * 2 + r * 0.55, { size: Math.max(11, r * 1.5), family: 'sc', align: 'center', color: '#f6ecd2' });
+        ctx.restore();
+      }
+      for (const e of st.entities) {
+        if ((e.kind !== 'hunters' && !e.sitId) || e.dead) continue;
+        if (Math.hypot(e.x - st.dragon.x, e.y - st.dragon.y) > 30 && !st.know.revealed[Math.round(e.y) * W.w + Math.round(e.x)]) continue;
+        const p = this.worldToScreen(e.x + 0.5, e.y + 0.8), s2 = Math.max(4, Math.min(9, 7 * Math.sqrt(this.cam.zoom)));
+        ctx.save(); HB.mapart.setup(ctx); HB.mapart.walker(ctx, p.x, p.y, s2, '#7a2418'); ctx.restore();
+        HB.text.draw(ctx, e.kind === 'hero' ? `${e.name}, slayer` : e.name, p.x, p.y - s2 * 2.6, { size: 12, italic: true, align: 'center', color: '#7a2418', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
+      }
     }
     /** crossed swords over places being raided by outlaws */
     drawThreats(ctx, tl, br) {
