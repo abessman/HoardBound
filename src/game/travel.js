@@ -114,7 +114,7 @@
       for (let dy = -1; dy <= 1 && !nearRoad; dy++) for (let dx = -1; dx <= 1; dx++) { const x = Math.round(d.x) + dx, y = Math.round(d.y) + dy; if (HB.world.inBounds(W, x, y) && W.road[y * W.w + x]) { nearRoad = true; break; } }
       const fid = HB.world.factionAt(W, d.x, d.y);
       const f = fid >= 0 ? W.factions[fid] : null;
-      const ctx = { terrain: terrain === 'pine forest' ? 'forest' : terrain, nearRoad, factionHostility: f ? f.dragon.hostility : 0, hasCargo: HB.game.cargoWeight(state) > 0.5, tier: d.tier, staminaFrac: d.stamina / Math.max(1, d.stats.maxStamina), unknownNearby: HB.world.locationsNear(W, d.x, d.y, 8, L => !L.knowledge.seen).length > 0, realm: f ? f.name : 'the realm' };
+      const ctx = { terrain: terrain === 'pine forest' ? 'forest' : terrain, nearRoad, factionHostility: f ? f.dragon.hostility : 0, hasCargo: HB.game.cargoWeight(state) > 0.5, heavyCargo: HB.game.cargoWeight(state) > d.stats.capacity * 0.7, tier: d.tier, staminaFrac: d.stamina / Math.max(1, d.stats.maxStamina), unknownNearby: HB.world.locationsNear(W, d.x, d.y, 8, L => !L.knowledge.seen).length > 0, realm: f ? f.name : 'the realm' };
       const pool = HB.TRAVEL_EVENTS.filter(e => (!e.when || e.when(ctx)) && !tr.eventsSeen.includes(e.id));
       if (!pool.length) return;
       const ev = HB.game.rng.weighted(pool, e => e.weight);
@@ -146,6 +146,7 @@
       if (e.kills) state.counters.kills += e.kills;
       if (e.attention) { state.lair.attention = (state.lair.attention || 0) + e.attention; out.push('your lair is a little easier to find'); }
       if (e.prestige) d.prestige += e.prestige;
+      if (e.dropCargo) { const dropped = HB.hoard.dropCargo(state, HB.game.cargoWeight(state) * e.dropCargo); out.push(dropped.length ? `you let fall ${HB.fmt.list(dropped.map(i => i.name))} and pull away` : 'there was nothing to drop'); }
       if (e.revealUnknown) { const near = HB.world.locationsNear(W, d.x, d.y, 9, L => !L.knowledge.seen); if (near.length) { const L = near[0].L; const res = HB.world.reveal(state, L.x, L.y, 2.2); L.knowledge.seen = true; if (map) { map.onReveal(res); map.centerOn(L.x + 0.5, L.y + 0.5); } out.push(`you find ${L.name}`); } else out.push('nothing but empty country'); }
       if (ev.id === 'roost') { out.push('you take wing again'); }
       HB.game.chronicle(state, `${ev.title}: ${ch.label}.`, 'travel');

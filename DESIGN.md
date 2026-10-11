@@ -198,7 +198,12 @@ Keyboard: arrows/WASD move the map cursor or focus; Enter/Space confirm; Esc bac
 Shift speed; P pause; H home/lair; C chronicle; F factions.
 Gamepad: left stick move/focus; A confirm; B back; X action menu; Y lair; RB speed; Start menu.
 
-## 13. Deferred / future
+## 13. Status
+
+See `docs/FEATURE_STATUS.md` for what is functional, simplified and deferred in the current build, and `README.md`
+for launching, controls, tools and how to continue development.
+
+## 14. Deferred / future
 Separate child-Keeper exploration, deep dynastic politics, dream worlds, autonomous servant societies,
 multiplayer, additional continents (expansion hook exists in region tiers), real sound design beyond
 synthesized SFX.

@@ -60,6 +60,15 @@
       ],
     },
     {
+      id: 'burdened', weight: 3, illustration: 'pursuer', title: 'Too Heavy to Outrun Them',
+      when: (ctx) => ctx.heavyCargo && ctx.factionHostility > 5,
+      text: 'Riders are gaining on your shadow and your wings are heavy with plunder. Something has to give: the loot, or the lead.',
+      choices: [
+        { label: 'Drop the heaviest cargo', desc: 'Shed about a third of your load and leave them behind.', effect: { dropCargo: 0.35 } },
+        { label: 'Fly on burdened', desc: 'Costs 20 stamina; they mark the way to your lair.', effect: { stamina: -20, attention: 2 } },
+      ],
+    },
+    {
       id: 'shelter', weight: 1.5, illustration: 'shelter', title: 'A Hollow in the Rocks',
       when: (ctx) => ctx.staminaFrac < 0.45,
       text: 'A dry hollow beneath an overhang, out of the wind. No tracks lead to it.',

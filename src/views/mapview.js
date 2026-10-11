@@ -547,7 +547,7 @@
       HB.text.draw(ctx, this.toast.text, HB.W / 2, 147, { size: 18, family: 'sc', align: 'center' });
       ctx.restore();
     }
-    passiveUpdate(dt) { this.t += dt; this.dragonFrameT += dt; }
+    passiveUpdate(dt) { this.t += dt; this.dragonFrameT += dt; if (this.toast && (this.toast.t -= dt) <= 0) this.toast = null; this.updateContextButtons(); }
     exit() { if (this._pvBtns) { for (const b of this._pvBtns) this.ui.remove(b); this._pvBtns = null; this._pvFor = null; } }
   }
   // selection cleanup when deselected

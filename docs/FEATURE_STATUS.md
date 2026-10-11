@@ -30,7 +30,7 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Village / monastery / ruin scenarios | Functional | Village/town/city scene (granary famine, barred treasury); monastery, shrine, ruin, tower, glade, hold as decision cards. |
 | Animation reflects actions; alarm brings threats | Functional | Swoop, breath flame, roar rings, fire particles; escalation spawns militia/archers/knights/champion. |
 | Cargo limits loot and captives | Functional | |
-| Return journey consequences; drop loot | Simplified | Load slows flight and raises cost; pursuit volley on withdrawal; `HB.hoard.dropCargo` exists but no in-flight "drop loot to escape" prompt yet. |
+| Return journey consequences; drop loot | Functional | Load raises stamina cost; pursuit volley on withdrawal; a "Too Heavy to Outrun Them" road event offers dropping a third of the cargo when riders follow a burdened dragon. |
 | Travel pause / accelerate / divert / turn back | Functional | |
 
 ## Economy and lair
@@ -91,7 +91,6 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 
 ## Simplified or deferred
 
-- **In-flight "drop loot to escape"** prompt: logic exists (`HB.hoard.dropCargo`); the travel event that uses it is not wired.
 - **Seasons** affect travel cost only (winter); no visual seasons on the map.
 - **Armies** do not move day by day; they jump along their march each year and besiege abstractly.
 - **Rival dragon lairs** cannot be looted without the duel; rivals never attack the player's lair directly (hunters do).
