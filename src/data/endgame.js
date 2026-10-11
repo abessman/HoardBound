@@ -16,7 +16,7 @@
         { id: 'sorcerer', role: 'Sorcerer', names: ['Maelis the Pale', 'Corvane Ashtongue', 'Serath of the Black Glass'], title: 'Sorcerer of the Hollow King', site: 'tower', siteName: () => 'The Tower of Black Glass',
           power: 'Wards', powerText: 'Wards woven over the Hollow Throne: no claw or fire can touch the king while they hold.',
           defeatText: 'The wards over the Hollow Throne have failed.', playable: false },
-        { id: 'blightmother', role: 'Blightmother', names: ['Mother Gallow', 'Seska Rotroot', 'the Widow of the Mire'], title: 'Blightmother of the Hollow King', site: 'fen', siteName: () => 'The Weeping Fen',
+        { id: 'blightmother', role: 'Blightmother', /* confirmed by the owner as the third lieutenant */ names: ['Mother Gallow', 'Seska Rotroot', 'the Widow of the Mire'], title: 'Blightmother of the Hollow King', site: 'fen', siteName: () => 'The Weeping Fen',
           power: 'Renewal', powerText: 'A blight that eats the fields near her fen and lets the Hollow King mend his wounds as fast as they are dealt.',
           defeatText: 'The blight withers: the Hollow King can no longer mend his wounds.', playable: false },
       ],

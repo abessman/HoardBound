@@ -159,6 +159,7 @@
     // ---------- update / draw
     update(dt) {
       this.t += dt; this.ui.update(dt);
+      if (HB.cheats && HB.cheats.any(this.state)) { const n = this.state.lair.construction.length; HB.cheats.topUp(this.state); if (n !== this.state.lair.construction.length) this.buildUi(); }
       const ptr = HB.input.pointer, F = this.frame;
       const bx = (ptr.x - F.x) * CW / F.w, by = (ptr.y - F.y) * CH / F.h;
       const inFrame = HB.pointInRect(ptr.x, ptr.y, F.x, F.y, F.w, F.h);

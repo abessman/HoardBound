@@ -29,7 +29,8 @@ rumour foreshadows it (one reaction). On the map a card announces it with the wh
   orc warriors and archers, war drums waking the camp, reinforcements, and the Warlord (a melee boss). Allied
   places' scouts lead you in at dusk: two sleepers per ally (up to four). Kill him and the rest flee: the hosts stop,
   places under your protection gain trust, realms that know you trust you more, the next lieutenant is rumoured.
-- **Sorcerer** (wards over the throne) and **Blightmother** (renewal; a blight on fields) are placed and described;
+- **Sorcerer** (wards over the throne) and **Blightmother** (renewal; a blight on fields; confirmed by the owner as
+  the third lieutenant) are placed and described;
   their battles are not built yet (their cards say so).
 - The **fortress** card lists which powers still protect the king; the last battle is not built yet.
 
@@ -50,13 +51,20 @@ Announcement card; a seal over each known place of the struggle (purple with a c
 glyphs for the fortress, warcamp, tower, fen and sanctuary; a line under the goal; an aim *The great struggle* on
 the Aims board; a section on waking; summary lines after a boss falls or a crystal is taken.
 
+### Debug tools (`HB.cheats`, Menu → Debug tools)
+Toggles saved with the campaign (infinite gold, invincible, endless stamina, safe sleep, instant building) and actions
+(gold, grow a stage, age, heal, benevolence ±25, grow the settlement, start the struggle, win its next step, reveal
+the map, calm the realms, pass a season, back to the lair). The map shows "Debug: …" while a toggle is on, and the
+chronicle notes once that debug tools were used.
+
 ### Test starts (`HB.presets`)
 `index.html?scene=map&preset=adult-kind` (also `adult-cruel`, `young-kind`, `young-cruel`) jumps a new campaign to
 that point: tier, age, upgrades, protected or tributary neighbours, the home settlement, and (adult) the struggle.
 Campaigns started from the URL autosave to a `test` slot, never over the player's own autosave.
 
 ## Code
-- Rules `src/game/endgame.js`; data, names, crystal treasures `src/data/endgame.js`; test starts `src/game/presets.js`.
+- Rules `src/game/endgame.js`; data, names, crystal treasures `src/data/endgame.js`; test starts `src/game/presets.js`;
+  debug tools `src/game/cheats.js` and `src/views/debugmenu.js`.
 - Scenes `warcamp` and `sanctuary` in `src/game/raid/templates.js`; bosses, wards, orcs in `src/game/raid/raid.js`.
 - Hooks: `encounter.js` (struggle card, raid end), `worldsim.js` (hosts; host repel and burn), `sleep.js`, `travel.js`,
   `domain.js` (map marks, signature), `goals.js`, `preview.js`, `save.js` (`state.endgame`; `lieutenant`, `crystal`, `foe`).

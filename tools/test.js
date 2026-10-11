@@ -514,5 +514,29 @@ section('endgame: the great struggle (prototype)');
   ok(st.dragon.stats.maxHealth > hp0, 'stored in the hoard, the crystal gives its power');
 }
 
+section('debug tools');
+{
+  const C = HB.cheats;
+  const st = HB.game.newCampaign({ seed: seed + '-cheat', name: 'C', keeper: false });
+  ok(!C.any(st) && !st.flags.cheated, 'a new campaign has no debug toggles');
+  C.toggle(st, 'gold'); C.toggle(st, 'invincible'); C.toggle(st, 'stamina'); C.toggle(st, 'safeSleep'); C.toggle(st, 'instantBuild');
+  ok(st.hoard.gold >= 100000 && st.flags.cheated && C.active(st).length === 5, 'toggles on: the hoard is full and the campaign is marked');
+  st.hoard.gold -= 50000; HB.worldsim.tickDays(st, 1);
+  ok(st.hoard.gold >= 100000, 'infinite gold tops the hoard back up');
+  HB.lair.build(st, 'entrance'); C.topUp(st);
+  ok(HB.lair.level(st, 'entrance') === 1 && !st.lair.construction.length, 'instant building finishes at once');
+  const T = HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, 18, L => L.type === 'farm' || L.type === 'village')[0].L;
+  st.dragon.x = T.x; st.dragon.y = T.y; st.phase = 'planning';
+  const r = HB.encounter.begin(st, T, null, { direct: true }); const hp = r.dragon.hp;
+  HB.raid.damageDragon(r, 50, 'a test blow'); r.dragon.stamina = 0; HB.raid.update(r, 1 / 30, {});
+  ok(r.dragon.hp === hp && r.dragon.stamina === st.dragon.stats.maxStamina, 'invincible takes no damage; stamina never runs out');
+  for (const a of C.ACTIONS) { let err = null; try { C.run(st, a.id); } catch (e) { err = e; } ok(!err, 'debug action runs: ' + a.id + (err ? ' ' + err.message : '')); }
+  ok(st.dragon.tier >= 1 && HB.domain.home(st).stage >= 1 && HB.endgame.active(st), 'actions grow the dragon, the settlement and start the struggle');
+  st.phase = 'home'; HB.sleep.begin(st, 20, null);
+  ok(!st.lastSleep.events.some(e => e.kind === 'thief' || e.kind === 'hunters') && st.phase !== 'dead', 'safe sleep: nobody comes');
+  const st2 = HB.save.deserialize(HB.save.serialize(st));
+  ok(C.on(st2, 'invincible') && st2.flags.cheated, 'saves keep the toggles');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

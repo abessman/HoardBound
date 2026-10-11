@@ -202,6 +202,7 @@
     update(dt) {
       this.t += dt; this.frame++;
       const st = this.state, inp = HB.input, ptr = inp.pointer;
+      if (HB.cheats) HB.cheats.topUp(st);
       this.updateContextButtons();
       this.ui.update(dt);
       const overUi = this.ui.hoverWidget || this.ui.consumedPointer;
@@ -711,6 +712,8 @@
         ctx.save(); ctx.strokeStyle = '#8f2b1f'; ctx.lineWidth = 2; HB.parchment.roundRect(ctx, 16, ay + 2, aw - 4, ah - 4, 4); ctx.stroke(); ctx.restore();
         let yy = ay + 8; alerts.slice(0, 3).forEach((a, i) => { HB.text.paragraph(ctx, a, 28, yy, aw - 28, { size: 13, lineHeight: 16, color: '#7a2418' }); yy += hs[i] + 4; });
       } else this._alertRect = null;
+      // debug toggles in force: say so, so a test campaign is never mistaken for a real one
+      if (HB.cheats && HB.cheats.any(st)) HB.text.draw(ctx, `Debug: ${HB.cheats.active(st).join(', ')}`, HB.W / 2, 26, { size: 14, italic: true, align: 'center', color: '#8f2b1f', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 3 });
       // phase hint
       const tap = HB.input.lastDevice === 'touch' ? 'Tap' : 'Click';
       const hint = st.phase === 'home' || st.phase === 'planning' ? (HB.settings.hints ? `${tap} a place to inspect it, or ${tap.toLowerCase()} anywhere to fly there and explore. Dotted ring: how far your stamina carries you.` : '') : st.phase === 'traveling' ? 'Flying… Shift speeds up, P pauses.' : st.phase === 'returning' ? 'Returning home with cargo.' : '';

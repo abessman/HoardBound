@@ -10,6 +10,7 @@
   screenshot at every stage, following the opening story. Prints summaries and errors.
 - `node tools/screenshot.mjs out.png "js to run" --url="index.html?debug=1&scene=map&seed=…"`: one screenshot.
   Add `&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`) to start later in the game (`src/game/presets.js`).
+- In the game: Menu → Debug tools (`src/game/cheats.js`): toggles and jumps for hand testing; tested in *debug tools*.
   `?scene=dragons` is the dragon sheet; `?scene=map&seed=…` jumps into a world.
 - `node tools/worldstats.js [seed] [size] [--ascii]`: world generation report.
 - `node tools/docscheck.js`: doc size budgets, broken relative links, the six sections in every system doc.

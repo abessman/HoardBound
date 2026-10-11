@@ -42,7 +42,7 @@ Tooltips explain every action, cost and disabled button.
 8. Build a domain (once you are a young dragon): people who trust you build a refuge at the foot of your hill, people you hold by fear are driven into a camp. Protect places and take their oaths, rebuild what burned, or make them pay and occupy them. Your territory shows on the map (**Territory**, T); the settlement grows while you sleep (Lair → Domain).
 9. The great struggle (once you are grown): a kind dragon faces an ancient evil and its three lieutenants; a cruel one hunts the six Crystals of Life. In 0.9 the first lieutenant and the first crystal can be fought.
 
-To try the later game without playing up to it: `index.html?scene=map&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`). These test starts save to their own slot.
+For testing: **Menu → Debug tools** (infinite gold, invincibility, endless stamina, safe sleep, instant building, grow a stage, start the great struggle, reveal the map…). To try the later game without playing up to it: `index.html?scene=map&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`). These test starts save to their own slot.
 
 ## Project layout
 

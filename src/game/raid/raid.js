@@ -49,6 +49,7 @@
     update(r, dt, input) {
       if (r.ended) { r.endT += dt; return; }
       const D = r.dragon, st = r.state;
+      if (HB.cheats && HB.cheats.on(st, 'stamina')) D.stamina = st.dragon.stats.maxStamina;
       // time scale: decision slow-motion, hold to speed
       r.hold = input && input.speed ? FAST : input && input.slow ? 0.35 : 1;
       const target = r.decision && !D.busy ? SLOW : r.hold;
@@ -165,6 +166,7 @@
     },
     damageDragon(r, dmg, label) {
       const D = r.dragon;
+      if (HB.cheats && HB.cheats.on(r.state, 'invincible')) { raid.msg(r, `${HB.fmt.cap(label)} glances off you (invincible).`); return; }
       dmg = Math.round(dmg);
       D.hp -= dmg; D.hurtT = 0.25; r.damageTaken += dmg;
       raid.msg(r, `${HB.fmt.cap(label)} hits you for ${dmg}.`, 'hurt');

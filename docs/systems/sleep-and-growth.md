@@ -17,6 +17,11 @@ Size tiers, coming of age, the long sleep with its thieves and hunters, the keep
 | Adult | 40+ | 6 000 | 7 | 25 |
 | Ancient | 150+ | 30 000 | 11 | 60 |
 
+What each phase opens: **hatchling** — the home vale, the first local story, a first sleep that forgives (≤ 20 years).
+**Young** — lands behind the first storm walls, tribute, the domain (a refuge or a camp at your hill), 50-year sleeps.
+**Adult** — land and smash, tolls, farther lands, a castle or dark stronghold, the great struggle, century sleeps.
+**Ancient** — the isles over the sea (the last crystal), the elder wyrm and legend, two-century sleeps.
+
 (Raised from 400 / 3 000 / 20 000 so the first milestone takes roughly ten expeditions; "hoard energy" in code is
 shown to the player as **hoard strength**: stored value, artifacts double.) Growing consumes 10% of the next
 tier's requirement in coin. Sleeping with too little hoard strength heals and ages but does not advance the tier

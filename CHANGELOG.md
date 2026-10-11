@@ -4,6 +4,14 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.9.1 — 2026-10-11
+- **Debug tools** (Menu → Debug tools) for testing: infinite gold, invincible, endless stamina, safe sleep, instant
+  building; and do-it-now buttons: gold, grow one stage, age 10 years, heal, benevolence ±25, grow your settlement,
+  start the great struggle, win its next step, reveal the whole map, calm every realm, pass a season, back to the
+  lair. Toggles are saved with the campaign; the map shows "Debug: …" while any is on, and the chronicle notes once
+  that debug tools were used.
+- The Blightmother is confirmed as the Hollow King's third lieutenant.
+
 ## 0.9.0 — 2026-10-11 · The great struggle (prototype)
 - When your dragon is grown (adult) and its rule leans kind or cruel, the world answers, once and for good:
   - **Kind:** the Hollow King wakes in a far fortress, sustained by three lieutenants (a Warlord, a Sorcerer, a

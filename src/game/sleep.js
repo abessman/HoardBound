@@ -115,6 +115,7 @@
       const days = Math.round(step * HB.DAYS_PER_YEAR);
       HB.game.advanceDays(state, days);
       if (HB.worldsim) HB.worldsim.tickDays(state, days);
+      if (HB.cheats) HB.cheats.topUp(state);
       sl.yearsDone += step;
       const yearEvents = [];
       const log = (text, kind, bad) => { const e = { year: state.time.year, text, kind: kind || 'sleep', bad: !!bad }; yearEvents.push(e); sl.events.push(e); };
@@ -144,6 +145,7 @@
       // threats
       const t = sleep.threatEstimate(state);
       const thiefP = HB.clamp(t.thief + sl.mods.thiefMod * 0.1, 0, 0.6);
+      if (HB.cheats && HB.cheats.on(state, 'safeSleep')) return null; // debug: nobody comes
       if (rng.chance(thiefP)) { const p = sleep.thieves(state, sl, log, rng); if (p) return p; }
       if (rng.chance(t.hunt)) { const p = sleep.hunters(state, sl, log, rng); if (p) return p; }
       return null;
@@ -261,6 +263,7 @@
       const v = HB.lair.values(state), d = state.dragon, s = d.stats;
       if (state.problems && !woke) state.problems.breaches++;
       if (HB.domain) HB.domain.onBreach(state, log);
+      if (HB.cheats && HB.cheats.on(state, 'invincible')) { log(`${party.leaderName}’s blades could not pierce you (invincible).`, 'hunters'); sl.forced = true; return sleep.fight(state, sl, log, rng, party, 1e9, 'awake'); }
       const power = (s.bite + s.breath) * 3 + s.defense * 2 + d.health / 4 + d.tier * 20;
       if (woke) return sleep.fight(state, sl, log, rng, party, power, 'awake');
       if (v.sleepSafety >= 1 + sl.mods.ward / 100) {

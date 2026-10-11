@@ -80,6 +80,7 @@
       if (HB.lair && HB.lair.tickDays) { const done = HB.lair.tickDays(state, days); if (done.length && HB.isBrowser && HB.flow.map) HB.flow.map.showToast(`${HB.UPGRADE_BY_ID[done[0].id].name} is finished`); }
       if (HB.ransom) { const ev = HB.ransom.tickDays(state, days); if (ev.length && HB.isBrowser && HB.notice) HB.notice('Word from the realms', ev.map(e => e.text).join('\n\n')); }
       if (HB.factions && HB.factions.tickDays) HB.factions.tickDays(state, days);
+      if (HB.cheats) HB.cheats.topUp(state);
     },
     tickRealtime(state, dt) { /* nothing continuous yet */ },
     // ---------- outlaw raids on farms and villages: a problem you can solve (or ignore)

@@ -66,6 +66,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Cruel path: six Crystals of Life | Simplified | Six sanctuaries in different realms; Greenmarrow is playable (warded crystal, guardian boss, realm withers, map blight, hoard treasure with an effect). Five others and the god's challenge: described, not playable. |
 | Allies matter to the struggle | Simplified | Allied scouts put warcamp guards to sleep; hosts target the places that trust you. No soldiers in the last battle yet. |
 | Test starts for the later game | Functional | `?scene=map&preset=adult-kind` (and adult-cruel, young-kind, young-cruel); saved to a separate test slot. |
+| Debug tools | Functional | Menu → Debug tools: infinite gold, invincible, endless stamina, safe sleep, instant building; grow, age, benevolence, settlement, struggle, reveal, calm. Marked on the map and in the chronicle. |
 
 ## Encounters and travel
 

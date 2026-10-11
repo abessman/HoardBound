@@ -6,7 +6,7 @@
   class MenuScene {
     constructor(state) { this.state = state; this.opaque = false; this.ui = new HB.ui.UI(); }
     enter() {
-      const w = 360, x = (HB.W - w) / 2, y0 = 150; this.x = x; this.y = y0; this.w = w; this.h = 420;
+      const w = 360, x = (HB.W - w) / 2, y0 = 120; this.x = x; this.y = y0; this.w = w; this.h = 470;
       let y = y0 + 60;
       const add = (label, onClick, opts = {}) => { this.ui.add(new HB.ui.Button(Object.assign({ x: x + 40, y, w: w - 80, h: 42, label, size: 17, onClick }, opts))); y += 50; };
       add('Return to the world', () => HB.scenes.pop(this), { primary: true });
@@ -14,6 +14,7 @@
       add('Load world', () => HB.scenes.push(new SaveMenuScene({ mode: 'load' })));
       add('Settings', () => HB.scenes.push(new HB.SettingsScene({ inGame: true })));
       add('Export save file', () => HB.save.exportFile(this.state));
+      add('Debug tools', () => HB.scenes.push(new HB.DebugMenuScene(this.state)), { tooltip: 'For testing: infinite gold, invincibility, grow a stage, start the great struggle, reveal the map…' });
       add('Quit to title', () => HB.confirm('Quit?', 'Return to the title screen? Unsaved progress since the last autosave is lost.', () => { HB.save.autosave(this.state); HB.scenes.replace(new HB.TitleScene()); }));
       this.ui.onCancel = () => HB.scenes.pop(this);
       this.ui.focusFirst();
