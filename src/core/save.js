@@ -46,6 +46,7 @@
       // the dragon is wherever it was; if mid-travel it is placed at home to be safe
       if (data.phase === 'traveling' || data.phase === 'returning') { state.dragon.x = world.home.x; state.dragon.y = world.home.y; state.phase = 'home'; }
       if (state.phase === 'planning' && Math.hypot(state.dragon.x - world.home.x, state.dragon.y - world.home.y) < 0.5) state.phase = 'home';
+      HB.world.syncRumors(state);
       HB.stats.recompute(state);
       return state;
     },

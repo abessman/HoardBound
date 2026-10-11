@@ -43,7 +43,7 @@
       HB.illustrations.draw(ctx, 'sleep', 0, 0, HB.W, 360, this.t);
       ctx.fillStyle = 'rgba(18,10,6,0.35)'; ctx.fillRect(0, 0, HB.W, 360);
       const years = sl ? sl.yearsDone : 0;
-      HB.text.draw(ctx, sl && sl.years < 1 ? 'A season passes' : `${Math.floor(years)} of ${HB.fmt.years(Math.round(sl ? sl.years : 0))}`, HB.W / 2, 70, { size: 44, family: 'sc', align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
+      HB.text.draw(ctx, sl && sl.years < 1 ? 'A season passes' : `${Math.floor(years)} of ${HB.fmt.years(Math.round(sl ? sl.years : 0))}`, HB.W / 2, 70, { size: 44, family: 'display', align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
       HB.text.draw(ctx, HB.game.dateString(st), HB.W / 2, 100, { size: 18, italic: true, align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
       // event log
       HB.parchment.panel(ctx, 40, 376, HB.W - 80, HB.H - 376 - 72, { tone: 'light', title: 'While you slept' });
@@ -90,7 +90,7 @@
       HB.parchment.fill(ctx, 0, 0, HB.W, HB.H);
       HB.parchment.vignette(ctx, 0, 0, HB.W, HB.H, 0.45);
       HB.parchment.border(ctx, 14, 14, HB.W - 28, HB.H - 28, { width: 2.5, flourish: 16 });
-      HB.text.draw(ctx, this.s.tierUp ? 'You wake, and you have grown' : this.s.forced ? 'You are woken' : 'You wake', HB.W / 2, 66, { size: 40, family: 'sc', align: 'center', spacing: 3 });
+      HB.text.draw(ctx, this.s.tierUp ? 'You wake, and you have grown' : this.s.forced ? 'You are woken' : 'You wake', HB.W / 2, 66, { size: 40, family: 'display', align: 'center', spacing: 3 });
       const planned = st.lastSleep && st.lastSleep.planned ? st.lastSleep.planned : null;
       HB.text.draw(ctx, `${HB.game.dateString(st)} · ${HB.fmt.years(Math.round(this.s.years))} passed${planned && Math.round(this.s.years) < planned ? ` of the ${planned} you meant to sleep` : ''}`, HB.W / 2, 92, { size: 15, italic: true, align: 'center', color: HB.palette.inkSoft });
       HB.dragonArt.draw(ctx, HB.dragonArt.specOf(st), 'roar', 0, HB.W - 150, 80, 2.2 - st.dragon.tier * 0.3, -1);

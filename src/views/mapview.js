@@ -49,12 +49,14 @@
       this.btnPause = ui.add(new HB.ui.Button({ x: cx, y, w: 150, h: bh, label: 'Pause', size: 15, hotkey: 'pause', hotkeyLabel: 'P', tooltip: 'Pause or resume the flight.', onClick: () => { HB.travel.togglePause(st); } }));
       this.btnSpeed = ui.add(new HB.ui.Button({ x: cx - 158, y, w: 150, h: bh, label: 'Speed ×1', size: 15, tooltip: 'Cycle flight speed. Hold Shift for a burst.', onClick: () => { const tr = st.travel; if (tr) tr.speedMul = tr.speedMul >= 3 ? 0.6 : tr.speedMul >= 1.6 ? 3 : tr.speedMul >= 1 ? 1.6 : 1; } }));
       this.btnTurn = ui.add(new HB.ui.Button({ x: cx - 316, y, w: 150, h: bh, label: 'Turn back', size: 15, tooltip: 'Abandon this flight and head home.', onClick: () => HB.travel.turnBack(st, this) }));
+      this.btnRest = ui.add(new HB.ui.Button({ x: cx - 158, y, w: 150, h: bh, label: 'Rest here', size: 15, tooltip: 'Rest two days where you are: half your stamina returns. People may notice you.', onClick: () => HB.travel.restInWild(st, this) }));
       ui.onCancel = () => { if (this.selected) this.selected = null; else this.openMenu(); };
     }
     updateContextButtons() {
       const st = this.state, tr = st.travel;
       const away = st.phase === 'planning' && Math.hypot(st.dragon.x - st.world.home.x, st.dragon.y - st.world.home.y) > 0.5;
       this.btnFlyHome.visible = away;
+      this.btnRest.visible = away && st.dragon.stamina < st.dragon.stats.maxStamina;
       const flying = st.phase === 'traveling' || st.phase === 'returning';
       this.btnPause.visible = flying; this.btnSpeed.visible = flying; this.btnTurn.visible = st.phase === 'traveling';
       if (flying && tr) { this.btnPause.label = tr.paused ? 'Resume' : 'Pause'; this.btnSpeed.label = `Speed ×${tr.speedMul}`; }
@@ -98,7 +100,11 @@
       if (ptr.released && !ptr.dragging && !overUi && HB.dist(ptr.x, ptr.y, ptr.clickX, ptr.clickY) < 10) {
         if (this.hoverEntity) this.select(this.hoverEntity);
         else if (this.hoverLoc) this.select(this.hoverLoc);
-        else if (this.selected && !this.previewContains(ptr.x, ptr.y)) this.selected = null;
+        else if (!this.previewContains(ptr.x, ptr.y) && !HB.pointInRect(ptr.x, ptr.y, 14, 12, 330, 96)) {
+          // tap on empty map: offer to fly there and explore
+          if (st.phase === 'home' || st.phase === 'planning' || st.phase === 'traveling' || st.phase === 'returning') { const w = this.screenToWorld(ptr.x, ptr.y); this.select(HB.travel.makePoint(st, w.x - 0.5, w.y - 0.5)); }
+          else this.selected = null;
+        }
       }
       if (this.selected && this.selected.kind && this.selected.dead) this.selected = null;
       if (inp.pressed('nextTarget')) this.cycleTarget();
@@ -130,13 +136,13 @@
       const p = this.screenToWorld(sx, sy);
       const z = CELL * this.cam.zoom;
       let best = null, bd = Math.max(1.2, 18 / z);
-      for (const L of W.locations) { if (!L.knowledge.seen) continue; const d = Math.hypot(L.x + 0.5 - p.x, L.y + 0.3 - p.y); if (d < bd) { bd = d; best = L; } }
+      for (const L of W.locations) { if (!HB.world.known(L)) continue; const d = Math.hypot(L.x + 0.5 - p.x, L.y + 0.3 - p.y); if (d < bd) { bd = d; best = L; } }
       return best;
     }
     select(L) { this.selected = L; if (HB.audio) HB.audio.play('click'); }
     cycleTarget() {
       const st = this.state, W = st.world;
-      const cands = W.locations.filter(L => L.knowledge.seen && L.type !== 'lair').map(L => ({ L, d: Math.hypot(L.x - st.dragon.x, L.y - st.dragon.y) })).sort((a, b) => a.d - b.d).map(c => c.L);
+      const cands = W.locations.filter(L => HB.world.known(L) && L.type !== 'lair').map(L => ({ L, d: Math.hypot(L.x - st.dragon.x, L.y - st.dragon.y) })).sort((a, b) => a.d - b.d).map(c => c.L);
       if (!cands.length) return;
       const i = this.selected ? cands.indexOf(this.selected) : -1;
       this.selected = cands[(i + 1) % cands.length];
@@ -335,6 +341,7 @@
       this.drawDragon(ctx);
       // fog
       this.drawFog(ctx, tl, br);
+      this.drawHazyPlaces(ctx, tl, br);
       // labels
       this.drawLabels(ctx, tl, br);
       // selection ring / hover
@@ -377,6 +384,26 @@
         const minor = L.type === 'farm' || L.type === 'camp' || L.type === 'mine' || L.type === 'shrine' || L.type === 'monastery' || L.type === 'ruin' || L.type === 'tower';
         if ((cam.zoom < 0.55 && minor) || (cam.zoom < 0.38 && L.type === 'village')) { ctx.fillStyle = HB.palette.ink; ctx.beginPath(); ctx.arc(p.x, p.y - 2, L.type === 'village' ? 2 : 1.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); continue; }
         HB.mapart.settlement(ctx, L, p.x, p.y, s * tierScale, rng, { flagColor: f ? f.color : undefined });
+        ctx.restore();
+      }
+    }
+    /** places known by rumour (or glimpsed) that still sit under the clouds: faint ink marks you can fly to */
+    drawHazyPlaces(ctx, tl, br) {
+      const st = this.state, W = st.world, cam = this.cam;
+      const s = Math.max(4, Math.min(11, 9 * Math.sqrt(cam.zoom)));
+      for (const L of W.locations) {
+        if (!HB.world.known(L) || L.type === 'lair') continue;
+        if (L.x < tl.x - 3 || L.x > br.x + 3 || L.y < tl.y - 3 || L.y > br.y + 3) continue;
+        if (this.fogAlpha[L.y * W.w + L.x] < 0.7) continue;
+        const p = this.worldToScreen(L.x + 0.5, L.y + 0.85);
+        ctx.save();
+        if (L.knowledge.seen) { ctx.globalAlpha *= 0.75; HB.mapart.settlement(ctx, L, p.x, p.y, s, new HB.RNG(HB.hash32('loc' + L.id))); }
+        else {
+          ctx.globalAlpha *= 0.8;
+          ctx.strokeStyle = HB.palette.ink; ctx.lineWidth = 1.2; ctx.setLineDash([3, 3]);
+          ctx.beginPath(); ctx.arc(p.x, p.y - s * 0.6, s * 0.9, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+          HB.text.draw(ctx, '?', p.x, p.y - s * 0.6 + s * 0.45, { size: s * 1.4, align: 'center', color: HB.palette.ink });
+        }
         ctx.restore();
       }
     }
@@ -448,9 +475,9 @@
         const p = this.worldToScreen(R.cx, R.cy);
         const size = HB.clamp(26 * Math.sqrt(cam.zoom), 16, 44);
         const text = R.name.toUpperCase();
-        const w = HB.text.width(text, size, { family: 'sc', spacing: size * 0.35 });
+        const w = HB.text.width(text, size, { family: 'display', spacing: size * 0.35 });
         if (!tryPlace(p.x, p.y, w + 10, size * 1.2)) continue;
-        HB.text.draw(ctx, text, p.x, p.y, { size, family: 'sc', align: 'center', spacing: size * 0.35, color: 'rgba(43,26,14,0.55)', stroke: 'rgba(240,228,200,0.6)', strokeWidth: 3 });
+        HB.text.draw(ctx, text, p.x, p.y, { size, family: 'display', align: 'center', spacing: size * 0.35, color: 'rgba(43,26,14,0.55)', stroke: 'rgba(240,228,200,0.6)', strokeWidth: 3 });
       }
       // subregion names
       if (cam.zoom > 0.45) for (const S of W.subregions) {
@@ -464,7 +491,7 @@
       }
       // location names
       const minTier = cam.zoom < 0.45 ? 3 : cam.zoom < 0.8 ? 2 : cam.zoom < 1.3 ? 1 : 0;
-      const locs = W.locations.filter(L => L.knowledge.seen && this.fogAlpha[L.y * W.w + L.x] < 0.5 && L.x >= tl.x - 3 && L.x <= br.x + 3 && L.y >= tl.y - 2 && L.y <= br.y + 2);
+      const locs = W.locations.filter(L => HB.world.known(L) && L.x >= tl.x - 3 && L.x <= br.x + 3 && L.y >= tl.y - 2 && L.y <= br.y + 2);
       locs.sort((a, b) => (b.tier + (b.type === 'lair' ? 9 : 0)) - (a.tier + (a.type === 'lair' ? 9 : 0)));
       for (const L of locs) {
         const important = L.type === 'lair' || L.type === 'city' || L.type === 'hold' || L.type === 'rivalLair' || L.capital;
@@ -473,9 +500,11 @@
         const p = this.worldToScreen(L.x + 0.5, L.y + 1.0);
         const size = HB.clamp((L.type === 'city' ? 15 : L.type === 'town' || L.type === 'castle' || L.type === 'hold' ? 13 : 11.5) * Math.sqrt(cam.zoom), 10, 20);
         const sc = L.type === 'city' || L.type === 'hold' || L.type === 'lair';
-        const w = HB.text.width(L.name, size, { family: sc ? 'sc' : 'body' });
+        const hazy = !L.knowledge.seen || this.fogAlpha[L.y * W.w + L.x] >= 0.5;
+        const label = L.knowledge.seen ? L.name : `${L.name}?`;
+        const w = HB.text.width(label, size, { family: sc ? 'sc' : 'body', italic: hazy });
         if (!tryPlace(p.x, p.y + size, w + 6, size * 1.25)) continue;
-        HB.text.draw(ctx, L.name, p.x, p.y + size, { size, family: sc ? 'sc' : 'body', align: 'center', color: L.state === 'ruin' || L.state === 'abandoned' ? P.inkSoft : P.ink, stroke: 'rgba(240,228,200,0.7)', strokeWidth: 2.5 });
+        HB.text.draw(ctx, label, p.x, p.y + size, { size, family: sc && !hazy ? 'sc' : 'body', italic: hazy, align: 'center', color: hazy ? 'rgba(43,26,14,0.62)' : L.state === 'ruin' || L.state === 'abandoned' ? P.inkSoft : P.ink, stroke: 'rgba(240,228,200,0.75)', strokeWidth: 2.5 });
       }
       ctx.restore();
     }
@@ -505,7 +534,8 @@
       drawMeter(ctx, x + 14, y + 76, mw, 14, cargoW, s.capacity, '#9c6b1c', 'Cargo');
       HB.text.draw(ctx, `Hoard ${HB.fmt.int(HB.game.hoardValue(st))}g`, x + 26 + mw + mw / 2, y + 87, { size: 13, align: 'center', family: 'sc', color: P.ink });
       // phase hint
-      const hint = st.phase === 'home' || st.phase === 'planning' ? (HB.settings.hints ? 'Click a place to inspect it. Fly to what you can reach, and keep stamina for the way home.' : '') : st.phase === 'traveling' ? 'Flying… Shift speeds up, P pauses.' : st.phase === 'returning' ? 'Returning home with cargo.' : '';
+      const tap = HB.input.lastDevice === 'touch' ? 'Tap' : 'Click';
+      const hint = st.phase === 'home' || st.phase === 'planning' ? (HB.settings.hints ? `${tap} a place to inspect it, or ${tap.toLowerCase()} anywhere to fly there and explore. Dotted ring: how far your stamina carries you.` : '') : st.phase === 'traveling' ? 'Flying… Shift speeds up, P pauses.' : st.phase === 'returning' ? 'Returning home with cargo.' : '';
       if (hint) HB.text.draw(ctx, hint, HB.W / 2, HB.H - 60, { size: 14, italic: true, align: 'center', color: P.inkSoft, stroke: 'rgba(240,228,200,0.8)', strokeWidth: 3 });
     }
     previewContains(sx, sy) { const r = this.previewRect(); return r && HB.pointInRect(sx, sy, r.x, r.y, r.w, r.h); }

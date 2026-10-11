@@ -5,8 +5,8 @@
   HB.DAYS_PER_YEAR = 360;
   // permanent, age-based characteristics per tier
   HB.TIERS = [
-    { id: 0, name: 'Hatchling', minAge: 0, energy: 0, vision: 2.6, capacity: 4, health: 40, stamina: 60, breath: 6, bite: 5, defense: 2, speed: 7, size: 1, roar: 1, land: false, sleepMax: 20 },
-    { id: 1, name: 'Young Dragon', minAge: 8, energy: 400, vision: 4.5, capacity: 10, health: 110, stamina: 120, breath: 14, bite: 12, defense: 6, speed: 10, size: 2, roar: 2, land: false, sleepMax: 50 },
+    { id: 0, name: 'Hatchling', minAge: 0, energy: 0, vision: 3.2, capacity: 4, health: 40, stamina: 60, breath: 6, bite: 5, defense: 2, speed: 7, size: 1, roar: 1, land: false, sleepMax: 20 },
+    { id: 1, name: 'Young Dragon', minAge: 8, energy: 400, vision: 4.8, capacity: 10, health: 110, stamina: 120, breath: 14, bite: 12, defense: 6, speed: 10, size: 2, roar: 2, land: false, sleepMax: 50 },
     { id: 2, name: 'Adult Dragon', minAge: 40, energy: 3000, vision: 7, capacity: 25, health: 280, stamina: 220, breath: 30, bite: 26, defense: 14, speed: 14, size: 3, roar: 3, land: true, sleepMax: 100 },
     { id: 3, name: 'Ancient Dragon', minAge: 150, energy: 20000, vision: 11, capacity: 60, health: 650, stamina: 400, breath: 60, bite: 50, defense: 28, speed: 20, size: 4, roar: 4, land: true, sleepMax: 200 },
   ];
@@ -51,7 +51,12 @@
       if (HB.stats) HB.stats.recompute(state);
       // opening knowledge
       HB.world.reveal(state, world.home.x, world.home.y, (state.dragon.stats ? state.dragon.stats.vision : tier.vision) + 1.5);
-      HB.world.rumor(state, world.home.x, world.home.y, 9);
+      HB.world.rumor(state, world.home.x, world.home.y, 10);
+      // what a hatchling glimpses from the cave mouth: the nearest farm or village, the nearest camp, the silhouette of a castle
+      for (const types of [['farm', 'village'], ['camp'], ['castle']]) {
+        const n = HB.world.nearest(world, world.home.x, world.home.y, L => types.includes(L.type) && HB.world.canEnterRegion(state, L.regionId));
+        if (n && n.d <= 18) HB.world.sight(state, n.L, types[0] === 'castle' ? 1.2 : 1.6);
+      }
       const S = world.subregions[world.home.subId];
       game.chronicle(state, `${state.dragon.name} hatched in a cave in ${S.name}, in ${world.regions[0].name}. The world did not notice.`, 'birth');
       return state;

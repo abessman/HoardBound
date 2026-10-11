@@ -8,7 +8,7 @@ Honest accounting against the brief (`docs/BRIEF.md`) and the design conversatio
 | Requirement | Status | Notes |
 | --- | --- | --- |
 | Hatch weak in a small cave | Functional | Tier 0 stats, 4 cargo, 2.6 sight; intro explains where to go, what to avoid, how to get home. |
-| Seeded world, limited visibility, reachable openings | Functional | 200×200 world, ~800 locations, guaranteed camp/farm-or-village/castle near home; fog as cloud banks; rumours sketch faint terrain. |
+| Seeded world, limited visibility, reachable openings | Functional | 200×200 world, ~800 locations; at hatching the nearest farm/village, camp and castle are glimpsed and places within 10 leagues are rumoured (dotted ? marks you can fly to); tap anywhere to fly there and chart the land along the path; rest in the wild to recover stamina. |
 | Inspect target wealth, defences, distance, uncertainty | Functional | Preview fuzzes estimates by intel; shows "as of Year N"; explains *why* a place is dangerous. |
 | Visible travel costing time and stamina, revealing terrain | Functional | Straight-line flight in world coordinates, days pass, stamina by terrain/load/season/injury, pause/speed/turn-back, divert by selecting another target, roost when exhausted, road events (8 kinds). |
 | Animated side-view raids with choices | Functional | 320×180 pixel scene, auto-advance with slow-motion opportunities, 9 action kinds, alarm with staged escalations, projectiles, fire, capture, feed. |

@@ -1,26 +1,33 @@
-/* Fonts and text drawing. Bundled IM Fell English (OFL) with serif fallback. */
+/* Fonts and text drawing. Alegreya for reading, IM Fell English SC for display titles (all OFL), serif fallback. */
 (function () {
   const HB = globalThis.HB;
   if (!HB.isBrowser) return;
 
   const families = {
-    body: '"IM Fell English", "Palatino Linotype", Georgia, serif',
-    sc: '"IM Fell English SC", "Palatino Linotype", Georgia, serif',
+    body: 'Alegreya, "Palatino Linotype", Georgia, serif',
+    sc: '"Alegreya SC", "Palatino Linotype", Georgia, serif',
+    display: '"IM Fell English SC", "Alegreya SC", Georgia, serif',
     mono: '"Courier New", monospace',
   };
 
   const text = HB.text = {
     families,
+    MIN_SIZE: 13,
     ready: false,
     wrapCache: new Map(),
     font(size, opts = {}) {
       const fam = families[opts.family || 'body'];
-      return `${opts.italic ? 'italic ' : ''}${opts.weight ? opts.weight + ' ' : ''}${Math.round(size)}px ${fam}`;
+      // readability floor: nothing renders below MIN_SIZE virtual pixels
+      const px = Math.max(text.MIN_SIZE, Math.round(size));
+      return `${opts.italic ? 'italic ' : ''}${opts.weight ? opts.weight + ' ' : ''}${px}px ${fam}`;
     },
     async load() {
       const defs = [
-        ['IM Fell English', 'assets/fonts/IMFellEnglish-Regular.woff', { style: 'normal' }],
-        ['IM Fell English', 'assets/fonts/IMFellEnglish-Italic.woff', { style: 'italic' }],
+        ['Alegreya', 'assets/fonts/Alegreya-400.woff', { style: 'normal', weight: '400' }],
+        ['Alegreya', 'assets/fonts/Alegreya-400i.woff', { style: 'italic', weight: '400' }],
+        ['Alegreya', 'assets/fonts/Alegreya-700.woff', { style: 'normal', weight: '700' }],
+        ['Alegreya SC', 'assets/fonts/AlegreyaSC-400.woff', { style: 'normal', weight: '400' }],
+        ['Alegreya SC', 'assets/fonts/AlegreyaSC-700.woff', { style: 'normal', weight: '700' }],
         ['IM Fell English SC', 'assets/fonts/IMFellEnglishSC-Regular.woff', { style: 'normal' }],
       ];
       const loads = defs.map(([fam, url, desc]) => {

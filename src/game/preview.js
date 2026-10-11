@@ -9,6 +9,8 @@
       const isEnt = !!target.kind;
       const dist = Math.hypot(target.x - d.x, target.y - d.y);
       const est = HB.travel.estimate(state, target);
+      if (target.kind === 'point') return preview.describePoint(state, target, dist, est);
+      if (!isEnt && target.knowledge && !target.knowledge.seen && target.knowledge.rumored) return preview.describeRumor(state, target, dist, est);
       const f = target.factionId >= 0 ? W.factions[target.factionId] : null;
       let subtitle = isEnt ? (target.kind === 'caravan' ? `Merchant caravan${f ? ' of ' + f.name : ''}` : target.kind === 'hero' ? `Wandering hero, level ${target.level}${target.lance ? ' — carries a long lance' : ''}` : target.kind) : HB.fmt.cap(HB.world.locTypeName(target)) + (f ? ` of ${f.name}` : ' (no realm)');
       if (!isEnt && target.state && target.state !== 'normal') subtitle += ` · ${target.state}`;
@@ -50,6 +52,33 @@
       if (f) lines.push({ label: 'Realm', text: preview.moodText(f) });
       const flyError = HB.travel.canBegin(state, target);
       return { subtitle, lines, flyError };
+    },
+    costLines(state, dist, est) {
+      const W = state.world, d = state.dragon, lines = [];
+      lines.push({ label: 'Distance', text: `${Math.round(dist)} leagues · about ${Math.max(1, Math.round(est.there.days))} day${Math.round(est.there.days) !== 1 ? 's' : ''} of flight` });
+      lines.push({ label: 'Stamina', text: `${Math.ceil(est.there.stamina)} to get there, ${Math.ceil(est.back.stamina)} to fly home (you have ${Math.floor(d.stamina)})`, tone: est.canReturn ? 'good' : est.canReach ? 'warn' : 'bad' });
+      if (est.blocked) lines.push({ text: `Storms wall off ${W.regions[est.blocked.regionId].name}. You are too small to cross them.`, tone: 'bad' });
+      else if (est.canReach && !est.canReturn) lines.push({ text: 'You could get there, but would have to rest in the wild before flying home.', tone: 'warn' });
+      return lines;
+    },
+    describePoint(state, P, dist, est) {
+      const W = state.world, lines = preview.costLines(state, dist, est);
+      const rid = HB.world.regionAt(W, P.x, P.y);
+      const rumor = state.know.rumor[Math.round(P.y) * W.w + Math.round(P.x)];
+      let subtitle;
+      if (P.known) subtitle = `${HB.fmt.cap(P.terrain)}, already charted`;
+      else if (rumor) subtitle = `Uncharted ${P.terrain}, known only from rumour`;
+      else subtitle = 'Blank parchment: nobody has told you what lies here';
+      lines.push({ text: P.known ? 'Fly here to land, rest, or look around.' : 'Flying there charts the land along your path. A hatchling sees only a few leagues; larger dragons see much farther.', italic: true });
+      if (rid >= 0 && W.regions[rid].tier > state.dragon.tier && !est.blocked) lines.push({ text: `This lies in ${W.regions[rid].name}, behind storms a dragon your size cannot cross.`, tone: 'bad' });
+      return { subtitle, lines, flyError: HB.travel.canBegin(state, P) };
+    },
+    describeRumor(state, L, dist, est) {
+      const W = state.world, lines = preview.costLines(state, dist, est);
+      const f = L.factionId >= 0 ? W.factions[L.factionId] : null;
+      lines.push({ label: 'Rumour', text: `Travellers speak of ${HB.fmt.a(HB.world.locTypeName(L))} here${f ? ` in the lands of ${f.name}` : ''}. Its wealth and defences are unknown until you see it.` });
+      lines.push({ text: 'Fly there to see it for yourself; you can still turn back.', italic: true });
+      return { subtitle: `Rumoured ${HB.world.locTypeName(L)}`, lines, flyError: HB.travel.canBegin(state, L) };
     },
     defenceText(state, target, def, f, stale) {
       const bits = [];

@@ -18,7 +18,7 @@ Saves live in the browser's localStorage (autosave on every return home and afte
 
 | Where | Mouse / touch | Keyboard | Gamepad |
 | --- | --- | --- | --- |
-| Map | click a place or caravan to inspect; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **C** chronicle, **F** realms, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
+| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **C** chronicle, **F** realms, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
 | Flight | Pause / Speed / Turn back buttons | **P** pause, hold **Shift** fast, hold **Ctrl** slow | RB fast, LB slow |
 | Raid | click a highlighted target or a chip in the bar; click an action | **1–9** actions, **Space** pass, **Q** next target, **W** withdraw, **Shift** fast | A first action, X pass, B withdraw |
 | Panels | click | arrows move focus, Enter select, Esc back | d-pad / stick, A, B |
@@ -66,4 +66,6 @@ All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/
 
 Data tables are plain objects: `src/data/treasures.js` (artifacts and loot), `src/data/upgrades.js` (lair, workers), `src/data/encounters.js` (decision cards), `src/data/events.js` (road events), `src/game/raid/templates.js` (scene layouts). Tuning numbers for tiers live in `src/game/state.js` (`HB.TIERS`) and `src/game/stats.js` (`HB.CATEGORIES`). See `docs/FEATURE_STATUS.md` for what is complete, simplified or deferred.
 
-Fonts: IM Fell English (OFL) in `assets/fonts`.
+Fonts (OFL, in `assets/fonts`): Alegreya and Alegreya SC for text, IM Fell English SC for display titles.
+
+Starting a new Claude Code session? `CLAUDE.md` is the handoff: architecture rules, where things live, how to verify, owner preferences and the backlog.

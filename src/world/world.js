@@ -4,7 +4,7 @@
   const T = () => HB.TERRAIN;
 
   HB.TIER_NAMES = ['hatchling', 'young dragon', 'adult dragon', 'ancient dragon'];
-  HB.TIER_VISION = [2.6, 4.5, 7, 11];
+  HB.TIER_VISION = [3.2, 4.8, 7, 11];
 
   const world = HB.world = {
     /** create knowledge arrays for a world */
@@ -59,10 +59,20 @@
       let n = 0;
       for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
         if ((x - cx) ** 2 + (y - cy) ** 2 > radius * radius) continue;
-        const i = y * W.w + x; if (!K.revealed[i] && !K.rumor[i]) { K.rumor[i] = 1; n++; }
+        const i = y * W.w + x;
+        if (K.revealed[i]) continue;
+        if (!K.rumor[i]) { K.rumor[i] = 1; n++; }
+        const lid = W.locAt[i];
+        if (lid >= 0) { const L = W.locations[lid]; if (!L.knowledge.seen) L.knowledge.rumored = true; }
       }
       return n;
     },
+    /** glimpse a location from afar: it becomes seen and a small clearing around it is revealed */
+    sight(state, L, radius = 1.6) { const res = world.reveal(state, L.x, L.y, radius); L.knowledge.seen = true; return res; },
+    /** re-derive rumoured locations from the rumour layer (for older saves) */
+    syncRumors(state) { const W = state.world, K = state.know; for (const L of W.locations) if (!L.knowledge.seen && K.rumor[L.cell]) L.knowledge.rumored = true; },
+    /** a place the player knows about: seen, or known by rumour */
+    known(L) { return !!(L.knowledge && (L.knowledge.seen || L.knowledge.rumored)); },
     knownFraction(state, subId) { const S = state.world.subregions[subId]; return S.landCells ? state.know.subRevealedCount[subId] / S.landCells : 0; },
     regionKnownFraction(state, rid) { const R = state.world.regions[rid]; return R.landCells ? state.know.regionRevealedCount[rid] / R.landCells : 0; },
     /** locations within radius (euclid), optionally filtered */

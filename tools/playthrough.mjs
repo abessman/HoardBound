@@ -36,6 +36,12 @@ try {
   await page.waitForTimeout(600); await shot('03-intro');
   await ev(`while (HB.scenes.top() instanceof HB.IntroScene) HB.scenes.pop();`);
   await page.waitForTimeout(400); await shot('04-map-start');
+  // tap empty land: should offer a point to explore
+  await page.mouse.click(860, 260); await page.waitForTimeout(300);
+  const tapped = await ev(`const s = HB.flow.map.selected; return s ? (s.kind || s.type) + ':' + s.name : 'nothing';`);
+  console.log('tap on empty map selects:', tapped);
+  await shot('04b-explore-point');
+  await ev(`HB.flow.map.selected = null;`);
   // select the nearest easy target and open its preview
   const target = await ev(`const st=HB.state, m=HB.flow.map; const near=HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, 12, L=>L.knowledge.seen && ['farm','village','camp'].includes(L.type)); const L=near[0].L; m.select(L); m.centerOn(L.x+0.5, L.y+0.5, 1.9, true); return {name:L.name, type:L.type, d:near[0].d};`);
   console.log('target', target);

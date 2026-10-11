@@ -30,7 +30,7 @@
       // dragon
       drawInkDragon(ctx, HB.W / 2, 215, 1, this.t);
       // title
-      HB.text.draw(ctx, 'HoardBound', HB.W / 2, 330, { size: 92, family: 'sc', align: 'center', color: p.ink, spacing: 6, shadow: 'rgba(90,60,20,0.35)' });
+      HB.text.draw(ctx, 'HoardBound', HB.W / 2, 330, { size: 92, family: 'display', align: 'center', color: p.ink, spacing: 6, shadow: 'rgba(90,60,20,0.35)' });
       HB.text.draw(ctx, 'A dragon’s life, told in treasure', HB.W / 2, 364, { size: 22, italic: true, align: 'center', color: p.inkSoft });
       this.ui.draw(ctx);
       HB.text.draw(ctx, 'v' + HB.VERSION, 30, HB.H - 28, { size: 13, color: p.inkSoft });

@@ -26,25 +26,54 @@
     canBegin(state, L) {
       if (!(state.phase === 'home' || state.phase === 'planning' || state.phase === 'traveling' || state.phase === 'returning')) return 'You cannot fly right now.';
       if (L.type === 'lair' && state.phase === 'home') return 'You are already home.';
+      if (L.kind === 'point' && Math.hypot(L.x - state.dragon.x, L.y - state.dragon.y) < 1) return 'You are already here.';
       const e = travel.estimate(state, L);
-      if (e.blocked) { const R = state.world.regions[e.blocked.regionId]; return `The storms over ${R.name} will not let a ${HB.TIERS[state.dragon.tier].name.toLowerCase()} pass. Grow, or find a way through.`; }
-      if (!e.canReach) return `Too far: that flight needs ${Math.ceil(e.there.stamina)} stamina and you have ${Math.floor(state.dragon.stamina)}.`;
+      if (e.blocked) { const R = state.world.regions[e.blocked.regionId]; return `The storms over ${R.name} will not let ${HB.fmt.a(HB.TIERS[state.dragon.tier].name.toLowerCase())} pass. Grow, or find a way through.`; }
+      // home is always reachable: if stamina runs out you come down, rest, and fly on
+      if (!e.canReach && L.type !== 'lair') return `Too far: that flight needs ${Math.ceil(e.there.stamina)} stamina and you have ${Math.floor(state.dragon.stamina)}. Rest first, or pick somewhere closer.`;
       return null;
+    },
+    /** an arbitrary map point to explore toward */
+    makePoint(state, x, y) {
+      const W = state.world;
+      const cx = HB.clamp(x, 0, W.w - 1), cy = HB.clamp(y, 0, W.h - 1);
+      const sid = HB.world.subAt(W, cx, cy);
+      const known = HB.world.isRevealed(state, cx, cy);
+      const S = sid >= 0 ? W.subregions[sid] : null;
+      const terr = HB.TERRAIN_NAMES[HB.world.terrainAt(W, cx, cy)];
+      const name = known && S ? S.name : known ? HB.fmt.cap(terr) : 'Unexplored land';
+      return { kind: 'point', id: 'pt', x: cx, y: cy, name, terrain: terr, known };
+    },
+    /** rest where you are (away from home): days pass, stamina returns */
+    restInWild(state, map) {
+      const d = state.dragon, W = state.world;
+      if (state.phase !== 'planning') return 'You can only rest when you are on the ground.';
+      const days = 2;
+      HB.game.advanceDays(state, days); if (HB.worldsim) HB.worldsim.tickDays(state, days);
+      d.stamina = Math.min(d.stats.maxStamina, Math.round(d.stamina + d.stats.maxStamina * 0.5));
+      d.health = Math.min(d.stats.maxHealth, Math.round(d.health + d.stats.maxHealth * 0.1));
+      const fid = HB.world.factionAt(W, d.x, d.y);
+      if (fid >= 0) state.lair.attention = (state.lair.attention || 0) + 0.5;
+      const sid = HB.world.subAt(W, d.x, d.y);
+      const msg = `You rest two days in ${sid >= 0 ? W.subregions[sid].name : 'the wilds'}. Stamina ${Math.floor(d.stamina)}/${d.stats.maxStamina}.`;
+      if (map) map.showToast(msg, 3);
+      return msg;
     },
     begin(state, L, map) {
       const d = state.dragon;
       const home = L.type === 'lair';
       state.phase = home ? 'returning' : 'traveling';
-      const isEnt = !!L.kind;
-      state.travel = { targetKind: isEnt ? 'ent' : 'loc', targetId: L.id, fromX: d.x, fromY: d.y, toX: L.x, toY: L.y, traveled: 0, length: Math.hypot(L.x - d.x, L.y - d.y), paused: false, speedMul: HB.settings.travelSpeed || 1, cellAcc: 0, dayAcc: 0, lastEventAt: 0, eventsSeen: [], startDay: state.time.totalDays };
+      const isPt = L.kind === 'point', isEnt = !!L.kind && !isPt;
+      state.travel = { targetKind: isPt ? 'pt' : isEnt ? 'ent' : 'loc', point: isPt ? L : null, targetId: L.id, fromX: d.x, fromY: d.y, toX: L.x, toY: L.y, traveled: 0, length: Math.hypot(L.x - d.x, L.y - d.y), paused: false, speedMul: HB.settings.travelSpeed || 1, cellAcc: 0, dayAcc: 0, lastEventAt: 0, eventsSeen: [], startDay: state.time.totalDays };
       d.facing = L.x >= d.x ? 1 : -1;
-      if (map) { map.selected = null; map.cam.tx = null; map.showToast(home ? 'Flying home' : `Flying to ${L.name}`); }
+      if (map) { map.selected = null; map.cam.tx = null; map.showToast(home ? 'Flying home' : isPt ? (L.known ? `Flying to ${L.name}` : 'Flying into unexplored land') : `Flying to ${L.name}`); }
       if (HB.audio) HB.audio.play('wing');
       return state.travel;
     },
     /** resolve the travel target (location or moving entity); null if it no longer exists */
     target(state) {
       const tr = state.travel; if (!tr) return null;
+      if (tr.targetKind === 'pt') return tr.point;
       if (tr.targetKind === 'ent') { const e = state.entities.find(x => x.id === tr.targetId && !x.dead); return e || null; }
       return state.world.locations[tr.targetId] || null;
     },
@@ -159,6 +188,16 @@
       if (!L) { state.phase = 'planning'; return; }
       d.x = L.x; d.y = L.y;
       if (L.type === 'lair') { travel.arriveHome(state, map); return; }
+      if (L.kind === 'point') {
+        state.phase = 'planning';
+        const res = HB.world.reveal(state, d.x, d.y, d.stats.vision + 0.5);
+        if (map) map.onReveal(res);
+        const sid = HB.world.subAt(state.world, d.x, d.y);
+        const found = res.locations.map(id => state.world.locations[id]);
+        if (map) map.showToast(found.length ? `You find ${HB.fmt.list(found.slice(0, 2).map(x => x.name))}${found.length > 2 ? ' and more' : ''}` : `You circle over ${sid >= 0 ? state.world.subregions[sid].name : 'empty country'}`, 3);
+        if (HB.save && HB.save.autosave) HB.save.autosave(state);
+        return;
+      }
       state.phase = 'encounter';
       const res = HB.world.reveal(state, d.x, d.y, d.stats.vision);
       if (map) map.onReveal(res);
