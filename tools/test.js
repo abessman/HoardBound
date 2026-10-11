@@ -110,6 +110,40 @@ ok(s.events.length >= 1, 'sleep produced events');
 const hoardNamed = state.hoard.items.filter(i => i.named).length;
 ok(hoardNamed <= 99, 'named artifacts tracked');
 
+section('hoard value vs room, strongroom, thieves');
+{
+  const saveHoard = { gold: state.hoard.gold, items: state.hoard.items.slice() }, saveUp = Object.assign({}, state.lair.upgrades);
+  const rng = HB.game.rng;
+  const mk = (name, cat, v, w) => HB.hoard.makeItem([name, cat, v, v, w], rng, 'test', 1);
+  state.hoard.gold = 500; state.hoard.items = [mk('a crown', 'royal', 2600, 1), mk('a ring', 'royal', 400, 0.1), mk('casks of wine', 'gold', 40, 3), mk('a mail hauberk', 'arms', 120, 2)];
+  state.hoard.items.push(HB.hoard.makeArtifact('emberheart', 'test', 1));
+  ok(Math.abs(HB.hoard.bulk(state) - (5 + 1 + 0.1 + 3 + 2 + 0.5)) < 1e-6, 'bulk counts coin per 100 and items by weight');
+  ok(HB.lair.storage(state).over === 0, 'a valuable but small hoard does not overflow the base chamber');
+  ok(HB.hoard.density(state) > 300, 'density reflects value per space');
+  state.lair.upgrades.strongroom = 1; HB.stats.recompute(state);
+  const locked = HB.hoard.protectedIds(state);
+  ok(locked.size === 3, 'strongroom level 1 locks 3 treasures');
+  ok([...locked].includes(state.hoard.items.find(i => i.named).id), 'named artifact is locked first');
+  // many plunders: locked items never leave; compact unlocked valuables go before bulky goods
+  const lockedIds = [...locked];
+  const sl = { mods: { defense: -999, ward: -999, thiefMod: 0 } };
+  let ringStolenFirst = 0, runs = 0;
+  for (let k = 0; k < 40; k++) {
+    state.hoard.gold = 500; state.hoard.items = [mk('a crown', 'royal', 2600, 1), mk('a ring', 'royal', 400, 0.1), mk('casks of wine', 'gold', 40, 3), mk('a mail hauberk', 'arms', 120, 2), mk('a jewelled chalice', 'gems', 450, 0.8), mk('a sapphire brooch', 'gems', 200, 0.3)];
+    state.hoard.items.push(HB.hoard.makeArtifact('emberheart', 'test', 1));
+    const lockNow = HB.hoard.protectedIds(state);
+    const before = state.hoard.items.map(i => i.id);
+    HB.sleep.thieves(state, sl, () => {}, rng);
+    const gone = before.filter(id => !state.hoard.items.some(i => i.id === id));
+    if (gone.some(id => lockNow.has(id))) { ok(false, 'thieves took a locked treasure'); break; }
+    const wine = state.hoard.items.find(i => i.name === 'casks of wine');
+    if (gone.length) { runs++; if (wine) ringStolenFirst++; }
+  }
+  ok(true, 'locked treasures never stolen in 40 plunders');
+  ok(runs === 0 || ringStolenFirst / runs > 0.8, 'plunderers prefer small valuables over bulky goods (' + ringStolenFirst + '/' + runs + ')');
+  state.hoard.gold = saveHoard.gold; state.hoard.items = saveHoard.items; state.lair.upgrades = saveUp; HB.stats.recompute(state);
+}
+
 section('save round trip');
 const json = HB.save.serialize(state);
 const st2 = HB.save.deserialize(json);

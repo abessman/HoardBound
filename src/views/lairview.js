@@ -35,8 +35,8 @@
     buildHoardTab() {
       const st = this.state, p = this.panel, ui = this.ui;
       const items = st.hoard.items.slice().sort((a, b) => (b.named ? 1 : 0) - (a.named ? 1 : 0) || b.value - a.value);
-      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 228, w: p.w - 32, h: p.h - 250, items, itemHeight: 40, emptyText: 'The hoard is empty. Everything you bring home will be counted here.',
-        drawItem: (ctx, it, x, y, w, h, s) => { HB.text.draw(ctx, HB.hoard.itemLabel(it), x + 10, y + 18, { size: 14, family: it.named ? 'sc' : 'body', maxWidth: w - 150 }); HB.text.draw(ctx, `${HB.hoard.catName(it.cat)} · from ${it.source || '?'}${it.year ? ', Year ' + it.year : ''}`, x + 10, y + 33, { size: 11, italic: true, color: HB.palette.inkSoft, maxWidth: w - 150 }); HB.text.draw(ctx, HB.fmt.int(it.value) + ' g', x + w - 12, y + 24, { size: 14, align: 'right' }); },
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 228, w: p.w - 32, h: p.h - 250, items, itemHeight: 40, emptyText: st.hoard.gold > 0 ? 'Only coin so far. Treasures you bring home will be listed here.' : 'The hoard is empty. Everything you bring home will be counted here.',
+        drawItem: (ctx, it, x, y, w, h, s) => { const lk = this._locked && this._locked.has(it.id); HB.text.draw(ctx, HB.hoard.itemLabel(it), x + 10, y + 18, { size: 14, family: it.named ? 'sc' : 'body', maxWidth: w - 150 }); HB.text.draw(ctx, `${lk ? 'In the strongroom · ' : ''}${HB.hoard.catName(it.cat)} · from ${it.source || '?'}${it.year ? ', Year ' + it.year : ''}`, x + 10, y + 33, { size: 11, italic: true, color: lk ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 150 }); HB.text.draw(ctx, HB.fmt.int(it.value) + ' g', x + w - 12, y + 24, { size: 14, align: 'right' }); },
         itemTooltip: (it) => it.named ? `${it.lore}\n\nEffect: ${describeEffect(it.effect)}` : `${HB.hoard.catName(it.cat)}: ${HB.CATEGORIES[it.cat] ? HB.CATEGORIES[it.cat].desc : ''}` }));
     }
     buildBuildTab() {
@@ -102,7 +102,30 @@
       ui.add(new HB.ui.Button({ x: p.x + 16, y: p.y + p.h - 80, w: 260, h: 40, label: sel ? `Sleep ${sel.label.toLowerCase()}` : 'Sleep', primary: true, size: 15, disabled: !sel || !sel.allowed, disabledReason: sel ? sel.reason : '', tooltip: 'Years pass. You grow; the world changes; thieves and hunters test the lair.', onClick: () => HB.confirm('Sleep?', `${sel.label}: ${this.sleepPreview.warning || 'The hoard is as safe as you have made it.'} Begin?`, () => { HB.scenes.pop(this); HB.sleep.begin(st, sel.years, HB.flow.map); }, { yes: 'Sleep', no: 'Not yet' }) }));
     }
     // ---------- update / draw
-    update(dt) { this.t += dt; this.ui.update(dt); }
+    update(dt) {
+      this.t += dt; this.ui.update(dt);
+      const ptr = HB.input.pointer, F = this.frame;
+      const bx = (ptr.x - F.x) * CW / F.w, by = (ptr.y - F.y) * CH / F.h;
+      const inFrame = HB.pointInRect(ptr.x, ptr.y, F.x, F.y, F.w, F.h);
+      const hit = inFrame ? (this.trophyRects || []).find(r => HB.pointInRect(bx, by, r.x, r.y, r.w, r.h)) : null;
+      this.hoverTrophy = hit || null;
+      if (ptr.released && !ptr.dragging && !this.ui.consumedPointer && inFrame) this.pinnedTrophy = hit && this.pinnedTrophy !== hit.item ? hit.item : null;
+      if (this.pinnedTrophy && !this.state.hoard.items.includes(this.pinnedTrophy)) this.pinnedTrophy = null;
+    }
+    get frame() { return { x: 20, y: 20, w: 690, h: 388 }; }
+    drawTrophyTip(ctx) {
+      const r = this.hoverTrophy && HB.input.usingPointer() && HB.input.lastDevice !== 'touch' ? this.hoverTrophy : this.pinnedTrophy ? (this.trophyRects || []).find(q => q.item === this.pinnedTrophy) : null;
+      if (!r) return;
+      const it = r.item, F = this.frame;
+      const lines = [`${HB.hoard.itemLabel(it)} — ${HB.fmt.int(it.value)} gold`, `${HB.hoard.catName(it.cat)} · from ${it.source || 'somewhere'}${it.year ? ', Year ' + it.year : ''} · ${HB.fmt.int(HB.hoard.itemDensity(it))} gold per space`];
+      if (it.lore) lines.push(it.lore);
+      lines.push(r.locked ? 'Locked in the strongroom: thieves cannot reach it.' : 'Within a thief’s reach.');
+      // place the card above the alcove so the pile stays visible
+      const text = lines.join('\n');
+      const th = HB.text.wrap(ctx, text, 280, 14).length * 14 * 1.3 + 14;
+      const sx = F.x + (r.x + r.w / 2) * F.w / CW, top = F.y + r.y * F.h / CH;
+      HB.ui.UI.drawTooltip(ctx, text, null, { x: sx - 150, y: Math.max(F.y + 30, top - th - 6) });
+    }
     draw(ctx) {
       const st = this.state, Pp = HB.palette;
       HB.parchment.fill(ctx, 0, 0, HB.W, HB.H, 'dark');
@@ -114,12 +137,16 @@
       HB.parchment.border(ctx, fx - 2, fy - 2, fw + 4, fh + 4, { width: 2, flourish: 10 });
       // dragon status under the cutaway
       this.drawStatus(ctx, fx, fy + fh + 16, fw);
+      // caption: how rich the hoard is for its size
+      const dens = HB.hoard.density(st);
+      if (dens > 0) HB.text.draw(ctx, `${HB.fmt.cap(HB.hoard.richnessName(st))} · ${HB.fmt.int(dens)} gold per space${this.trophyRects && this.trophyRects.length ? ' · tap a treasure on the wall' : ''}`, fx + 12, fy + 22, { size: 14, italic: true, color: HB.palette.parchmentLight, stroke: 'rgba(20,10,5,0.75)', strokeWidth: 3 });
       // right panel
       const p = this.panel;
       HB.parchment.panel(ctx, p.x, p.y, p.w, p.h, { tone: 'light', title: { hoard: 'The Hoard', build: 'The Lair', workers: 'Workers', captives: 'Captives', sleep: 'Sleep' }[this.tab] });
       const drawTab = { hoard: this.drawHoardTab, build: this.drawBuildTab, workers: this.drawWorkersTab, captives: this.drawCaptivesTab, sleep: this.drawSleepTab }[this.tab];
       drawTab.call(this, ctx);
       this.ui.draw(ctx);
+      this.drawTrophyTip(ctx);
     }
     drawStatus(ctx, x, y, w) {
       const st = this.state, d = st.dragon, s = d.stats, Pp = HB.palette;
@@ -132,7 +159,7 @@
       const cw = (w - 32) / 4;
       cols.forEach(([k, v], i) => { const cx = x + 16 + (i % 4) * cw, cy = y + 80 + Math.floor(i / 4) * 40; HB.text.draw(ctx, k, cx, cy, { size: 12, family: 'sc', color: Pp.inkSoft }); HB.text.draw(ctx, String(v), cx, cy + 20, { size: 17 }); });
       const next = HB.TIERS[d.tier + 1];
-      if (next) { const e = HB.stats.hoardEnergy(st); HB.text.draw(ctx, `To become a ${next.name.toLowerCase()}: age ${next.minAge} (now ${Math.floor(d.age)}) and a hoard worth ${HB.fmt.int(next.energy)} (now ${HB.fmt.int(e)}), then sleep.`, x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft, maxWidth: w - 32 }); }
+      if (next) { const e = HB.stats.hoardEnergy(st); HB.text.draw(ctx, `To become ${HB.fmt.a(next.name.toLowerCase())}: age ${next.minAge} (now ${Math.floor(d.age)}) and a hoard worth ${HB.fmt.int(next.energy)} (now ${HB.fmt.int(e)}), then sleep.`, x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft, maxWidth: w - 32 }); }
       else HB.text.draw(ctx, 'There is no older kind of dragon.', x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft });
     }
     drawHoardTab(ctx) {
@@ -144,7 +171,8 @@
       HB.text.draw(ctx, `${HB.fmt.int(st.hoard.gold)} gold in coin · ${HB.fmt.int(total)} gold worth in all`, p.x + 16, p.y + 44, { size: 14, maxWidth: p.w - 32 });
       const roomText = sto.over > 0
         ? `The hoard fills ${Math.ceil(sto.used)} spaces and the chamber has ${sto.space}. ${HB.fmt.int(sto.exposedValue)} gold worth lies outside it, where thieves can take it easily. Build a larger treasure chamber.`
-        : `The hoard fills ${Math.ceil(sto.used)} of the chamber’s ${sto.space} spaces. Room goes by size, not worth: 100 coins to a space, a sword about two, a ring almost none.`;
+        : `The hoard fills ${Math.ceil(sto.used)} of the chamber’s ${sto.space} spaces (100 coins to a space; items by size). At ${HB.fmt.int(HB.hoard.density(st))} gold per space it is ${HB.hoard.richnessName(st)}.`;
+      this._locked = HB.hoard.protectedIds(st);
       HB.text.paragraph(ctx, roomText, p.x + 16, p.y + 50, p.w - 32, { size: 13, italic: true, color: sto.over > 0 ? Pp.bad : Pp.inkSoft, maxLines: 2, lineHeight: 16 });
       let y = p.y + 92;
       const cats = Object.keys(HB.CATEGORIES);
@@ -203,6 +231,18 @@
       const floor = cy0 + ch;
       g.fillStyle = '#3b2a33'; g.fillRect(0, floor, CW, CH - floor);
       g.fillStyle = '#6a5460'; g.fillRect(cx0, floor, cw, 2);
+      // the hoard lights its own cave: glow grows with total worth, warms with richness
+      const total = HB.game.hoardValue(st), bulk = HB.hoard.bulk(st), rich = HB.hoard.richness(st);
+      const pxc = cx0 + cw * 0.45;
+      const glow = HB.clamp(Math.log10(1 + total) / 4.6, 0, 1) * (0.45 + rich * 0.55);
+      if (total > 0) {
+        g.save(); g.globalCompositeOperation = 'lighter';
+        const gr = g.createRadialGradient(pxc, floor - 10, 4, pxc, floor - 20, 40 + glow * 130);
+        gr.addColorStop(0, `rgba(255,196,90,${0.10 + glow * 0.32})`); gr.addColorStop(0.5, `rgba(220,150,60,${0.04 + glow * 0.14})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = gr; g.fillRect(0, 0, CW, CH); g.restore();
+      }
+      // trophy wall: alcoves carved along the back wall hold the most prized pieces
+      this.drawTrophyWall(g, cx0, cw, floor, chamber);
       // entrance tunnel on the left with daylight
       const ent = lv('entrance');
       g.fillStyle = '#5a4552'; g.fillRect(0, floor - 34, cx0 + 4, 34);
@@ -217,19 +257,15 @@
       if (lv('forge')) { px.blit(g, S.get('campfire'), cx0 + cw - 40, floor - 6); g.fillStyle = P.ironDark; g.fillRect(cx0 + cw - 30, floor - 6, 10, 4); g.fillRect(cx0 + cw - 28, floor - 9, 6, 3); }
       if (lv('larder')) { px.blit(g, S.get('barrel'), cx0 + cw - 56, floor - 6); px.blit(g, S.get('hay'), cx0 + cw - 64, floor - 5); }
       if (lv('sleeping')) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 10, floor - 50, 40, 50); g.fillStyle = '#4f3a46'; g.fillRect(cx0 + cw - 4, floor - 44, 30, 44); px.blit(g, S.get('gate', 12, 20), cx0 + cw - 12, floor - 20); }
-      // hoard pile: size by gold value
-      const total = HB.game.hoardValue(st), bulk = HB.hoard.bulk(st);
-      const pileW = HB.clamp(16 + Math.sqrt(bulk) * 9, 14, cw * 0.6), pileH = HB.clamp(3 + Math.sqrt(bulk) * 2.6, 3, 40);
-      const pxc = cx0 + cw * 0.45;
-      for (let i = 0; i < 4; i++) px.ellipse(g, pxc, floor - i * (pileH / 4), pileW * (1 - i * 0.22), pileH * 0.45 * (1 - i * 0.15), i % 2 ? P.gold : P.goldLight);
-      g.fillStyle = P.goldDark; for (let i = 0; i < Math.min(40, total / 40); i++) g.fillRect(pxc - pileW * 0.8 + rng.int(pileW * 1.6), floor - rng.int(pileH), 1, 1);
-      // named artifacts around the pile
-      const arts = st.hoard.items.filter(i => i.named).slice(0, 8);
-      arts.forEach((a, i) => { const sp = S.get(['crown', 'gem', 'book', 'sword', 'shield', 'goblet', 'key', 'scroll'][i % 8]); const ax = pxc - pileW * 0.9 + (i / Math.max(1, arts.length - 1)) * pileW * 1.8; px.blit(g, sp, Math.round(ax - sp.width / 2), floor - pileH * 0.3 - sp.height - (i % 2) * 3); });
-      // dragon on the pile
+      // hoard pile: footprint by bulk (how much room it takes), look by richness and by what it is made of
+      const pileW = bulk > 0 ? HB.clamp(16 + Math.sqrt(bulk) * 9, 14, cw * 0.6) : 0, pileH = bulk > 0 ? HB.clamp(3 + Math.sqrt(bulk) * 2.6, 3, 40) : 0;
+      if (bulk > 0) this.drawPile(g, pxc, floor, pileW, pileH, rich, rng);
+      // dragon on the pile, wearing or guarding its most prized piece
       const spec = HB.dragonArt.specOf(st);
       const pose = st.phase === 'sleeping' ? 'sleep' : 'idle';
-      HB.dragonArt.draw(g, spec, pose, Math.floor(this.t * 1.5) % 2, Math.round(pxc), Math.round(floor - pileH * 0.6 - 6 - spec.tier * 4), 1, 1);
+      const dx = Math.round(pxc), dy = Math.round(floor - pileH * 0.6 - 6 - spec.tier * 4);
+      const dsp = HB.dragonArt.draw(g, spec, pose, Math.floor(this.t * 1.5) % 2, dx, dy, 1, 1);
+      this.drawDragonsPrize(g, dsp, dx, dy, pose);
       // workers
       let wi = 0;
       for (const grp of st.lair.workers) { for (let k = 0; k < Math.min(grp.count, 6); k++) { const sp = S.get(HB.WORKER_TYPES[grp.type].sprite); const wx = 70 + ((wi * 23 + this.t * 6 * (grp.task === 'build' ? 1 : 0.3)) % (cw - 60)); px.blit(g, sp, Math.round(cx0 + wx), floor - sp.height, 1, wi % 2 === 0); if (grp.task === 'build') px.blit(g, S.get('pick'), Math.round(cx0 + wx + 6), floor - sp.height - 2); wi++; } }
@@ -240,10 +276,106 @@
       // torches
       for (let i = 0; i < 2 + chamber; i++) { const tx = cx0 + 30 + i * (cw / (2 + chamber)); g.fillStyle = P.wood; g.fillRect(tx, floor - 40, 1, 6); g.fillStyle = Math.floor(this.t * 8 + i) % 2 ? P.fire : P.fireHot; g.fillRect(tx - 1, floor - 43, 3, 3); }
       // vignette
-      const vg = g.createRadialGradient(cx0 + cw / 2, floor - 40, 40, cx0 + cw / 2, floor - 40, 220); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
+      const vg = g.createRadialGradient(cx0 + cw / 2, floor - 40, 40, cx0 + cw / 2, floor - 40, 220); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${0.55 - glow * 0.25})`); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
+      // twinkles over a rich pile (drawn last so they sparkle through the vignette)
+      if (bulk > 0) {
+        const tw = Math.round(1 + rich * 12 + glow * 4);
+        for (let i = 0; i < tw; i++) {
+          const speed = 0.6 + (i % 5) * 0.17, cyc = this.t * speed + i * 0.37, ph = cyc % 1;
+          if (ph > 0.35) continue;
+          const r2 = new HB.RNG(i * 977 + Math.floor(cyc));
+          const tx = Math.round(pxc + (r2.next() - 0.5) * pileW * 1.6), ty = Math.round(floor - r2.next() * pileH * 0.9 - 1);
+          const a = HB.clamp(1 - Math.abs(ph - 0.17) / 0.17, 0, 1);
+          g.fillStyle = `rgba(255,250,220,${a})`; g.fillRect(tx, ty, 1, 1);
+          if (a > 0.6) { g.fillRect(tx - 1, ty, 3, 1); g.fillRect(tx, ty - 1, 1, 3); }
+        }
+      }
+    }
+    /** the heap: base colour runs copper -> gold with richness; what sticks out shows what the hoard is made of */
+    drawPile(g, pxc, floor, pileW, pileH, rich, rng) {
+      const st = this.state, t = HB.stats.categoryTotals(st);
+      const k = HB.clamp((rich - 0.1) / 0.3, 0, 1); // plain goods are copper and bronze; coin and better is gold
+      const c1 = px.mix('#8a5a32', P.gold, k), c2 = px.mix('#b07a46', P.goldLight, k), cd = px.mix('#5e3c22', P.goldDark, k);
+      for (let i = 0; i < 4; i++) px.ellipse(g, pxc, floor - i * (pileH / 4), pileW * (1 - i * 0.22), pileH * 0.45 * (1 - i * 0.15), i % 2 ? c1 : c2);
+      const rx = () => pxc + (rng.next() - 0.5) * pileW * 1.5, ry = () => floor - rng.next() * pileH * 0.75;
+      g.fillStyle = cd; for (let i = 0; i < Math.min(50, 6 + pileW); i++) g.fillRect(Math.round(rx()), Math.round(ry()), 1, 1);
+      // gems: coloured pixels by the worth of gems held
+      const gemCols = [P.gem, P.gemRed, P.gemGreen, P.gemPurple];
+      for (let i = 0; i < Math.min(70, Math.round(t.gems / 25)); i++) { g.fillStyle = gemCols[i % 4]; g.fillRect(Math.round(rx()), Math.round(ry()), 1, 1); }
+      const stick = (id, n) => { for (let i = 0; i < n; i++) { const sp = S.get(id); const x = Math.round(rx() - sp.width / 2), y = Math.round(floor - pileH * (0.25 + rng.next() * 0.45) - sp.height * 0.6); px.blit(g, sp, x, y); } };
+      // plain goods sit around the base as sacks, crates and barrels
+      const goods = st.hoard.items.filter(i => i.cat === 'gold').length;
+      for (let i = 0; i < Math.min(6, goods); i++) { const sp = S.get(['sack', 'crate', 'barrel'][i % 3]); const side = i % 2 ? 1 : -1; px.blit(g, sp, Math.round(pxc + side * (pileW * 0.85 + 2 + Math.floor(i / 2) * 7) - sp.width / 2), floor - sp.height); }
+      stick('sword', Math.min(4, Math.floor(t.arms / 450)));
+      stick('helm', Math.min(2, Math.floor(t.arms / 1200)));
+      stick('book', Math.min(3, Math.floor(t.books / 450)));
+      stick('chalice', Math.min(3, Math.floor(t.royal / 700)));
+      stick('plate', Math.min(2, Math.floor(t.gold / 2500)));
+      stick('gemRed', Math.min(3, Math.floor(t.gems / 900)));
+    }
+    /** alcoves along the back wall for the most prized pieces; locked ones (strongroom) behind iron bars */
+    drawTrophyWall(g, cx0, cw, floor, chamber) {
+      const st = this.state;
+      const x0 = cx0 + 14, x1 = cx0 + cw - 40;
+      const slots = HB.clamp(Math.floor((x1 - x0) / 16), 0, 4 + chamber * 2);
+      const items = HB.hoard.trophies(st, slots).filter(it => it.named || it.value >= 150);
+      const locked = HB.hoard.protectedIds(st);
+      const strongN = HB.lair.values(st).strongroom || 0;
+      this.trophyRects = [];
+      const n = Math.max(items.length, Math.min(slots, strongN));
+      if (!n) return;
+      const step = (x1 - x0) / Math.max(1, slots);
+      const y = floor - 68, w = 12, h = 16;
+      for (let i = 0; i < n; i++) {
+        const x = Math.round(x0 + i * step + (step - w) / 2);
+        const it = items[i] || null;
+        const isLocked = it ? locked.has(it.id) : i < strongN;
+        // niche
+        g.fillStyle = '#2a1c22'; g.fillRect(x, y + 2, w, h - 2); g.fillRect(x + 1, y + 1, w - 2, 1); g.fillRect(x + 3, y, w - 6, 1);
+        g.fillStyle = '#6a5460'; g.fillRect(x - 1, y + h, w + 2, 2);
+        if (it) {
+          if (it.named) { const pulse = 0.25 + 0.2 * Math.sin(this.t * 2 + i); g.fillStyle = `rgba(255,220,120,${pulse})`; g.fillRect(x + 1, y + 3, w - 2, h - 3); }
+          const sp = S.get(trophySprite(it));
+          px.blit(g, sp, Math.round(x + (w - sp.width) / 2), y + h - sp.height);
+        }
+        if (isLocked) { g.fillStyle = P.ironDark; for (let b = 0; b < 4; b++) g.fillRect(x + 1 + b * 3, y + 1, 1, h - 1); g.fillStyle = P.iron; g.fillRect(x, y + 6, w, 1); g.fillStyle = P.goldDark; g.fillRect(x + w / 2 - 1, y + 7, 2, 2); }
+        if (it) this.trophyRects.push({ x: x - 1, y: y - 1, w: w + 2, h: h + 3, item: it, locked: isLocked });
+      }
+    }
+    /** the single most prized piece: a crown on the dragon's head, anything else under its claw */
+    drawDragonsPrize(g, dsp, dx, dy, pose) {
+      const top = HB.hoard.trophies(this.state, 1)[0];
+      if (!top || (!top.named && top.value < 200)) return;
+      const id = trophySprite(top), L = dsp.bodyLength;
+      const sc = 1 + Math.floor(this.state.dragon.tier / 2);
+      const sp = S.get(id);
+      if (id === 'crown' && pose !== 'sleep') px.blit(g, sp, Math.round(dx + 0.44 * L - sp.width * sc / 2), Math.round(dy - 0.42 * L - sp.height * sc + 1), sc);
+      else px.blit(g, sp, Math.round(dx + (pose === 'sleep' ? 0.42 : 0.32) * L), Math.round(dy + (pose === 'sleep' ? 0.22 : 0.39) * L - sp.height * sc), sc);
     }
   }
+  /** which sprite shows a treasure on the wall */
+  function trophySprite(it) {
+    const n = (it.name || '').toLowerCase();
+    if (/crown|circlet|regalia|diadem/.test(n)) return 'crown';
+    if (/signet/.test(n)) return 'signet';
+    if (/\bring\b/.test(n)) return 'ring';
+    if (/goblet|chalice|cup|comb/.test(n)) return 'chalice';
+    if (/shield/.test(n)) return 'shield';
+    if (/sword|axe|bow|blade|bane|lance/.test(n)) return 'sword';
+    if (/helm|hauberk|mail/.test(n)) return 'helm';
+    if (/book|psalter|bestiary|lexicon|ledger|spell/.test(n)) return 'book';
+    if (/chart|map|scroll|astrolabe/.test(n)) return 'scroll';
+    if (/sceptre|horn|banner/.test(n)) return 'sceptre';
+    if (/bell/.test(n)) return 'bell';
+    if (/lamp|lantern/.test(n)) return 'lantern';
+    if (/pearl/.test(n)) return 'pearl';
+    if (/ruby|ember|heart|sun/.test(n)) return 'gemRed';
+    if (/emerald/.test(n)) return 'gemGreen';
+    if (/plate|silver/.test(n)) return 'plate';
+    return { gems: 'gem', royal: 'crown', arms: 'sword', books: 'book', gold: 'coins', artifacts: 'gem' }[it.cat] || 'chest';
+  }
+  HB.trophySprite = trophySprite;
   function describeEffect(e) { if (!e) return 'none'; const parts = []; for (const k in e) { if (k === 'mul') for (const kk in e.mul) parts.push(`${kk} ×${e.mul[kk]}`); else parts.push(`${k} ${typeof e[k] === 'number' ? HB.fmt.signed(e[k]) : e[k]}`); } return parts.join(', '); }
-  function describeEffects(e) { if (e.space) return `room for ${HB.fmt.int(e.space)} spaces of treasure`; const names = { defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
+  function describeEffects(e) { if (e.space) return `room for ${HB.fmt.int(e.space)} spaces of treasure`; if (e.strongroom) return `locks away your ${e.strongroom} most prized treasures`; const names = { defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
   HB.LairScene = LairScene;
 })();

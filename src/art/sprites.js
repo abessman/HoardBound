@@ -321,6 +321,16 @@
   def('book', ['oooooo', 'occcco', 'oxxxxo', 'occcco', 'oooooo']);
   def('crown', ['G.G.G', 'GYGYG', 'GGGGG']);
   def('gem', ['.b.', 'bxb', '.b.']);
+  def('gemRed', ['.r.', 'rxr', '.r.']);
+  def('gemGreen', ['.e.', 'exe', '.e.']);
+  def('ring', ['.GG.', 'G..G', '.GG.'], {});
+  def('signet', ['.Gr', 'G.G', '.G.']);
+  def('sceptre', ['.Y.', 'YrY', '.G.', '.G.', '.G.', '.D.']);
+  def('bell', ['..o..', '.oGo.', '.GYG.', 'oGGGo', 'ooooo', '..o..']);
+  def('helm', ['.ooo.', 'oIIIo', 'oIdIo', 'oI.Io']);
+  def('plate', ['.ooooo.', 'oSSSSSo', 'oSIIISo', '.ooooo.']);
+  def('pearl', ['.o.', 'oxo', '.o.']);
+  def('chalice', ['oYGYo', '.oGo.', '..G..', '.oGo.']);
   def('sword', ['...I', '..Io', '.Io.', 'oo..']);
   def('shield', ['ooooo', 'oiCio', 'oiCio', '.oio.', '..o..']);
   def('pick', ['..oo', '.oW.', 'oW..', 'o...']);

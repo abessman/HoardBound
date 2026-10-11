@@ -8,7 +8,7 @@
     /** derived lair values from base + upgrades (+ staffed forge bonus) */
     values(state) {
       const v = Object.assign({}, HB.LAIR_BASE);
-      for (const u of HB.UPGRADES) { const lv = lair.level(state, u.id); for (let i = 0; i < lv; i++) for (const k in u.levels[i].effects) { if (k === 'space') v.space = Math.max(v.space, u.levels[i].effects[k]); else v[k] += u.levels[i].effects[k]; } }
+      for (const u of HB.UPGRADES) { const lv = lair.level(state, u.id); for (let i = 0; i < lv; i++) for (const k in u.levels[i].effects) { if (k === 'space' || k === 'strongroom') v[k] = Math.max(v[k], u.levels[i].effects[k]); else v[k] += u.levels[i].effects[k]; } }
       v.defense += state.lair.forgeBonus || 0;
       v.defense -= state.lair.decay || 0;
       // guards

@@ -75,6 +75,17 @@
     cargoWeight(state) { return HB.game.cargoWeight(state); },
     /** room the stored hoard takes in the cave: 100 coins per space, items by their size (weight) */
     bulk(state) { let b = state.hoard.gold / 100; for (const it of state.hoard.items) b += it.weight || 0; return b; },
+    /** gold worth per space: how rich the hoard is for its size */
+    density(state) { const b = hoard.bulk(state); return b > 0.01 ? HB.game.hoardValue(state) / b : 0; },
+    /** 0 (plain goods) .. 1 (jewelled) on a log scale; plain coin sits around 0.3 */
+    richness(state) { const d = hoard.density(state); return HB.clamp(Math.log(Math.max(1, d) / 40) / Math.log(1200 / 40), 0, 1); },
+    richnessName(state) { const d = hoard.density(state); return d <= 0 ? 'an empty cave' : d < 70 ? 'a heap of plain goods' : d < 180 ? 'a hoard of coin' : d < 500 ? 'a rich hoard' : 'a jewelled hoard'; },
+    /** gold worth per space of one item: what a thief would rather carry */
+    itemDensity(it) { return it.value / Math.max(0.1, it.weight || 0.1); },
+    /** the most prized pieces, in display order: named artifacts first, then by worth */
+    trophies(state, n) { return state.hoard.items.slice().sort((a, b) => (b.named ? 1 : 0) - (a.named ? 1 : 0) || b.value - a.value).slice(0, n === undefined ? state.hoard.items.length : n); },
+    /** ids of treasures locked in the strongroom (the top of the trophy order) */
+    protectedIds(state) { const n = HB.lair ? HB.lair.values(state).strongroom || 0 : 0; return new Set(hoard.trophies(state, n).map(i => i.id)); },
     canCarry(state, weight) { return HB.game.cargoWeight(state) + weight <= state.dragon.stats.capacity + 1e-6; },
     addCargo(state, loot) { state.cargo.gold += loot.gold || 0; for (const it of loot.items || []) state.cargo.items.push(it); },
     /** drop the heaviest cargo to shed `weight` — returns dropped list */

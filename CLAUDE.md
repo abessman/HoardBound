@@ -34,7 +34,7 @@ through decades while the world changes and remembers. Played on desktop and iPa
 
 ## Verify before pushing
 ```
-node tools/test.js              # 62 headless checks: world, travel, raid, economy, ransom, sleep, save, defeat
+node tools/test.js              # 69 headless checks: world, travel, raid, economy, ransom, sleep, save, defeat
 node tools/test.js other-seed   # try a second seed
 for f in src/**/*.js; do node --check $f; done   # syntax (class bodies: no commas between methods!)
 node tools/playthrough.mjs <outDir>              # scripted browser run with screenshots (Playwright, preinstalled Chromium)

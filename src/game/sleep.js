@@ -44,6 +44,9 @@
       const pThief = 1 - Math.pow(1 - t.thief, yrs), pHunt = 1 - Math.pow(1 - t.hunt, yrs);
       lines.push({ text: `Thieves: ${sleep.likelihood(pThief)} over the sleep. Hunters: ${sleep.likelihood(pHunt)}.`, tone: pHunt > 0.5 ? 'bad' : pThief > 0.5 ? 'warn' : 'good' });
       if (HB.lair.hoardOverflow(state) > 0) lines.push({ text: `${HB.fmt.int(HB.lair.hoardOverflow(state))} gold worth does not fit in the treasure chamber and lies where thieves can carry it off.`, tone: 'warn' });
+      { const locked = HB.hoard.protectedIds(state); const loose = state.hoard.items.filter(i => !locked.has(i.id) && HB.hoard.itemDensity(i) >= 300); const lockedN = locked.size;
+        if (loose.length) lines.push({ text: `Thieves go for small, valuable things first: ${HB.fmt.plural(loose.length, 'treasure')} worth ${HB.fmt.int(loose.reduce((a, b) => a + b.value, 0))} could fit in a thief’s sack${lockedN ? `; ${lockedN} more ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom` : '. A strongroom would lock the best of them away'}.`, tone: 'warn' });
+        else if (lockedN) lines.push({ text: `Your ${HB.fmt.plural(lockedN, 'most prized treasure')} ${lockedN === 1 ? 'is' : 'are'} locked in the strongroom.`, tone: 'good' }); }
       if (HB.keeper && HB.keeper.enabled(state) && years >= 5) lines.push({ text: 'The Keeper will tend you: expect one or two moments where its choices matter.' });
       const warning = pHunt > 0.5 && !t.sleepSafety ? `Hunters are likely (${sleep.likelihood(pHunt)}) and nothing stands between them and the sleeper.` : pThief > 0.6 ? 'Thieves are likely; the hoard is exposed.' : null;
       return { lines, warning, pThief, pHunt };
@@ -110,9 +113,17 @@
         state.dragon.prestige += 0.5;
         return null;
       }
+      const locked = HB.hoard.protectedIds(state);
+      const namedReachable = state.hoard.items.filter(i => i.named && !locked.has(i.id));
       const targeted = rng.chance(0.4) && state.hoard.items.some(i => i.named);
+      if (targeted && !namedReachable.length) {
+        log(`${name}, a thief out of ${f.name}, came for a named treasure and found it behind the strongroom’s bars. They left with nothing.`, 'thief');
+        f.learned.vaults++;
+        return null;
+      }
       if (targeted) {
-        const named = state.hoard.items.filter(i => i.named).sort((a, b) => b.value - a.value);
+        // a specialist: the most valuable thing for its size, among the first couple of candidates
+        const named = namedReachable.sort((a, b) => HB.hoard.itemDensity(b) - HB.hoard.itemDensity(a));
         const it = named[rng.int(Math.min(2, named.length))];
         HB.hoard.removeItem(state, it.id);
         const dest = sleep.stolenDestination(state, f, rng);
@@ -121,15 +132,25 @@
         log(`${name}, a thief out of ${f.name}, crept past the door and took ${it.name}.${dest ? ` It was carried to ${dest.name}.` : ''}`, 'thief', true);
         HB.game.chronicle(state, `${it.name} was stolen by ${name} of ${f.name}${dest ? ' and taken to ' + dest.name : ''}.`, 'theft');
       } else {
-        const over = HB.lair.hoardOverflow(state);
-        const frac = 0.06 + rng.next() * 0.16;
-        const loss = Math.round(Math.min(state.hoard.gold * 0.45, state.hoard.gold * frac + over * 0.35));
+        // plunderers carry what fits in their sacks, best value for its size first; treasure lying outside the chamber is easier to haul
+        const sto = HB.lair.storage(state);
+        let room = 2 + rng.next() * 4 + Math.min(10, sto.over * 0.5);
+        const taken = [];
+        // best value for its size first; coin (100 gold per space) competes with the items
+        const cands = state.hoard.items.filter(i => !i.named && !locked.has(i.id)).sort((a, b) => HB.hoard.itemDensity(b) - HB.hoard.itemDensity(a));
+        const takeItems = (pred) => { for (const it of cands) { if (taken.includes(it) || !pred(it) || (it.weight || 0.1) > room || taken.length >= 4) continue; room -= it.weight || 0.1; taken.push(it); } };
+        takeItems(it => HB.hoard.itemDensity(it) >= 100);
+        const coinCap = Math.round(state.hoard.gold * 0.45);
+        const loss = Math.round(Math.min(coinCap, Math.max(0, room) * 100));
+        room -= loss / 100;
+        takeItems(() => true);
+        for (const it of taken) HB.hoard.removeItem(state, it.id);
         state.hoard.gold -= loss;
-        let itemLoss = null;
-        if (rng.chance(0.5)) { const cands = state.hoard.items.filter(i => !i.named); if (cands.length) { itemLoss = cands[rng.int(cands.length)]; HB.hoard.removeItem(state, itemLoss.id); } }
         HB.stats.recompute(state);
-        log(`Thieves out of ${f.name} led by ${name} plundered the hoard: ${HB.fmt.int(loss)} gold${itemLoss ? ' and ' + HB.hoard.itemLabel(itemLoss) : ''} gone.`, 'thief', true);
-        HB.game.chronicle(state, `Thieves from ${f.name} took ${HB.fmt.int(loss)} gold from the sleeping dragon’s hoard.`, 'theft');
+        const what = taken.map(i => HB.hoard.itemLabel(i)).concat(loss ? [`${HB.fmt.int(loss)} gold`] : []);
+        const worth = loss + taken.reduce((a, b) => a + b.value, 0);
+        log(`Thieves out of ${f.name} led by ${name} plundered the hoard: ${what.length ? HB.fmt.list(what) : 'nothing worth the climb'} gone${taken.length ? ' — small things, worth the carrying' : ''}.`, 'thief', worth > 0);
+        HB.game.chronicle(state, `Thieves from ${f.name} took ${HB.fmt.int(worth)} gold worth from the sleeping dragon’s hoard.`, 'theft');
       }
       f.learned.vaults++;
       return null;
