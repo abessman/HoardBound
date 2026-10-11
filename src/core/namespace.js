@@ -4,7 +4,9 @@
 (function () {
   const root = typeof globalThis !== 'undefined' ? globalThis : window;
   const HB = root.HB = root.HB || {};
-  HB.VERSION = '0.1.0';
+  // Bump on every update pushed (see CHANGELOG.md): minor for a feature update, patch for fixes and tweaks.
+  HB.VERSION = '0.6.1';
+  HB.VERSION_DATE = '2026-10-11';
   HB.W = 1280;            // virtual resolution
   HB.H = 720;
   HB.PX_W = 320;          // pixel-scene buffer

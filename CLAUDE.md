@@ -75,6 +75,11 @@ sprite sheet; `?scene=map&seed=…` jumps straight into a world.
 6. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
 7. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
 
+## Versioning (keep doing this)
+Every update you push bumps `HB.VERSION` and `HB.VERSION_DATE` in `src/core/namespace.js` (shown on the title screen
+and in the in-game menu) and adds an entry to `CHANGELOG.md`. Pre-1.0: minor for a feature update, patch for fixes
+and tweaks. Always tell the owner which version they are on after each update.
+
 ## Git
 Work on the branch named in the session instructions; commit with clear messages; push when a change is verified.
 Do not open PRs unless asked.

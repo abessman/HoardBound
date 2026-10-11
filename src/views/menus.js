@@ -19,7 +19,7 @@
       this.ui.focusFirst();
     }
     update(dt) { this.ui.update(dt); }
-    draw(ctx) { ctx.fillStyle = 'rgba(15,8,4,0.5)'; ctx.fillRect(0, 0, HB.W, HB.H); HB.parchment.panel(ctx, this.x, this.y, this.w, this.h, { title: 'Menu', tone: 'light' }); this.ui.draw(ctx); }
+    draw(ctx) { ctx.fillStyle = 'rgba(15,8,4,0.5)'; ctx.fillRect(0, 0, HB.W, HB.H); HB.parchment.panel(ctx, this.x, this.y, this.w, this.h, { title: 'Menu', tone: 'light' }); HB.text.draw(ctx, `HoardBound version ${HB.VERSION}`, this.x + this.w / 2, this.y + this.h - 14, { size: 13, italic: true, align: 'center', color: HB.palette.inkSoft }); this.ui.draw(ctx); }
   }
   HB.MenuScene = MenuScene;
 

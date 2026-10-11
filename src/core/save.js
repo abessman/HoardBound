@@ -13,7 +13,7 @@
       const W = state.world;
       const locs = W.locations.map(L => { const o = { id: L.id }; for (const k of LOC_FIELDS) if (L[k] !== undefined) o[k] = L[k]; return o; });
       const data = {
-        v: 1, gen: GEN_VERSION, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
+        v: 1, ver: HB.VERSION, gen: GEN_VERSION, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
         renown: state.renown, reactions: state.reactions, problems: state.problems,

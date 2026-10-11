@@ -33,9 +33,10 @@
       HB.text.draw(ctx, 'HoardBound', HB.W / 2, 330, { size: 92, family: 'display', align: 'center', color: p.ink, spacing: 6, shadow: 'rgba(90,60,20,0.35)' });
       HB.text.draw(ctx, 'A dragon’s life, told in treasure', HB.W / 2, 364, { size: 22, italic: true, align: 'center', color: p.inkSoft });
       this.ui.draw(ctx);
-      HB.text.draw(ctx, 'v' + HB.VERSION, 30, HB.H - 28, { size: 13, color: p.inkSoft });
+      HB.text.draw(ctx, `Version ${HB.VERSION}`, 40, HB.H - 48, { size: 18, family: 'sc', color: p.ink });
+      HB.text.draw(ctx, HB.VERSION_DATE, 40, HB.H - 28, { size: 13, italic: true, color: p.inkSoft });
       const hint = HB.input.usingGamepad() ? 'Stick to move · A select · B back' : 'Arrows / mouse to choose · Enter to select · Esc back';
-      HB.text.draw(ctx, hint, HB.W - 30, HB.H - 28, { size: 13, align: 'right', color: p.inkSoft });
+      HB.text.draw(ctx, hint, HB.W - 40, HB.H - 28, { size: 13, align: 'right', color: p.inkSoft });
     }
   }
   HB.TitleScene = TitleScene;
