@@ -77,12 +77,15 @@
       const W = st.world;
       this.cam.x = HB.clamp(this.cam.x, -4, W.w + 4); this.cam.y = HB.clamp(this.cam.y, -4, W.h + 4);
       this.cam.zoom = HB.clamp(this.cam.zoom, 0.22, 3.2);
-      // hover + click on locations
-      this.hoverLoc = overUi ? null : this.locationAtScreen(ptr.x, ptr.y);
+      // hover + click on locations and moving entities
+      this.hoverEntity = overUi || !HB.worldsim ? null : HB.worldsim.entityAtScreen(this, st, ptr.x, ptr.y);
+      this.hoverLoc = overUi || this.hoverEntity ? null : this.locationAtScreen(ptr.x, ptr.y);
       if (ptr.released && !ptr.dragging && !overUi && HB.dist(ptr.x, ptr.y, ptr.clickX, ptr.clickY) < 10) {
-        if (this.hoverLoc) this.select(this.hoverLoc);
+        if (this.hoverEntity) this.select(this.hoverEntity);
+        else if (this.hoverLoc) this.select(this.hoverLoc);
         else if (this.selected && !this.previewContains(ptr.x, ptr.y)) this.selected = null;
       }
+      if (this.selected && this.selected.kind && this.selected.dead) this.selected = null;
       if (inp.pressed('nextTarget')) this.cycleTarget();
       if (this.selected && inp.pressed('confirm') && !this.ui.focus) this.flyToSelected();
       // fog animation
@@ -463,7 +466,7 @@
     }
     drawSelection(ctx) {
       const cam = this.cam, z = CELL * cam.zoom;
-      for (const [L, kind] of [[this.hoverLoc, 'hover'], [this.selected, 'sel']]) {
+      for (const [L, kind] of [[this.hoverLoc || this.hoverEntity, 'hover'], [this.selected, 'sel']]) {
         if (!L) continue;
         const p = this.worldToScreen(L.x + 0.5, L.y + 0.5);
         ctx.save(); ctx.strokeStyle = kind === 'sel' ? HB.palette.focus : HB.palette.inkSoft; ctx.lineWidth = kind === 'sel' ? 2.5 : 1.5; ctx.setLineDash(kind === 'sel' ? [] : [4, 3]);

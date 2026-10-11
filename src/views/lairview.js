@@ -1,0 +1,246 @@
+/* Lair view: pixel cutaway of the cave plus hoard / build / workers / captives / sleep panels. */
+(function () {
+  const HB = globalThis.HB;
+  if (!HB.isBrowser) return;
+  const px = HB.px, P = HB.px_palette, S = HB.sprites;
+  const CW = 320, CH = 180;
+
+  class LairScene {
+    constructor(state) { this.state = state; this.opaque = true; this.ui = new HB.ui.UI(); this.tab = 'hoard'; this.t = 0; this.buf = px.create(CW, CH); this.workerAnim = []; }
+    enter() { this.buildUi(); }
+    buildUi() {
+      const ui = this.ui; ui.clear(); this.tabWidgets = [];
+      const st = this.state;
+      const tabs = [['hoard', 'Hoard'], ['build', 'Build'], ['workers', 'Workers'], ['captives', 'Captives'], ['sleep', 'Sleep']];
+      const px0 = 730, pw = 536;
+      const tw = (pw - (tabs.length - 1) * 6) / tabs.length;
+      tabs.forEach(([id, label], i) => ui.add(new HB.ui.Button({ x: px0 + i * (tw + 6), y: 20, w: tw, h: 36, label, size: 15, primary: this.tab === id, onClick: () => { this.tab = id; this.buildUi(); } })));
+      ui.add(new HB.ui.Button({ x: 20, y: HB.H - 56, w: 180, h: 40, label: 'Back to map', size: 16, hotkey: 'cancel', hotkeyLabel: 'Esc', onClick: () => HB.scenes.pop(this) }));
+      ui.add(new HB.ui.Button({ x: 210, y: HB.H - 56, w: 180, h: 40, label: 'Rest a season', size: 16, tooltip: 'Pass 90 days at home: heal fully, let construction advance, let the world move. Workers are not paid until year’s end.', onClick: () => this.rest(90) }));
+      this.panel = { x: px0, y: 70, w: pw, h: HB.H - 90 };
+      const build = { hoard: this.buildHoardTab, build: this.buildBuildTab, workers: this.buildWorkersTab, captives: this.buildCaptivesTab, sleep: this.buildSleepTab }[this.tab];
+      build.call(this);
+      ui.onCancel = () => HB.scenes.pop(this);
+    }
+    rest(days) {
+      const st = this.state, d = st.dragon;
+      HB.game.advanceDays(st, days); if (HB.worldsim) HB.worldsim.tickDays(st, days);
+      d.health = d.stats.maxHealth; d.stamina = d.stats.maxStamina; d.injury = 0;
+      if (HB.ransom) { const ev = HB.ransom.tickDays(st, 0); }
+      HB.game.chronicle(st, `Rested at home for a season.`, 'lair');
+      this.buildUi();
+      if (HB.save) HB.save.autosave(st);
+    }
+    // ---------- tabs
+    buildHoardTab() {
+      const st = this.state, p = this.panel, ui = this.ui;
+      const items = st.hoard.items.slice().sort((a, b) => (b.named ? 1 : 0) - (a.named ? 1 : 0) || b.value - a.value);
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 228, w: p.w - 32, h: p.h - 250, items, itemHeight: 40, emptyText: 'The hoard is empty. Everything you bring home will be counted here.',
+        drawItem: (ctx, it, x, y, w, h, s) => { HB.text.draw(ctx, HB.hoard.itemLabel(it), x + 10, y + 18, { size: 14, family: it.named ? 'sc' : 'body', maxWidth: w - 150 }); HB.text.draw(ctx, `${HB.hoard.catName(it.cat)} · from ${it.source || '?'}${it.year ? ', Year ' + it.year : ''}`, x + 10, y + 33, { size: 11, italic: true, color: HB.palette.inkSoft, maxWidth: w - 150 }); HB.text.draw(ctx, HB.fmt.int(it.value) + ' g', x + w - 12, y + 24, { size: 14, align: 'right' }); },
+        itemTooltip: (it) => it.named ? `${it.lore}\n\nEffect: ${describeEffect(it.effect)}` : `${HB.hoard.catName(it.cat)}: ${HB.CATEGORIES[it.cat] ? HB.CATEGORIES[it.cat].desc : ''}` }));
+    }
+    buildBuildTab() {
+      const st = this.state, p = this.panel, ui = this.ui;
+      const items = HB.UPGRADES.map(u => ({ u, lv: HB.lair.level(st, u.id), can: HB.lair.canBuild(st, u.id), inProgress: st.lair.construction.find(c => c.id === u.id) }));
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 60, w: p.w - 32, h: p.h - 150, items, itemHeight: 58, onSelect: (it) => { this.selectedUpgrade = it; this.buildUi(); }, selected: this.selectedUpgrade ? items.findIndex(i => i.u.id === this.selectedUpgrade.u.id) : -1,
+        drawItem: (ctx, it, x, y, w, h) => { const next = it.u.levels[it.lv]; HB.text.draw(ctx, `${it.u.name}${it.lv ? ` (level ${it.lv}${it.lv >= it.u.levels.length ? ', complete' : ''})` : ''}`, x + 10, y + 20, { size: 15, family: 'sc' }); if (it.inProgress) { HB.text.draw(ctx, `Under construction: ${Math.round(it.inProgress.progress * 100)}% · about ${Math.ceil((1 - it.inProgress.progress) * it.inProgress.days / Math.max(0.2, HB.lair.buildRate(st)))} days left`, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.warn }); } else if (next) HB.text.draw(ctx, `Next: ${HB.fmt.int(next.cost)} gold · ~${HB.lair.estimateDays(st, next.days)} days · ${describeEffects(next.effects)}`, x + 10, y + 40, { size: 12, italic: true, color: it.can.ok ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 20 }); else HB.text.draw(ctx, it.u.mitigates, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.inkSoft }); },
+        itemTooltip: (it) => `${it.u.desc}\n\nMitigates: ${it.u.mitigates}${it.can.ok ? '' : '\n\n' + it.can.reason}` }));
+      const sel = this.selectedUpgrade && items.find(i => i.u.id === this.selectedUpgrade.u.id);
+      if (sel) {
+        const pv = HB.lair.buildPreview(st, sel.u.id);
+        ui.add(new HB.ui.Button({ x: p.x + 16, y: p.y + p.h - 80, w: 220, h: 40, label: `Build ${sel.u.name}`, primary: true, size: 15, disabled: !sel.can.ok, disabledReason: sel.can.reason || '', tooltip: pv ? `Cost ${HB.fmt.int(pv.cost)} gold → ${HB.fmt.int(pv.balance)} left. ${pv.diff.length ? 'Hoard power changes: ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') + '.' : 'No change to your power.'} About ${pv.days} days with your current workers.` : '', onClick: () => { const r = HB.lair.build(st, sel.u.id); if (!r.ok) HB.notice('Cannot build', r.reason); else HB.notice('Work begins', `${sel.u.name}: ${HB.fmt.int(pv.cost)} gold spent. ${pv.diff.length ? 'Your hoard’s power shifts: ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') + '.' : ''} The workers reckon about ${pv.days} days.`); this.buildUi(); } }));
+        this.buildPreviewInfo = pv;
+      }
+    }
+    buildWorkersTab() {
+      const st = this.state, p = this.panel, ui = this.ui;
+      const groups = st.lair.workers;
+      const taskOpts = Object.keys(HB.WORKER_TASKS).map(k => ({ label: HB.WORKER_TASKS[k].name, value: k }));
+      let y = p.y + 50;
+      HB.text.draw(HB.app.ctx, '', 0, 0);
+      this.workerRows = [];
+      for (const g of groups) {
+        const T = HB.WORKER_TYPES[g.type];
+        const tg = ui.add(new HB.ui.Toggle({ x: p.x + 16, y, w: p.w - 170, h: 30, label: `${g.count} ${g.count === 1 ? T.single : T.name.toLowerCase()} (${g.status}, loyalty ${Math.round(g.loyalty)})`, value: g.task, onChange: (v) => { g.task = v; }, tooltip: `${T.desc}\nFrom ${g.from}. ${g.status === 'enslaved' ? 'Unpaid; unrest grows each year: sabotage, escape, revolt.' : `Wages ${g.count * T.wage} gold a year.`}` }));
+        tg.setOptions(taskOpts, g.task);
+        ui.add(new HB.ui.Button({ x: p.x + p.w - 146, y, w: 130, h: 30, label: g.status === 'enslaved' ? 'Free them' : 'Dismiss', size: 13, onClick: () => { HB.lair.dismiss(st, g); this.buildUi(); } }));
+        y += 38;
+      }
+      if (!groups.length) { this.workersEmptyY = y; y += 30; }
+      this.offersY = y + 16;
+      const offers = HB.lair.hireOffers(st);
+      this.offerList = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: this.offersY + 24, w: p.w - 32, h: p.h - (this.offersY - p.y) - 60, items: offers, itemHeight: 52, emptyText: 'No crews will come yet.',
+        onSelect: (o) => { const r = HB.lair.hire(st, o); if (!r.ok) HB.notice('No deal', r.reason); else { HB.notice('Hired', `${o.count} ${HB.WORKER_TYPES[o.type].name.toLowerCase()} from ${o.from} arrive for ${o.fee} gold. They expect ${o.count * o.wage} gold a year.`); this.buildUi(); } },
+        drawItem: (ctx, o, x, y, w, h) => { HB.text.draw(ctx, `${o.count} ${HB.WORKER_TYPES[o.type].name.toLowerCase()} from ${o.from}`, x + 10, y + 20, { size: 14, family: 'sc', color: o.available ? HB.palette.ink : HB.palette.inkSoft }); HB.text.draw(ctx, o.available ? `Fee ${o.fee} gold, then ${o.count * o.wage} a year. Click to hire.` : o.reason, x + 10, y + 38, { size: 12, italic: true, color: o.available ? HB.palette.good : HB.palette.inkSoft, maxWidth: w - 20 }); },
+        itemTooltip: (o) => HB.WORKER_TYPES[o.type].desc }));
+    }
+    buildCaptivesTab() {
+      const st = this.state, p = this.panel, ui = this.ui;
+      const caps = st.lair.captives;
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 50, w: p.w - 32, h: 200, items: caps, itemHeight: 46, emptyText: 'No captives. Seize nobles, heirs and craftsmen during raids.', selected: this.selectedCaptive ? caps.indexOf(this.selectedCaptive) : -1, onSelect: (c) => { this.selectedCaptive = c; this.buildUi(); },
+        drawItem: (ctx, c, x, y, w, h) => { HB.text.draw(ctx, c.name, x + 10, y + 19, { size: 14, family: 'sc' }); HB.text.draw(ctx, `${HB.CAPTIVE_KINDS[c.kind] ? HB.CAPTIVE_KINDS[c.kind].label : c.kind} from ${c.from}${c.pending ? ` · demand out, ${Math.max(1, Math.ceil(c.pending.daysLeft))} days` : ''}`, x + 10, y + 36, { size: 12, italic: true, color: HB.palette.inkSoft }); } }));
+      const c = this.selectedCaptive && caps.includes(this.selectedCaptive) ? this.selectedCaptive : null;
+      if (c && HB.ransom) {
+        const { opts, rescueRisk } = HB.ransom.options(st, c);
+        let y = p.y + 300;
+        this.captiveInfoY = p.y + 258; this.captiveRescue = rescueRisk;
+        for (const o of opts) { ui.add(new HB.ui.Button({ x: p.x + 16, y, w: p.w - 32, h: 34, label: o.label, size: 14, align: 'left', disabled: !!c.pending || !!o.disabled, disabledReason: c.pending ? 'A demand is already out' : 'Not possible for this captive', tooltip: o.desc, onClick: () => { const r = HB.ransom.demand(st, c, o); HB.notice('Demand sent', r.ok ? `Your terms go to ${HB.ransom.payerName(st, c)}. Expect an answer in about ${r.days} days. Risks: refusal, stalling, a short-weighted chest, or a rescue attempt on the lair (${Math.round(rescueRisk * 100)}%).` : r.reason); this.buildUi(); } })); y += 38; }
+        ui.add(new HB.ui.Button({ x: p.x + 16, y: y + 6, w: 200, h: 34, label: 'Release', size: 14, tooltip: 'Let them go. Trust with their realm grows; so does your reputation for mercy.', onClick: () => { HB.ransom.release(st, c); this.selectedCaptive = null; this.buildUi(); } }));
+        const trade = c.kind === 'smith' || c.kind === 'engineer' || c.kind === 'miner';
+        ui.add(new HB.ui.Button({ x: p.x + 226, y: y + 6, w: 200, h: 34, label: 'Put to work', size: 14, disabled: !trade, disabledReason: 'Only craftsmen and miners are useful as labour', tooltip: 'Forced labour: no wages, low loyalty, unrest over the years, and their realm will hate you for it.', onClick: () => { const r = HB.lair.enslave(st, c); if (!r.ok) HB.notice('No', r.reason); this.selectedCaptive = null; this.buildUi(); } }));
+      }
+    }
+    buildSleepTab() {
+      const st = this.state, p = this.panel, ui = this.ui;
+      if (!HB.sleep) { return; }
+      const opts = HB.sleep.durations(st);
+      this.sleepOpts = opts;
+      this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: p.y + 50, w: p.w - 32, h: 230, items: opts, itemHeight: 54, selected: this.sleepSel || 0, onSelect: (o, i) => { this.sleepSel = i; this.buildUi(); },
+        drawItem: (ctx, o, x, y, w, h) => { HB.text.draw(ctx, o.label, x + 10, y + 20, { size: 15, family: 'sc', color: o.allowed ? HB.palette.ink : HB.palette.inkSoft }); HB.text.draw(ctx, o.allowed ? o.summary : o.reason, x + 10, y + 40, { size: 12, italic: true, color: HB.palette.inkSoft, maxWidth: w - 20 }); } }));
+      const sel = opts[this.sleepSel || 0];
+      this.sleepPreview = sel ? HB.sleep.preview(st, sel.years) : null;
+      ui.add(new HB.ui.Button({ x: p.x + 16, y: p.y + p.h - 80, w: 260, h: 40, label: sel ? `Sleep ${sel.label.toLowerCase()}` : 'Sleep', primary: true, size: 15, disabled: !sel || !sel.allowed, disabledReason: sel ? sel.reason : '', tooltip: 'Years pass. You grow; the world changes; thieves and hunters test the lair.', onClick: () => HB.confirm('Sleep?', `${sel.label}: ${this.sleepPreview.warning || 'The hoard is as safe as you have made it.'} Begin?`, () => { HB.scenes.pop(this); HB.sleep.begin(st, sel.years, HB.flow.map); }, { yes: 'Sleep', no: 'Not yet' }) }));
+    }
+    // ---------- update / draw
+    update(dt) { this.t += dt; this.ui.update(dt); }
+    draw(ctx) {
+      const st = this.state, Pp = HB.palette;
+      HB.parchment.fill(ctx, 0, 0, HB.W, HB.H, 'dark');
+      HB.parchment.vignette(ctx, 0, 0, HB.W, HB.H, 0.45);
+      // cutaway frame
+      const fx = 20, fy = 20, fw = 690, fh = 388;
+      this.drawCutaway(this.buf.ctx);
+      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(this.buf, fx, fy, fw, fh); ctx.restore();
+      HB.parchment.border(ctx, fx - 2, fy - 2, fw + 4, fh + 4, { width: 2, flourish: 10 });
+      // dragon status under the cutaway
+      this.drawStatus(ctx, fx, fy + fh + 16, fw);
+      // right panel
+      const p = this.panel;
+      HB.parchment.panel(ctx, p.x, p.y, p.w, p.h, { tone: 'light', title: { hoard: 'The Hoard', build: 'The Lair', workers: 'Workers', captives: 'Captives', sleep: 'Sleep' }[this.tab] });
+      const drawTab = { hoard: this.drawHoardTab, build: this.drawBuildTab, workers: this.drawWorkersTab, captives: this.drawCaptivesTab, sleep: this.drawSleepTab }[this.tab];
+      drawTab.call(this, ctx);
+      this.ui.draw(ctx);
+    }
+    drawStatus(ctx, x, y, w) {
+      const st = this.state, d = st.dragon, s = d.stats, Pp = HB.palette;
+      HB.parchment.panel(ctx, x, y, w, HB.H - y - 76, { stains: false, vignette: 0.1, flourish: 0 });
+      HB.text.draw(ctx, `${d.name}, ${HB.TIERS[d.tier].name.toLowerCase()}, ${HB.game.ageString(st)}`, x + 16, y + 28, { size: 18, family: 'sc' });
+      HB.text.draw(ctx, HB.game.dateString(st), x + w - 16, y + 28, { size: 14, align: 'right', color: Pp.inkSoft });
+      const al = d.alignment; const alText = al < -60 ? 'a tyrant' : al < -25 ? 'feared and cruel' : al < 25 ? 'neither cruel nor kind' : al < 60 ? 'known for mercy' : 'a protector';
+      HB.text.draw(ctx, `Reputation: ${alText} (${al > 0 ? '+' : ''}${Math.round(al)}) · Prestige ${Math.round(s.prestige)} · Dominance ${Math.round(s.dominance)}`, x + 16, y + 50, { size: 13, italic: true, color: Pp.inkSoft });
+      const cols = [['Health', `${d.health}/${s.maxHealth}`], ['Defence', s.defense], ['Breath', s.breath], ['Bite', s.bite], ['Stamina', `${d.stamina}/${s.maxStamina}`], ['Carry', s.capacity], ['Sight', s.vision.toFixed(1)], ['Intel', s.intel.toFixed(1)]];
+      const cw = (w - 32) / 4;
+      cols.forEach(([k, v], i) => { const cx = x + 16 + (i % 4) * cw, cy = y + 80 + Math.floor(i / 4) * 40; HB.text.draw(ctx, k, cx, cy, { size: 12, family: 'sc', color: Pp.inkSoft }); HB.text.draw(ctx, String(v), cx, cy + 20, { size: 17 }); });
+      const next = HB.TIERS[d.tier + 1];
+      if (next) { const e = HB.stats.hoardEnergy(st); HB.text.draw(ctx, `To become a ${next.name.toLowerCase()}: age ${next.minAge} (now ${Math.floor(d.age)}) and a hoard worth ${HB.fmt.int(next.energy)} (now ${HB.fmt.int(e)}), then sleep.`, x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft, maxWidth: w - 32 }); }
+      else HB.text.draw(ctx, 'There is no older kind of dragon.', x + 16, y + 170, { size: 13, italic: true, color: Pp.inkSoft });
+    }
+    drawHoardTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette;
+      const totals = HB.stats.categoryTotals(st);
+      const v = HB.lair.values(st);
+      const total = HB.game.hoardValue(st);
+      HB.text.draw(ctx, `${HB.fmt.int(st.hoard.gold)} gold in coin · ${HB.fmt.int(total)} gold worth in all · cave holds ${HB.fmt.int(v.capacity)}`, p.x + 16, p.y + 44, { size: 14, maxWidth: p.w - 32 });
+      const over = HB.lair.hoardOverflow(st);
+      if (over > 0) HB.text.draw(ctx, `${HB.fmt.int(over)} gold worth overflows the chamber: exposed to thieves and only half as empowering. Build a larger treasure chamber.`, p.x + 16, p.y + 62, { size: 12, italic: true, color: Pp.bad, maxWidth: p.w - 32 });
+      let y = p.y + 84;
+      const cats = Object.keys(HB.CATEGORIES);
+      for (const c of cats) {
+        const def = HB.CATEGORIES[c];
+        const val = totals[c] || 0;
+        const bonusText = Object.keys(def.bonus).map(k => { const [cap, scale] = def.bonus[k]; const b = HB.stats.diminishing(val, cap, scale); return `${k === 'maxHealth' ? 'health' : k} +${b.toFixed(1)}`; }).join(', ');
+        HB.text.draw(ctx, def.name, p.x + 16, y + 14, { size: 13, family: 'sc' });
+        HB.text.draw(ctx, HB.fmt.int(val) + ' g', p.x + 190, y + 14, { size: 13, align: 'right' });
+        HB.text.draw(ctx, c === 'artifacts' ? `${st.hoard.items.filter(i => i.named).length} named` : bonusText || def.desc, p.x + 200, y + 14, { size: 12, italic: true, color: Pp.inkSoft, maxWidth: p.w - 216 });
+        y += 22;
+      }
+    }
+    drawBuildTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette;
+      const v = HB.lair.values(st);
+      HB.text.draw(ctx, `Defence ${Math.round(v.defense)} · concealment ${v.concealment} · traps ${v.traps} · guards ${Math.round(v.guardStrength)} · ward ${v.ward} · gold ${HB.fmt.int(st.hoard.gold)}`, p.x + 16, p.y + 44, { size: 13, maxWidth: p.w - 32 });
+      if (this.selectedUpgrade && this.buildPreviewInfo) { const pv = this.buildPreviewInfo; HB.text.draw(ctx, `Spend ${HB.fmt.int(pv.cost)} → ${HB.fmt.int(pv.balance)} left${pv.diff.length ? ' · ' + pv.diff.map(d => `${d.label} ${HB.fmt.signed(d.delta, 1)}`).join(', ') : ''} · ~${pv.days} days`, p.x + 250, p.y + p.h - 54, { size: 12, italic: true, color: pv.diff.some(d => d.delta < 0) ? Pp.warn : Pp.inkSoft, maxWidth: p.w - 270 }); }
+    }
+    drawWorkersTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette;
+      const rate = HB.lair.buildRate(st);
+      HB.text.draw(ctx, `Build rate ${rate.toFixed(1)}× (a lone dragon manages 0.2×). Guards add ${Math.round(HB.lair.guardStrength(st))} defence.`, p.x + 16, p.y + 40, { size: 13, maxWidth: p.w - 32 });
+      if (this.workersEmptyY) HB.text.draw(ctx, 'No workers. Hire crews below, or put captured craftsmen to work.', p.x + 16, this.workersEmptyY + 14, { size: 13, italic: true, color: Pp.inkSoft });
+      HB.text.draw(ctx, 'Crews for hire', p.x + 16, this.offersY + 14, { size: 14, family: 'sc' });
+    }
+    drawCaptivesTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette;
+      HB.text.draw(ctx, `${st.lair.captives.length} held. Each resolves once: ransom, release, or labour.`, p.x + 16, p.y + 40, { size: 13 });
+      const c = this.selectedCaptive && st.lair.captives.includes(this.selectedCaptive) ? this.selectedCaptive : null;
+      if (c && HB.ransom) HB.text.paragraph(ctx, HB.ransom.describe(st, c) + ` Rescue risk if you demand: ${Math.round(this.captiveRescue * 100)}%.`, p.x + 16, this.captiveInfoY, p.w - 32, { size: 13, italic: true, color: Pp.inkSoft });
+    }
+    drawSleepTab(ctx) {
+      const st = this.state, p = this.panel, Pp = HB.palette;
+      if (!HB.sleep) { HB.text.draw(ctx, 'Sleep is not available in this build.', p.x + 16, p.y + 44, { size: 14 }); return; }
+      HB.text.draw(ctx, 'Sleep ages you, heals you, and lets the world move. The lair is as safe as you have made it.', p.x + 16, p.y + 40, { size: 13, italic: true, color: Pp.inkSoft, maxWidth: p.w - 32 });
+      const pv = this.sleepPreview;
+      if (pv) { let y = p.y + 300; for (const line of pv.lines) { const h = HB.text.paragraph(ctx, line.text, p.x + 16, y, p.w - 32, { size: 13, color: line.tone === 'bad' ? Pp.bad : line.tone === 'good' ? Pp.good : line.tone === 'warn' ? Pp.warn : Pp.ink }); y += h + 4; } }
+    }
+    // ---------- cutaway
+    drawCutaway(g) {
+      const st = this.state, d = st.dragon;
+      const lv = (id) => HB.lair.level(st, id);
+      const chamber = lv('chamber');
+      g.fillStyle = '#2a1c22'; g.fillRect(0, 0, CW, CH);
+      // rock texture
+      const rng = new HB.RNG(HB.hash32('lair' + st.seed));
+      g.fillStyle = '#3b2a33'; for (let i = 0; i < 160; i++) g.fillRect(rng.int(CW), rng.int(CH), 2 + rng.int(4), 1 + rng.int(2));
+      // cave interior: grows with the chamber level
+      const cx0 = 40, cy0 = 34 - chamber * 4, cw = 180 + chamber * 30, ch = 120 + chamber * 6;
+      g.fillStyle = '#4f3a46';
+      g.beginPath(); g.moveTo(cx0, cy0 + 30); g.quadraticCurveTo(cx0 + cw * 0.3, cy0 - 10, cx0 + cw * 0.7, cy0 + 6); g.quadraticCurveTo(cx0 + cw, cy0 + 20, cx0 + cw, cy0 + ch * 0.6); g.lineTo(cx0 + cw, cy0 + ch); g.lineTo(cx0, cy0 + ch); g.closePath(); g.fill();
+      g.fillStyle = '#5a4552'; g.beginPath(); g.moveTo(cx0 + 10, cy0 + 40); g.quadraticCurveTo(cx0 + cw * 0.3, cy0 + 2, cx0 + cw * 0.7, cy0 + 16); g.quadraticCurveTo(cx0 + cw - 10, cy0 + 28, cx0 + cw - 10, cy0 + ch * 0.6); g.lineTo(cx0 + cw - 10, cy0 + ch); g.lineTo(cx0 + 10, cy0 + ch); g.closePath(); g.fill();
+      // stalactites
+      g.fillStyle = '#4f3a46'; for (let i = 0; i < 9; i++) { const sx = cx0 + 20 + i * (cw / 9), h = 6 + rng.int(10); g.beginPath(); g.moveTo(sx - 3, cy0 + 8 + (i % 2) * 4); g.lineTo(sx + 3, cy0 + 8 + (i % 2) * 4); g.lineTo(sx, cy0 + 8 + h); g.closePath(); g.fill(); }
+      const floor = cy0 + ch;
+      g.fillStyle = '#3b2a33'; g.fillRect(0, floor, CW, CH - floor);
+      g.fillStyle = '#6a5460'; g.fillRect(cx0, floor, cw, 2);
+      // entrance tunnel on the left with daylight
+      const ent = lv('entrance');
+      g.fillStyle = '#5a4552'; g.fillRect(0, floor - 34, cx0 + 4, 34);
+      const sky = g.createLinearGradient(0, floor - 34, 0, floor); sky.addColorStop(0, '#8fb8d8'); sky.addColorStop(1, '#c9e0ee');
+      g.fillStyle = sky; g.fillRect(0, floor - 32, 14, 32);
+      if (lv('concealed')) { px.blit(g, S.get('bush'), 2, floor - 10); px.blit(g, S.get('bush'), 8, floor - 6); if (lv('concealed') >= 2) px.blit(g, S.get('tree'), -2, floor - 20); }
+      if (ent) { const gate = S.get('gate', 16, 30); px.blit(g, gate, 18, floor - 30); if (ent >= 2) { g.fillStyle = P.ironLight; g.fillRect(18, floor - 30, 16, 2); } if (ent >= 3) { g.fillStyle = P.iron; g.fillRect(16, floor - 32, 20, 2); g.fillRect(16, floor - 32, 2, 32); } }
+      if (lv('traps')) { g.fillStyle = P.ironLight; for (let i = 0; i < 3 + lv('traps') * 2; i++) { const tx = 38 + i * 4; g.beginPath(); g.moveTo(tx, floor); g.lineTo(tx + 2, floor); g.lineTo(tx + 1, floor - 4); g.closePath(); g.fill(); } }
+      if (lv('guardpost')) { px.blit(g, S.get('house', 16, 10, 1), 44, floor - 20); px.blit(g, S.get('lantern'), 62, floor - 18); }
+      if (lv('lookout')) { g.fillStyle = '#6a5460'; g.fillRect(2, floor - 50, 22, 3); px.blit(g, S.get('villager2'), 8, floor - 62); }
+      if (lv('ward')) { g.fillStyle = Math.floor(this.t * 2) % 2 ? '#7fe6ff' : '#4fb0d8'; for (let i = 0; i < 5; i++) g.fillRect(cx0 - 2 + (i % 2) * 2, floor - 30 + i * 6, 2, 2); }
+      if (lv('forge')) { px.blit(g, S.get('campfire'), cx0 + cw - 40, floor - 6); g.fillStyle = P.ironDark; g.fillRect(cx0 + cw - 30, floor - 6, 10, 4); g.fillRect(cx0 + cw - 28, floor - 9, 6, 3); }
+      if (lv('larder')) { px.blit(g, S.get('barrel'), cx0 + cw - 56, floor - 6); px.blit(g, S.get('hay'), cx0 + cw - 64, floor - 5); }
+      if (lv('sleeping')) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 10, floor - 50, 40, 50); g.fillStyle = '#4f3a46'; g.fillRect(cx0 + cw - 4, floor - 44, 30, 44); px.blit(g, S.get('gate', 12, 20), cx0 + cw - 12, floor - 20); }
+      // hoard pile: size by gold value
+      const total = HB.game.hoardValue(st);
+      const pileW = HB.clamp(20 + Math.sqrt(total) * 1.6, 16, cw * 0.6), pileH = HB.clamp(4 + Math.sqrt(total) * 0.5, 3, 40);
+      const pxc = cx0 + cw * 0.45;
+      for (let i = 0; i < 4; i++) px.ellipse(g, pxc, floor - i * (pileH / 4), pileW * (1 - i * 0.22), pileH * 0.45 * (1 - i * 0.15), i % 2 ? P.gold : P.goldLight);
+      g.fillStyle = P.goldDark; for (let i = 0; i < Math.min(40, total / 40); i++) g.fillRect(pxc - pileW * 0.8 + rng.int(pileW * 1.6), floor - rng.int(pileH), 1, 1);
+      // named artifacts around the pile
+      const arts = st.hoard.items.filter(i => i.named).slice(0, 8);
+      arts.forEach((a, i) => { const sp = S.get(['crown', 'gem', 'book', 'sword', 'shield', 'goblet', 'key', 'scroll'][i % 8]); const ax = pxc - pileW * 0.9 + (i / Math.max(1, arts.length - 1)) * pileW * 1.8; px.blit(g, sp, Math.round(ax - sp.width / 2), floor - pileH * 0.3 - sp.height - (i % 2) * 3); });
+      // dragon on the pile
+      const spec = HB.dragonArt.specOf(st);
+      const pose = st.phase === 'sleeping' ? 'sleep' : 'idle';
+      HB.dragonArt.draw(g, spec, pose, Math.floor(this.t * 1.5) % 2, Math.round(pxc), Math.round(floor - pileH * 0.6 - 6 - spec.tier * 4), 1, 1);
+      // workers
+      let wi = 0;
+      for (const grp of st.lair.workers) { for (let k = 0; k < Math.min(grp.count, 6); k++) { const sp = S.get(HB.WORKER_TYPES[grp.type].sprite); const wx = 70 + ((wi * 23 + this.t * 6 * (grp.task === 'build' ? 1 : 0.3)) % (cw - 60)); px.blit(g, sp, Math.round(cx0 + wx), floor - sp.height, 1, wi % 2 === 0); if (grp.task === 'build') px.blit(g, S.get('pick'), Math.round(cx0 + wx + 6), floor - sp.height - 2); wi++; } }
+      // captives in a niche
+      if (st.lair.captives.length) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 30, cy0 + 30, 26, 30); g.fillStyle = P.ironDark; for (let i = 0; i < 5; i++) g.fillRect(cx0 + cw - 29 + i * 5, cy0 + 30, 1, 30); st.lair.captives.slice(0, 2).forEach((c, i) => px.blit(g, S.get(c.kind === 'priest' ? 'priest' : c.kind === 'knight' ? 'knight' : c.kind === 'noble' || c.kind === 'heir' || c.kind === 'official' ? 'noble' : 'villager'), cx0 + cw - 27 + i * 10, cy0 + 48)); }
+      // construction site
+      if (st.lair.construction.length) { px.blit(g, S.get('crate'), cx0 + cw - 20, floor - 6); px.blit(g, S.get('pick'), cx0 + cw - 12, floor - 10); }
+      // torches
+      for (let i = 0; i < 2 + chamber; i++) { const tx = cx0 + 30 + i * (cw / (2 + chamber)); g.fillStyle = P.wood; g.fillRect(tx, floor - 40, 1, 6); g.fillStyle = Math.floor(this.t * 8 + i) % 2 ? P.fire : P.fireHot; g.fillRect(tx - 1, floor - 43, 3, 3); }
+      // vignette
+      const vg = g.createRadialGradient(cx0 + cw / 2, floor - 40, 40, cx0 + cw / 2, floor - 40, 220); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)'); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
+    }
+  }
+  function describeEffect(e) { if (!e) return 'none'; const parts = []; for (const k in e) { if (k === 'mul') for (const kk in e.mul) parts.push(`${kk} ×${e.mul[kk]}`); else parts.push(`${k} ${typeof e[k] === 'number' ? HB.fmt.signed(e[k]) : e[k]}`); } return parts.join(', '); }
+  function describeEffects(e) { const names = { capacity: 'holds', defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
+  HB.LairScene = LairScene;
+})();

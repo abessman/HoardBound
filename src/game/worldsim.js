@@ -1,0 +1,153 @@
+/* World simulation: moving entities (caravans, heroes, armies), daily ticks. Yearly development lives in sleep.js. */
+(function () {
+  const HB = globalThis.HB;
+
+  const sim = HB.worldsim = {
+    init(state) {
+      state.entities = [];
+      sim.spawnCaravans(state, 1);
+      sim.spawnHeroes(state);
+    },
+    /** road edges suitable for trade */
+    tradeRoads(state) { const W = state.world; return W.roads.filter(r => !r.lane && W.locations[r.a].tier >= 1 && W.locations[r.b].tier >= 1); },
+    spawnCaravans(state, density = 1) {
+      const W = state.world, rng = HB.game.rng;
+      const roads = sim.tradeRoads(state);
+      const want = Math.round(roads.length * 0.22 * density);
+      const have = state.entities.filter(e => e.kind === 'caravan' && !e.dead).length;
+      for (let i = have; i < want; i++) {
+        const R = rng.pick(roads); if (!R) break;
+        const A = W.locations[R.a], B = W.locations[R.b];
+        const origin = rng.chance(0.5) ? A : B;
+        const f = origin.factionId >= 0 ? W.factions[origin.factionId] : null;
+        const wealth = Math.round(rng.between(120, 320) * (1 + (A.tier + B.tier) * 0.4) * (1 + W.regions[origin.regionId].tier * 0.3));
+        state.entities.push({ id: HB.nextId('ent'), kind: 'caravan', name: `caravan of ${origin.name}`, roadIdx: W.roads.indexOf(R), dir: origin === A ? 1 : -1, t: rng.next(), speed: 6, wealth, escort: f ? Math.min(3, f.learned.escorts) + (wealth > 500 ? 1 : 0) : 0, factionId: origin.factionId, originId: origin.id, x: 0, y: 0, dead: false, raided: false });
+      }
+      for (const e of state.entities) if (e.kind === 'caravan') sim.placeOnRoad(state, e);
+    },
+    spawnHeroes(state) {
+      const W = state.world, rng = HB.game.rng;
+      const have = state.entities.filter(e => e.kind === 'hero' && !e.dead).length;
+      const want = 2 + Math.floor(state.dragon.tier * 1.5) + Math.floor((state.lair.attention || 0) / 6);
+      const roads = sim.tradeRoads(state);
+      for (let i = have; i < want; i++) {
+        // prefer roads in the home region early
+        const near = roads.filter(R => W.locations[R.a].regionId === 0 || W.regions[W.locations[R.a].regionId].tier <= state.dragon.tier);
+        const R = rng.pick(near.length ? near : roads); if (!R) break;
+        const culture = W.locations[R.a].factionId >= 0 ? W.factions[W.locations[R.a].factionId].culture : 'westron';
+        const level = 1 + (rng.chance(0.3) ? 1 : 0) + state.dragon.tier;
+        state.entities.push({ id: HB.nextId('ent'), kind: 'hero', name: HB.names.person(rng, culture, false), level, lance: rng.chance(0.15 + state.dragon.tier * 0.1), roadIdx: W.roads.indexOf(R), dir: rng.chance(0.5) ? 1 : -1, t: rng.next(), speed: 8, factionId: W.locations[R.a].factionId, x: 0, y: 0, dead: false, culture });
+      }
+      for (const e of state.entities) if (e.kind === 'hero') sim.placeOnRoad(state, e);
+    },
+    placeOnRoad(state, e) {
+      const R = state.world.roads[e.roadIdx]; if (!R) { e.dead = true; return; }
+      const i = HB.clamp(Math.floor(e.t * (R.cells.length - 1)), 0, R.cells.length - 1);
+      e.x = R.cells[i][0]; e.y = R.cells[i][1];
+    },
+    /** days of simulated time pass during travel/rest */
+    tickDays(state, days) {
+      const W = state.world, rng = HB.game.rng;
+      for (const e of state.entities) {
+        if (e.dead) continue;
+        const R = W.roads[e.roadIdx]; if (!R) { e.dead = true; continue; }
+        const len = Math.max(1, R.cells.length);
+        e.t += e.dir * (e.speed * days) / len;
+        if (e.t >= 1 || e.t <= 0) {
+          // arrive: pick a connecting road from the endpoint
+          const endLoc = e.t >= 1 ? R.b : R.a;
+          const next = W.roads.map((r, i) => ({ r, i })).filter(o => !o.r.lane && (o.r.a === endLoc || o.r.b === endLoc) && o.i !== e.roadIdx);
+          if (e.kind === 'caravan' && (rng.chance(0.35) || !next.length)) { e.dead = true; continue; }
+          if (!next.length) { e.dir *= -1; e.t = HB.clamp(e.t, 0, 1); }
+          else { const n = rng.pick(next); e.roadIdx = n.i; e.dir = n.r.a === endLoc ? 1 : -1; e.t = e.dir === 1 ? 0.01 : 0.99; }
+        }
+        sim.placeOnRoad(state, e);
+      }
+      state.entities = state.entities.filter(e => !e.dead);
+      sim.spawnCaravans(state, 1);
+      if (rng.chance(days * 0.05)) sim.spawnHeroes(state);
+      if (HB.lair && HB.lair.tickDays) { const done = HB.lair.tickDays(state, days); if (done.length && HB.isBrowser && HB.flow.map) HB.flow.map.showToast(`${HB.UPGRADE_BY_ID[done[0].id].name} is finished`); }
+      if (HB.ransom) { const ev = HB.ransom.tickDays(state, days); if (ev.length && HB.isBrowser && HB.notice) HB.notice('Word from the realms', ev.map(e => e.text).join('\n\n')); }
+      if (HB.factions && HB.factions.tickDays) HB.factions.tickDays(state, days);
+    },
+    tickRealtime(state, dt) { /* nothing continuous yet */ },
+    /** yearly development of settlements; returns events */
+    yearly(state, rng) {
+      const W = state.world, ev = [], year = state.time.year;
+      const tierUp = { farm: 'village', village: 'town', town: 'city' };
+      for (const L of W.locations) {
+        if (L.type === 'lair' || L.type === 'rivalLair') continue;
+        if (L.type === 'battlefield') { if (L.flags.expires && year >= L.flags.expires) { L.type = 'ruin'; L.name = L.name.replace('Field', 'Barrow'); L.wealth = 50; } continue; }
+        // memory fades
+        L.fear = Math.max(0, L.fear - 3); L.trust = Math.max(0, L.trust - 1);
+        if (L.state === 'burned') {
+          L.flags.burnedYears = (L.flags.burnedYears || 0) + 1;
+          const f = L.factionId >= 0 ? W.factions[L.factionId] : null;
+          if (L.flags.burnedYears >= 3 + rng.int(6)) {
+            if (rng.chance(0.2 + (f && f.dragon.fear > 50 ? 0.2 : 0)) && L.type !== 'castle' && L.type !== 'city') { L.state = 'abandoned'; L.pop = 0; ev.push({ text: `${L.name} was abandoned; its people never came back.`, kind: 'world', bad: true }); }
+            else { L.state = 'normal'; L.wealth = Math.round(L.wealthMax * 0.45); L.flags.burnedYears = 0; if (L.knowledge.seen) ev.push({ text: `${L.name} was rebuilt.`, kind: 'world' }); }
+          }
+          continue;
+        }
+        if (L.state === 'abandoned') { L.flags.abandonedYears = (L.flags.abandonedYears || 0) + 1; if (L.flags.abandonedYears > 15) { L.state = 'ruin'; L.type = 'ruin'; L.name = 'Ruins of ' + L.name.replace(/^(Castle |Fort |Keep of )/, ''); L.wealth = Math.round(L.wealthMax * 0.3); L.defense = 20; L.tier = 0; } continue; }
+        if (L.state === 'besieged') { L.wealth = Math.round(L.wealth * 0.9); continue; }
+        // growth toward max, slower in famine
+        const famine = L.flags.famine && year - L.flags.famine < 5;
+        L.wealth = Math.round(Math.min(L.wealthMax, L.wealth + (L.wealthMax - L.wealth) * (famine ? 0.05 : 0.14) + L.wealthMax * 0.01));
+        if (L.pop) L.pop = Math.round(L.pop * (famine ? 0.98 : 1.02));
+        // tier changes
+        const next = tierUp[L.type];
+        if (next && L.wealth > L.wealthMax * 0.95 && rng.chance(0.07) && L.state === 'normal') {
+          L.type = next; L.tier++; L.wealthMax = Math.round(L.wealthMax * 2.4); L.defenseBase += 10; L.defense = L.defenseBase; L.pop = Math.round(L.pop * 2.5);
+          if (L.type !== 'village' && !L.ruler) L.ruler = { name: HB.names.person(rng, (L.factionId >= 0 ? W.factions[L.factionId] : { culture: 'westron' }).culture, false), title: 'Reeve', house: '', since: year };
+          if (L.knowledge.seen) ev.push({ text: `${L.name} has grown into a ${HB.world.locTypeName(L)}.`, kind: 'world' });
+        }
+        L.flags.poorYears = L.wealth < L.wealthMax * 0.2 ? (L.flags.poorYears || 0) + 1 : 0;
+        if (L.flags.poorYears >= 5 && L.tier > 0 && (L.type === 'town' || L.type === 'city')) { L.type = L.type === 'city' ? 'town' : 'village'; L.tier--; L.wealthMax = Math.round(L.wealthMax / 2.4); L.flags.poorYears = 0; if (L.knowledge.seen) ev.push({ text: `${L.name} has dwindled into a ${HB.world.locTypeName(L)}.`, kind: 'world', bad: true }); }
+        // rulers
+        if (L.ruler && rng.chance(0.035)) { const f = L.factionId >= 0 ? W.factions[L.factionId] : null; const culture = f ? f.culture : 'westron'; const sameHouse = rng.chance(0.7); L.ruler = { name: HB.names.person(rng, culture, false), title: L.ruler.title, house: sameHouse ? L.ruler.house : HB.names.house(rng, culture), since: year }; if (L.capital && f) { f.ruler = { name: L.ruler.name, title: f.ruler.title, house: L.ruler.house }; f.rulerSince = year; ev.push({ text: `${f.ruler.title} ${f.ruler.name} now rules ${f.name}.`, kind: 'world' }); } }
+        // defences drift toward base + learning
+        const f = L.factionId >= 0 ? W.factions[L.factionId] : null;
+        const target = L.defenseBase + (f ? f.learned.hunters * 2 + (f.dragon.fear > 50 ? 5 : 0) : 0) + (L.flags.repelled ? 4 : 0);
+        L.defense = Math.round(L.defense + (target - L.defense) * 0.3);
+      }
+      return ev;
+    },
+    afterSleep(state) {
+      // refresh moving things after a long sleep
+      state.entities = state.entities.filter(e => e.kind === 'army');
+      sim.spawnCaravans(state, 1); sim.spawnHeroes(state);
+      // hunting parties from grudges appear on the roads near the lair
+      const W = state.world, rng = HB.game.rng;
+      const lead = HB.history ? HB.history.leadHunter(state) : null;
+      if (lead && rng.chance(0.5)) {
+        const roads = sim.tradeRoads(state).filter(R => Math.hypot(W.locations[R.a].x - W.home.x, W.locations[R.a].y - W.home.y) < 25);
+        const R = roads.length ? rng.pick(roads) : null;
+        if (R) { const e = { id: HB.nextId('ent'), kind: 'hero', name: lead.name, level: lead.level, lance: true, roadIdx: W.roads.indexOf(R), dir: 1, t: 0.5, speed: 6, factionId: lead.factionId, x: 0, y: 0, dead: false, grudgeId: lead.id }; sim.placeOnRoad(state, e); state.entities.push(e); }
+      }
+    },
+    /** entities visible on the map (within revealed cells) */
+    visibleEntities(state) { const W = state.world, K = state.know.revealed; return state.entities.filter(e => !e.dead && HB.world.inBounds(W, Math.round(e.x), Math.round(e.y)) && K[Math.round(e.y) * W.w + Math.round(e.x)]); },
+    drawEntities(ctx, map, state) {
+      const A = HB.mapart, z = HB.MAP_CELL * map.cam.zoom;
+      const s = Math.max(3, Math.min(9, 7 * Math.sqrt(map.cam.zoom)));
+      for (const e of sim.visibleEntities(state)) {
+        const p = map.worldToScreen(e.x + 0.5, e.y + 0.8);
+        if (p.x < -40 || p.x > HB.W + 40 || p.y < -40 || p.y > HB.H + 40) continue;
+        ctx.save(); A.setup(ctx);
+        if (e.kind === 'caravan') A.wagon(ctx, p.x, p.y, s, e.wealth > 500 ? '#6a4a85' : undefined);
+        else if (e.kind === 'hero') A.walker(ctx, p.x, p.y, s, e.lance ? '#7a2418' : undefined);
+        else if (e.kind === 'army') A.banner(ctx, p.x, p.y, s, e.color);
+        else if (e.kind === 'hunters') A.walker(ctx, p.x, p.y, s, '#7a2418');
+        ctx.restore();
+        if (map.cam.zoom > 0.8 && (map.hoverEntity === e || map.selected === e)) HB.text.draw(ctx, e.name, p.x, p.y - s * 2.6, { size: 12, italic: true, align: 'center', stroke: 'rgba(240,228,200,0.7)', strokeWidth: 2.5 });
+      }
+    },
+    entityAtScreen(map, state, sx, sy) {
+      const p = map.screenToWorld(sx, sy); const z = HB.MAP_CELL * map.cam.zoom;
+      let best = null, bd = Math.max(1.2, 16 / z);
+      for (const e of sim.visibleEntities(state)) { const d = Math.hypot(e.x + 0.5 - p.x, e.y + 0.5 - p.y); if (d < bd) { bd = d; best = e; } }
+      return best;
+    },
+  };
+})();

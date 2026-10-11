@@ -31,6 +31,8 @@
     plural: (n, s, p) => n === 1 ? `1 ${s}` : `${n} ${p || s + 's'}`,
     list: (arr) => arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' and ' + arr[arr.length - 1],
     cap: (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : s,
+    /** 'a' or 'an' + word */
+    a: (s) => (/^[aeiou]/i.test(s) ? 'an ' : 'a ') + s,
   };
 
   /** simple seeded-id generator for entities */

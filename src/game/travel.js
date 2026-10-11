@@ -35,11 +35,18 @@
       const d = state.dragon;
       const home = L.type === 'lair';
       state.phase = home ? 'returning' : 'traveling';
-      state.travel = { targetId: L.id, fromX: d.x, fromY: d.y, toX: L.x, toY: L.y, progress: 0, length: Math.hypot(L.x - d.x, L.y - d.y), paused: false, speedMul: HB.settings.travelSpeed || 1, cellAcc: 0, dayAcc: 0, lastEventAt: 0, eventsSeen: [], startDay: state.time.totalDays };
+      const isEnt = !!L.kind;
+      state.travel = { targetKind: isEnt ? 'ent' : 'loc', targetId: L.id, fromX: d.x, fromY: d.y, toX: L.x, toY: L.y, traveled: 0, length: Math.hypot(L.x - d.x, L.y - d.y), paused: false, speedMul: HB.settings.travelSpeed || 1, cellAcc: 0, dayAcc: 0, lastEventAt: 0, eventsSeen: [], startDay: state.time.totalDays };
       d.facing = L.x >= d.x ? 1 : -1;
       if (map) { map.selected = null; map.cam.tx = null; map.showToast(home ? 'Flying home' : `Flying to ${L.name}`); }
       if (HB.audio) HB.audio.play('wing');
       return state.travel;
+    },
+    /** resolve the travel target (location or moving entity); null if it no longer exists */
+    target(state) {
+      const tr = state.travel; if (!tr) return null;
+      if (tr.targetKind === 'ent') { const e = state.entities.find(x => x.id === tr.targetId && !x.dead); return e || null; }
+      return state.world.locations[tr.targetId] || null;
     },
     returnHome(state, map) { const lair = state.world.locations[state.world.home.locId]; return travel.begin(state, lair, map); },
     /** turn back toward home mid-flight (always allowed; may roost on the way) */
@@ -59,11 +66,18 @@
         tr.hold = hold;
       }
       const d = state.dragon;
+      // moving targets: follow the entity's current position
+      const tgt = travel.target(state);
+      if (!tgt) { state.travel = null; state.phase = 'planning'; if (map) map.showToast('Your quarry is gone. You circle, then choose another course.'); return; }
+      if (tr.targetKind === 'ent') { tr.toX = tgt.x; tr.toY = tgt.y; }
       const speed = BASE_CELLS_PER_SEC * tr.speedMul * (tr.hold || 1) * (0.85 + d.tier * 0.15);
-      const step = Math.min(speed * dt, Math.max(0, tr.length - tr.progress * tr.length));
+      const remaining = Math.hypot(tr.toX - d.x, tr.toY - d.y);
+      const step = Math.min(speed * dt, remaining);
       const prevX = d.x, prevY = d.y;
-      tr.progress = tr.length > 0 ? Math.min(1, tr.progress + step / tr.length) : 1;
-      d.x = HB.lerp(tr.fromX, tr.toX, tr.progress); d.y = HB.lerp(tr.fromY, tr.toY, tr.progress);
+      if (remaining > 1e-6) { d.x += (tr.toX - d.x) / remaining * step; d.y += (tr.toY - d.y) / remaining * step; }
+      d.facing = tr.toX >= d.x - 0.01 ? (tr.toX > d.x + 0.01 ? 1 : d.facing) : -1;
+      tr.traveled += step;
+      tr.progress = remaining - step <= 0.05 ? 1 : Math.min(0.999, tr.traveled / Math.max(0.1, tr.traveled + remaining - step));
       // per-cell costs
       const moved = Math.hypot(d.x - prevX, d.y - prevY);
       tr.cellAcc += moved;
@@ -81,9 +95,8 @@
       // exhaustion: roost
       if (d.stamina <= 0 && tr.progress < 1) { travel.roost(state, map); return; }
       // events
-      const traveled = tr.progress * tr.length;
-      if (traveled - tr.lastEventAt >= 4.5 && tr.progress < 0.96) {
-        tr.lastEventAt = traveled;
+      if (tr.traveled - tr.lastEventAt >= 4.5 && remaining > 2) {
+        tr.lastEventAt = tr.traveled;
         if (HB.game.rng.chance(0.16)) travel.maybeEvent(state, map);
       }
       if (tr.progress >= 1) travel.arrive(state, map);
@@ -139,16 +152,16 @@
       return out.length ? HB.fmt.cap(HB.fmt.list(out)) + '.' : 'Nothing comes of it.';
     },
     arrive(state, map) {
-      const tr = state.travel, W = state.world;
-      const L = W.locations[tr.targetId];
+      const L = travel.target(state);
       state.travel = null;
       const d = state.dragon;
+      if (!L) { state.phase = 'planning'; return; }
       d.x = L.x; d.y = L.y;
       if (L.type === 'lair') { travel.arriveHome(state, map); return; }
       state.phase = 'encounter';
       const res = HB.world.reveal(state, d.x, d.y, d.stats.vision);
       if (map) map.onReveal(res);
-      if (!L.knowledge.scoutedYear || L.knowledge.scoutedYear < state.time.year) L.knowledge.scoutedYear = state.time.year;
+      if (L.knowledge && (!L.knowledge.scoutedYear || L.knowledge.scoutedYear < state.time.year)) L.knowledge.scoutedYear = state.time.year;
       if (HB.encounter && HB.encounter.begin) HB.encounter.begin(state, L, map);
       else { if (map) map.showToast(`You arrive at ${L.name}. (Encounters not built yet.)`); state.phase = 'planning'; }
     },
