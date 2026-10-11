@@ -2,6 +2,9 @@
 (function () {
   const HB = globalThis.HB;
 
+  /** who is raiding: orcs of a warlord's host, goblins, or outlaws */
+  HB.raiderWord = (t) => t && t.orc ? 'orc' : t && t.goblin ? 'goblin' : 'outlaw';
+
   const sim = HB.worldsim = {
     init(state) {
       state.entities = [];
@@ -65,6 +68,7 @@
       }
       if (HB.hunters) HB.hunters.tick(state, days);
       state.entities = state.entities.filter(e => !e.dead);
+      if (HB.endgame) HB.endgame.tickDays(state, days, rng);
       sim.updateThreats(state, days, rng);
       if (HB.heat) HB.heat.decay(state, days);
       if (HB.pursuit && HB.pursuit.tick(state) && HB.isBrowser && HB.flow && HB.flow.map) HB.flow.map.showToast('The riders give up the chase', 3);
@@ -126,7 +130,8 @@
       const guards = HB.lair ? HB.lair.guardStrength(state) : 0;
       const guardians = state.memory.loyalties.filter(l => l.kind === 'guardians').length;
       const allied = L.flags.allied && pact ? 0.15 : 0; // sworn to you: your settlement's militia rides to help
-      return HB.clamp(0.15 + guards / 30 + guardians * 0.15 + (pact ? 0.1 : 0) + allied, 0, 0.85);
+      const host = L.threat && L.threat.host ? 0.15 : 0;  // a warlord's host is harder to turn back
+      return HB.clamp(0.15 + guards / 30 + guardians * 0.15 + (pact ? 0.1 : 0) + allied - host, 0, 0.85);
     },
     threatFalls(state, L, rng) {
       if (rng.chance(sim.repelChance(state, L))) {
@@ -139,7 +144,7 @@
       L.wealth -= loss;
       const camp = t.campId >= 0 ? W.locations[t.campId] : null;
       if (camp) camp.wealth += Math.round(loss * 0.5);
-      if (rng.chance(L.tier === 0 ? 0.5 : 0.3)) { L.state = 'burned'; L.flags.burnedYear = state.time.year; }
+      if (rng.chance(t.host ? 0.6 : L.tier === 0 ? 0.5 : 0.3)) { L.state = 'burned'; L.flags.burnedYear = state.time.year; }
       L.memory.push({ year: state.time.year, kind: 'sacked', by: t.campName });
       if (L.memory.length > 12) L.memory.shift();
       const protectedByYou = L.tribute && L.tribute.willing && !L.tribute.lapsed;

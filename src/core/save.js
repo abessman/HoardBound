@@ -6,7 +6,7 @@
 
   function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
   function unb64(str) { const s = typeof atob === 'function' ? atob(str) : Buffer.from(str, 'base64').toString('binary'); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
-  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient', 'threat', 'occupation'];
+  const LOC_FIELDS = ['name', 'type', 'tier', 'pop', 'wealth', 'wealthMax', 'defense', 'defenseBase', 'state', 'special', 'ruler', 'memory', 'fear', 'trust', 'lastRaidYear', 'knowledge', 'flags', 'founded', 'capital', 'tribute', 'factionId', 'camp', 'dragon', 'ancient', 'threat', 'occupation', 'lieutenant', 'crystal', 'foe'];
   // places made during play (battlefields) are not regenerated from the seed: their position is saved too
   const DYN_FIELDS = ['x', 'y', 'cell', 'subId', 'regionId'];
 
@@ -20,7 +20,7 @@
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
         renown: state.renown, reactions: state.reactions, problems: state.problems,
-        situations: state.situations || [], pursuit: state.pursuit || null, pactGold: state.pactGold || 0, domain: state.domain || null,
+        situations: state.situations || [], pursuit: state.pursuit || null, pactGold: state.pactGold || 0, domain: state.domain || null, endgame: state.endgame || null,
         locations: locs, factions: W.factions, extraLocations: W.locations.length,
         know: { revealed: b64(state.know.revealed), rumor: b64(state.know.rumor), subSeen: b64(state.know.subSeen), regionSeen: b64(state.know.regionSeen) },
         regionTiers: W.regions.map(R => R.tier), subFactions: W.subregions.map(S => S.factionId),
@@ -55,7 +55,7 @@
         version: 1, seed: data.seed, created: data.created, name: data.name, world, know,
         dragon: data.dragon, hoard: data.hoard, cargo: data.cargo, lair: data.lair, time: data.time, phase: data.phase || 'home', travel: null, encounter: null,
         chronicle: data.chronicle, entities: data.entities || [], flags: data.flags, memory: data.memory, counters: data.counters, playRng: data.playRng,
-        situations: data.situations || [], pursuit: data.pursuit || null, pactGold: data.pactGold || 0, ambush: null, domain: data.domain || (HB.domain ? HB.domain.fresh() : null),
+        situations: data.situations || [], pursuit: data.pursuit || null, pactGold: data.pactGold || 0, ambush: null, domain: data.domain || (HB.domain ? HB.domain.fresh() : null), endgame: data.endgame || (HB.endgame ? HB.endgame.fresh() : null),
         renown: data.renown || { deeds: {}, titles: [], known: {}, places: {} }, reactions: data.reactions || [], problems: data.problems || { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 },
       };
       HB.setIdCounter(Math.max(HB.getIdCounter(), data.idCounter || 1));
@@ -76,7 +76,7 @@
     meta(slot) { try { const raw = localStorage.getItem(save.slotKey(slot)); if (!raw) return null; const d = JSON.parse(raw); return { slot, name: d.name, dragon: d.dragon.name, tier: d.dragon.tier, year: d.time.year, savedAt: d.savedAt, seed: d.seed, hoard: d.hoard.gold }; } catch (e) { return null; } },
     slots() { const out = []; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith(PREFIX)) { const m = save.meta(k.slice(PREFIX.length)); if (m) out.push(m); } } out.sort((a, b) => b.savedAt - a.savedAt); return out; },
     hasAny() { try { return save.slots().length > 0; } catch (e) { return false; } },
-    autosave(state) { if (!HB.isBrowser) return; save.write(state, 'auto'); },
+    autosave(state) { if (!HB.isBrowser) return; save.write(state, state.flags && state.flags.test ? 'test' : 'auto'); },
     continueLatest() { const s = save.slots()[0]; if (s) save.loadSlot(s.slot); },
     loadSlot(slot) { try { const state = save.read(slot); if (state) { HB.flow.enterWorld(state, false); return true; } } catch (e) { console.error(e); HB.notice('Load failed', 'That save could not be read: ' + e.message); } return false; },
     remove(slot) { localStorage.removeItem(save.slotKey(slot)); },

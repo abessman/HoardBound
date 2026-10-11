@@ -6,10 +6,13 @@ Recorded 11 October 2026.
 
 This document records the proposed next expansion: a dragon's growing influence creates a domain, communities build around its lair, the parchment map reflects its character, and good and evil playstyles lead toward different endgame goals.
 
-**Status (0.8.0):** the domain is built: allegiance statuses, influence, the settlement at your hill, territory
-washes and glyphs, and the deeds that spread or lose your rule (sections 3–7, 10–11; see
-[docs/systems/domain-and-influence.md](../systems/domain-and-influence.md)). Not built yet: the benevolent and tyrannical endgames
-(sections 8–9) and undead settlements (section 7). The rest of this document is the original notes, unchanged.
+**Status (0.9.0):** the domain is built (sections 3–7, 10–11; see
+[docs/systems/domain-and-influence.md](../systems/domain-and-influence.md)). The endgames (sections 8–9) are a prototype:
+one opposition per world, the Warlord and the first crystal playable, the rest placed and described, the final
+battles not built ([docs/systems/endgame.md](../systems/endgame.md)). Not built: undead settlements (section 7). The
+owner decided: the opposition forms when you reach that phase and never both; three lieutenants open the battle with
+the demon king (who can be challenged early at a major disadvantage), six crystals the challenge with the god of the
+world. The rest of this document is the original notes, unchanged.
 
 These are design notes for future implementation. Adding this document does not implement any mechanics. Read DESIGN.md and CLAUDE.md alongside it. The player's latest ideas below establish the direction; suggested rules, pacing, and examples remain proposals until chosen or tested. Do not silently replace existing campaign rules or claim these features already work.
 

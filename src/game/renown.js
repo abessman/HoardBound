@@ -14,7 +14,7 @@
     { id: 'herobane', deed: 'heroes', need: 2, name: () => 'Bane of Heroes', verb: 'Slay wandering heroes', effect: '+10 prestige. Seasoned heroes come looking for you.' /* stats, worldsim.spawnHeroes */ },
     { id: 'roadwarden', deed: 'escorted', need: 4, name: () => 'Warden of the Roads', verb: 'Guard caravans on the road', effect: 'Merchants send a share of their profits to your lair each year.' /* sleep.stepYear */ },
     { id: 'overlord', deed: 'tributes', need: 2, name: () => 'the Overlord', verb: 'Win tribute from settlements', effect: '+10 dominance: your demands land harder.' /* stats */ },
-    { id: 'liege', deed: 'allied', need: 3, name: (st) => `Liege of ${st.world.subregions[st.world.home.subId].name}`, verb: 'Take the oaths of settlements', effect: 'Your allies send word when hunters set out: one more warning before they reach you in your sleep.' /* domain.bonuses */ },
+    { id: 'liege', deed: 'allied', need: 3, name: (st) => `Liege of ${st.world.subregions[st.world.home.subId].name.replace(/^The /, 'the ')}`, verb: 'Take the oaths of settlements', effect: 'Your allies send word when hunters set out: one more warning before they reach you in your sleep.' /* domain.bonuses */ },
     { id: 'tyrant', deed: 'occupied', need: 2, name: () => 'the Tyrant', verb: 'Occupy settlements', effect: 'Your overseers are feared: resistance in occupied places grows a third more slowly.' /* domain.yearly */ },
   ];
   HB.TITLE_BY_ID = {}; for (const t of HB.TITLES) HB.TITLE_BY_ID[t.id] = t;

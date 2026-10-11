@@ -4,6 +4,24 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.9.0 — 2026-10-11 · The great struggle (prototype)
+- When your dragon is grown (adult) and its rule leans kind or cruel, the world answers, once and for good:
+  - **Kind:** the Hollow King wakes in a far fortress, sustained by three lieutenants (a Warlord, a Sorcerer, a
+    Blightmother). The **Warlord** is playable: his orc hosts attack the places that trust you, and his warcamp is
+    a hard animated fight; your allies' scouts lead you in while some of his warband sleep. Kill him and the hosts
+    stop.
+  - **Cruel:** six Crystals of Life in sanctuaries across the realms. **Greenmarrow** is playable: its crystal is
+    warded until you kill the Warden of the Grove. Taking it withers its realm for good (poorer settlements,
+    blighted land on the map, more hunters) and gives you its power once it is in your hoard.
+  - The other lieutenants, the other crystals and the two final battles are placed and described but not playable
+    yet. A rumour foreshadows the struggle at 25.
+- On screen: an announcement card, seals and new glyphs on the map, a line under your goal, a *great struggle* aim,
+  summary and waking lines.
+- Test starts: `?scene=map&preset=adult-kind` (also `adult-cruel`, `young-kind`, `young-cruel`) to try the later
+  game. Campaigns started from the URL save to their own slot and never overwrite your autosave.
+- Fix: loot inside buildings (castle vaults, town halls, house savings, mine carts, a rival's hoard) could never be
+  reached; burning now spills it and an adult can smash its way in, as intended.
+
 ## 0.8.0 — 2026-10-11 · The domain
 - People build around you. Once you are a young dragon, families who trust you build a refuge at the foot of your
   hill (village → flourishing town → castle and sanctuary); people you hold by fear are driven into a coerced camp

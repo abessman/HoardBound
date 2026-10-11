@@ -55,7 +55,17 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Allegiance can weaken | Functional | Resistance grows yearly and ends in revolt and freedom; allies lapse when trust falls; a cruel home revolts; a home turns with your deeds. |
 | Map changes with your rule | Functional | Burned and bare forests, jagged ash-dark mountains, ash near a tyrant; fuller groves and fields near a protector; strongest near the lair. |
 | Sleep advances the domain | Functional | Growth, gifts, unrest, resistance, oaths during sleep; shown in the sleep preview and the awakening. |
-| Endgames (lieutenants, crystals) | Deferred | Next: see `docs/ideas/domain-and-endgame.md` sections 8–9. |
+| Endgames (lieutenants, crystals) | Simplified | 0.9.0 prototype: see the next table. |
+
+## The great struggle (0.9.0, prototype)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| One opposition per world, formed by your path | Functional | At adult with a leaning rule; fixed afterwards; foreshadowed at 25; announced with a card. |
+| Kind path: an ancient evil and three lieutenants | Simplified | Hollow King, fortress and three strongholds placed and named; the Warlord is playable (hosts strike your allies; warcamp raid with a boss; real effects when he dies). Sorcerer, Blightmother and the final battle: described, not playable. |
+| Cruel path: six Crystals of Life | Simplified | Six sanctuaries in different realms; Greenmarrow is playable (warded crystal, guardian boss, realm withers, map blight, hoard treasure with an effect). Five others and the god's challenge: described, not playable. |
+| Allies matter to the struggle | Simplified | Allied scouts put warcamp guards to sleep; hosts target the places that trust you. No soldiers in the last battle yet. |
+| Test starts for the later game | Functional | `?scene=map&preset=adult-kind` (and adult-cruel, young-kind, young-cruel); saved to a separate test slot. |
 
 ## Encounters and travel
 
@@ -149,3 +159,4 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 - The wandering-hero duel uses the generic scene with a campfire; it needs more distinct staging.
 - No hand testing on physical gamepads or touch screens yet.
 - Domain numbers (stage years, gold, unrest, resistance) are first guesses; influence by land can feel large.
+- Endgame boss strength is tuned only with a simple bot; host frequency is a first guess.

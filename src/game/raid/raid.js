@@ -146,14 +146,14 @@
       const D = r.dragon, st = r.state;
       const dist = Math.hypot(D.x - e.x, D.y - (e.y - e.h * 0.6));
       const dur = kind === 'bolt' ? 0.35 : HB.clamp(dist / 140, 0.3, 0.9);
-      const dmg = kind === 'bolt' ? 18 + Math.random() * 12 : kind === 'javelin' ? 7 + Math.random() * 4 : 4 + Math.random() * 4;
+      const dmg = e.boss ? e.attack * (0.8 + Math.random() * 0.4) : kind === 'bolt' ? 18 + Math.random() * 12 : kind === 'javelin' ? 7 + Math.random() * 4 : 4 + Math.random() * 4;
       const baseHit = (kind === 'bolt' ? 0.7 : kind === 'javelin' ? 0.6 : 0.5) * (0.55 + D.size * 0.55); // small dragons are hard to hit
       const moving = !D.busy ? 0.1 : 0;
       const evade = D.dodgeT > 0 ? 0.6 : 0;
       const hit = Math.random() < baseHit - moving - evade;
       const tx = hit ? D.x : D.x + (Math.random() - 0.5) * 30, ty = hit ? D.y : D.y + (Math.random() > 0.5 ? 14 : -16);
       const sx = e.x, sy = e.y - e.h * 0.7;
-      r.projectiles.push({ kind, x: sx, y: sy, vx: (tx - sx) / dur, vy: (ty - sy) / dur, t: 0, dur, hitDragon: hit, dmg: Math.max(1, dmg - st.dragon.stats.defense * (kind === 'bolt' ? 0.5 : 0.6)), label: kind === 'bolt' ? 'a ballista bolt' : kind === 'javelin' ? `${e.label || 'the hero'}’s javelin` : 'an arrow' });
+      r.projectiles.push({ kind, x: sx, y: sy, vx: (tx - sx) / dur, vy: (ty - sy) / dur, t: 0, dur, hitDragon: hit, dmg: Math.max(1, dmg - st.dragon.stats.defense * (kind === 'bolt' ? 0.5 : 0.6)), label: e.boss ? `${e.label}’s shaft of light` : kind === 'bolt' ? 'a ballista bolt' : kind === 'javelin' ? `${e.label || 'the hero'}’s javelin` : 'an arrow' });
       if (kind === 'bolt') r.alarm = Math.min(100, r.alarm + 2);
     },
     meleeHit(r, e) {
@@ -178,6 +178,10 @@
       raid.msg(r, `${HB.fmt.cap(e.label || e.kind)} ${how === 'burned' ? 'burns' : 'falls'}.`);
       // loot carried by the fallen
       if (e.drop) { r.entities.push(raid.makeLoot(r, e.drop, e.x, 'exposed')); }
+      // wards fall with whoever held them
+      for (const o of r.entities) if (o.wardedBy === e.id && o.access === 'warded') { o.access = 'exposed'; raid.msg(r, `The ward on ${o.label} breaks.`, 'good'); }
+      // a boss falls: the rest break and run
+      if (e.boss) { r.bossSlain = e.label; raid.msg(r, `${HB.fmt.cap(e.label)} is dead. The rest break and run.`, 'good'); for (const o of r.entities) if (!o.dead && o.defender && o !== e) { o.fearT = 60; o.state = 'flee'; } }
     },
     makeLoot(r, def, x, access) { const e = Object.assign({ kind: def.sprite || 'coins', x, y: GROUND, w: 10, h: 8, loot: def, access: access || def.access || 'exposed', label: def.label || def.name || 'treasure' }, {}); raid.initEntity(r, e); return e; },
     buildingBurned(r, e) {
@@ -238,9 +242,11 @@
       const isolated = !r.entities.some(o => o !== e && o.defender && !o.dead && Math.abs(o.x - e.x) < 26 && o.state !== 'asleep');
       if (e.state === 'aiming') out.push({ id: 'dodge', label: 'Dodge the bolt', desc: 'Costs 5 stamina; the bolt will almost surely miss.', risk: 'safe', enabled: stamOK(5), reason: 'Not enough stamina' });
       if (e.loot && !e.person && !e.animal) {
-        if (e.access === 'exposed') out.push({ id: 'grab', label: `${e.loot.recovered ? 'Take back' : 'Grab'} ${e.label}`, desc: `${e.loot.value ? HB.fmt.int(e.loot.value) + ' gold worth, ' : ''}weighs ${e.loot.weight}. ${e.loot.recovered ? 'Stolen from the village: afterwards you choose to return it or keep it.' : 'Alarm rises a little.'}`, risk: 'low', enabled: e.loot.weight <= weightLeft + 1e-6, reason: `Too heavy: ${e.loot.weight} with ${Math.max(0, weightLeft).toFixed(1)} left`, showDisabled: true });
+        if (e.access === 'warded') { const w = r.entities.find(o => o.id === e.wardedBy); out.push({ id: 'grab', label: `Take ${e.label}`, desc: 'A ward holds it.', risk: 'high', enabled: false, reason: `Warded while ${w ? w.label : 'its guardian'} lives`, showDisabled: true }); }
+        else if (e.access === 'exposed') out.push({ id: 'grab', label: `${e.loot.recovered ? 'Take back' : 'Grab'} ${e.label}`, desc: `${e.loot.value ? HB.fmt.int(e.loot.value) + ' gold worth, ' : ''}weighs ${e.loot.weight}. ${e.loot.recovered ? 'Stolen from the village: afterwards you choose to return it or keep it.' : 'Alarm rises a little.'}`, risk: 'low', enabled: e.loot.weight <= weightLeft + 1e-6, reason: `Too heavy: ${e.loot.weight} with ${Math.max(0, weightLeft).toFixed(1)} left`, showDisabled: true });
         else if (e.access === 'inside') out.push({ id: 'smash', label: `Smash open ${e.container || 'it'}`, desc: 'Land and break it open. Takes time; defenders close in; alarm rises sharply.', risk: 'high', enabled: s.canLand && stamOK(10), reason: s.canLand ? 'Not enough stamina' : 'Only an adult dragon can land and smash', showDisabled: true });
       }
+      if (e.building && !e.burnedDown && !e.noSmash && r.entities.some(o => o.insideOf === e.id && !o.dead && o.loot)) out.push({ id: 'smash', label: `Smash open ${e.label}`, desc: 'Land and break in. Takes time; defenders close in; alarm rises sharply.', risk: 'high', enabled: s.canLand && stamOK(10), reason: s.canLand ? 'Not enough stamina' : 'Only an adult dragon can land and smash its way in', showDisabled: true });
       if (e.building && !e.burnedDown && !e.burning) out.push({ id: 'breathe', label: `Burn ${e.label}`, desc: `${e.contents || 'What is inside may burn with it.'} Costs 12 stamina; alarm rises sharply; the realm will hate you for it.`, risk: 'mid', enabled: stamOK(12), reason: 'Not enough stamina' });
       if (e.defender && !e.dead) {
         out.push({ id: 'bite', label: `Bite ${e.label}`, desc: `${isolated || e.state === 'asleep' ? 'Isolated. ' : 'Others are near: they will strike back. '}Swoop low and tear.`, risk: isolated ? 'mid' : 'high', enabled: true });
@@ -429,6 +435,10 @@
     cow: { hp: 6, speed: 12, animal: true, courage: 0.2 },
     horse: { hp: 8, speed: 30, animal: true, courage: 0.3 },
     rivalDragon: { hp: 200, attack: 22, range: 120, rate: 3, ranged: true, melee: true, defender: true, courage: 9, speed: 18 },
+    orc: { hp: 16, attack: 6, speed: 22, melee: true, defender: true, courage: 1.6, person: true },
+    orcArcher: { hp: 12, attack: 4, range: 150, rate: 2.2, ranged: true, melee: true, defender: true, courage: 1.4, person: true },
+    warlord: { hp: 220, attack: 18, speed: 14, melee: true, defender: true, courage: 9, person: true },
+    warden: { hp: 240, attack: 12, range: 170, rate: 1.5, ranged: true, defender: true, courage: 9, person: true },
     house: { building: true }, wagon: { building: true }, tent: { building: true }, tower: { building: true }, keep: { building: true }, granary: { building: true }, barn: { building: true }, stall: { building: true }, shrineB: { building: true },
   };
 })();

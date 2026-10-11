@@ -128,6 +128,7 @@
       if (HB.tribute) for (const e of HB.tribute.yearly(state, rng)) log(e.text, 'tribute', e.bad);
       for (const e of HB.lair.yearlyWorkers(state, rng)) log(e.text, e.kind, e.bad);
       if (HB.domain) for (const e of HB.domain.yearly(state, rng)) log(e.text, e.kind, e.bad);
+      if (HB.endgame) for (const e of HB.endgame.yearly(state, rng)) log(e.text, e.kind, e.bad);
       // attention decays with concealment
       const v = HB.lair.values(state);
       state.lair.attention = Math.max(0, (state.lair.attention || 0) - 0.6 - v.concealment * 0.15);

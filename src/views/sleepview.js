@@ -85,6 +85,8 @@
           if (h.stage) { const S = HB.domain.stageInfo(st), nr = HB.domain.nextReqs(st), miss = nr.reqs.filter(r => !r.done); lines.push({ text: `${h.name} is ${S.noun} and has sent you ${HB.fmt.int(h.goldTotal)} gold in all.${nr.target ? ` To grow into ${nr.target.noun} it still needs: ${miss.length ? HB.domain.missingText(nr) : 'nothing more'}.` : ''}` }); }
         }
       }
+      // the great struggle
+      { const ev = s.events.filter(e => e.kind === 'endgame'); const hint = HB.endgame ? HB.endgame.hint(st) : ''; if (ev.length || hint) { lines.push({ h: 'The great struggle' }); for (const e of ev.slice(-4)) lines.push({ text: `Year ${e.year}: ${e.text}`, tone: 'warn' }); if (hint) lines.push({ text: hint }); } }
       const worldAt = lines.length;
       const changes = [];
       W.locations.forEach((L, i) => { const old = b.locTiers[i]; if (!old) return; const [ot, os] = old.split(':'); if (L.knowledge.seen && (Number(ot) !== L.tier || os !== L.state)) changes.push(`${L.name}: ${os !== L.state ? L.state : HB.world.locTypeName(L)}`); });

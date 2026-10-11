@@ -28,7 +28,13 @@
   HB.debug.goto = function (name, params) {
     if (name === 'newgame') HB.scenes.push(new HB.NewGameScene());
     else if (name === 'settings') HB.scenes.push(new HB.SettingsScene());
-    else if (name === 'map') { const state = HB.game.newCampaign({ seed: (params && params.get('seed')) || 'ember-quill-42', name: 'Vorthax', breed: (params && params.get('breed')) || 'red' }); HB.flow.enterWorld(state, false); }
+    else if (name === 'map') {
+      const state = HB.game.newCampaign({ seed: (params && params.get('seed')) || 'ember-quill-42', name: 'Vorthax', breed: (params && params.get('breed')) || 'red' });
+      state.flags.test = true; // started from the URL: autosaves go to the 'test' slot, never over a real campaign
+      const preset = params && params.get('preset');
+      if (preset && HB.presets) HB.presets.apply(state, preset); // e.g. ?scene=map&preset=adult-kind
+      HB.flow.enterWorld(state, false);
+    }
     else if (HB.debug.gotoGame) HB.debug.gotoGame(name, params);
   };
   /** quick campaign for tests: HB.debug.quick(seed) */

@@ -10,6 +10,7 @@
     secure: { label: 'Secure your sleep', color: '#2f4a66' },
     renown: { label: 'Become known', color: '#6a4a85' },
     domain: { label: 'Grow your domain', color: '#7a5a14' },
+    endgame: { label: 'The great struggle', color: '#4a2a5a' },
   };
   const pct = (p) => Math.round(p * 100) + '%';
 
@@ -29,7 +30,7 @@
         out.push(`Cross the storm walls into ${seen.length ? HB.fmt.list(seen.slice(0, 2)) + (regions.length > seen.length ? ' and lands beyond' : '') : HB.fmt.plural(regions.length, 'new land') + ' beyond your vale'}`);
       }
       if (toTier === 1) out.push('Demand tribute from settlements that fear you', 'People begin to settle at the foot of your hill: a refuge if they trust you, a camp if they fear you (your domain)', 'Sleep up to 50 years at a time');
-      if (toTier === 2) out.push('Your settlement can grow into a castle, or a dark stronghold');
+      if (toTier === 2) out.push('Your settlement can grow into a castle, or a dark stronghold', 'The great struggle begins: a kind dragon faces an ancient evil and its lieutenants; a cruel one hunts the six Crystals of Life');
       if (toTier === 2) out.push('Land and smash open vaults, gates and wagons', 'Make caravans pay tolls', 'Sleep up to a century');
       if (toTier === 3) out.push('Fly over the sea to the far isles', 'Sleep up to two centuries');
       return out;
@@ -84,6 +85,7 @@
       const m = goals.milestone(state);
       // ---- local stories first: each approach is its own opportunity
       if (HB.situations) out.push(...HB.situations.opportunities(state));
+      if (HB.endgame) out.push(...HB.endgame.opportunities(state));
       if (HB.domain) out.push(...HB.domain.opportunities(state));
       // ---- grow stronger: the best haul for its danger that you can reach
       const prey = [];
@@ -99,7 +101,7 @@
       const threatened = known.filter(L => L.threat).sort((a, b) => dist(a) - dist(b));
       for (const L of threatened.slice(0, 2)) {
         const days = Math.max(1, Math.round(L.threat.until - state.time.totalDays));
-        out.push({ aim: 'trust', title: `Save ${L.name} from the raiders`, desc: `${HB.fmt.cap(HB.fmt.plural(L.threat.raiders, L.threat.goblin ? 'goblin' : 'outlaw'))} from ${L.threat.campName} are sacking it; about ${HB.fmt.plural(days, 'day')} before it falls. ${reach(L).ok ? dist(L) + ' leagues away.' : 'Out of reach right now: rest first.'}`, yields: `${L.name}’s trust: willing workers, a pact of protection with yearly gifts, and the name Guardian of ${L.name}.`, ref: { kind: 'loc', id: L.id }, urgent: true });
+        out.push({ aim: 'trust', title: `Save ${L.name} from the raiders`, desc: `${HB.fmt.cap(HB.fmt.plural(L.threat.raiders, HB.raiderWord(L.threat)))} from ${L.threat.campName} are sacking it; about ${HB.fmt.plural(days, 'day')} before it falls. ${reach(L).ok ? dist(L) + ' leagues away.' : 'Out of reach right now: rest first.'}`, yields: `${L.name}’s trust: willing workers, a pact of protection with yearly gifts, and the name Guardian of ${L.name}.`, ref: { kind: 'loc', id: L.id }, urgent: true });
       }
       for (const c of state.lair.captives.filter(c => !c.pending).slice(0, 1)) out.push({ aim: 'trust', title: `Release ${c.name}`, desc: `Held in your lair since Year ${c.year}.`, yields: `Trust with ${c.factionId >= 0 ? W.factions[c.factionId].name : 'their people'}; their family sends gifts and warnings. Two releases make you known as the Merciful.`, ref: { kind: 'tab', tab: 'captives' } });
       if (HB.tribute) { const L = known.find(L => (L.trust >= 15 || (HB.renown && HB.renown.guardianOf(state).includes(L.name))) && HB.tribute.canProtect(state, L).ok); if (L) out.push({ aim: 'trust', title: `Offer ${L.name} your protection`, desc: `They trust you (${Math.round(L.trust)}).`, yields: `About ${HB.fmt.int(Math.max(10, Math.round(L.wealth * 0.04)))} gold a year in gifts, and watchers on the roads to your lair.`, ref: { kind: 'loc', id: L.id } }); }

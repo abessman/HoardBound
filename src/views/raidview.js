@@ -148,6 +148,7 @@
       if (e.kind === 'corpse') { px.blit(g, S.get('corpse'), x - 4, yb - 10); return; }
       if (e.dead) { if (e.person) px.blit(g, S.get('corpse'), x - 4, yb - 10); return; }
       if (e.loot && !e.person && !e.animal) {
+        if (e.kind === 'crystal') { const c = S.get('crystal'); px.blit(g, c, x - c.width / 2, yb - c.height); g.fillStyle = e.access === 'warded' ? 'rgba(220,240,255,0.5)' : P.goldLight; if (Math.floor(this.t * 5) % 2) { g.fillRect(x - 5, yb - c.height - 2, 1, 1); g.fillRect(x + 4, yb - c.height + 3, 1, 1); } if (e.access === 'warded') { g.strokeStyle = 'rgba(200,230,255,0.55)'; g.beginPath(); g.arc(x, yb - c.height / 2, 9 + Math.sin(this.t * 3), 0, Math.PI * 2); g.stroke(); } return; }
         const spName = e.artifact ? 'crown' : e.kind === 'coins' ? 'coins' : e.kind === 'gem' ? 'gem' : e.kind === 'crown' ? 'crown' : e.kind === 'book' ? 'book' : e.kind === 'sword' ? 'sword' : 'chest';
         const sp = S.get(spName);
         px.blit(g, sp, x - sp.width / 2, yb - sp.height);
@@ -164,7 +165,7 @@
         return;
       }
       // people / animals
-      const spriteId = e.sprite || ({ guard: 'guard', militia: 'villager2', archer: 'archer', knight: 'knight', hero: 'hero', captain: 'knight', bandit: 'bandit', goblin: 'goblin', goblinArcher: 'goblin', dwarfWarrior: 'dwarf', elfArcher: 'archer', villager: 'villager', merchant: 'villager2', priest: 'priest', noble: 'noble', worker: 'villager2', sheep: 'sheep', cow: 'cow', horse: 'horse' }[e.kind] || 'villager');
+      const spriteId = e.sprite || ({ orc: 'orc', orcArcher: 'orc', warlord: 'warlord', warden: 'warden', guard: 'guard', militia: 'villager2', archer: 'archer', knight: 'knight', hero: 'hero', captain: 'knight', bandit: 'bandit', goblin: 'goblin', goblinArcher: 'goblin', dwarfWarrior: 'dwarf', elfArcher: 'archer', villager: 'villager', merchant: 'villager2', priest: 'priest', noble: 'noble', worker: 'villager2', sheep: 'sheep', cow: 'cow', horse: 'horse' }[e.kind] || 'villager');
       const sp = S.get(spriteId);
       const bob = e.state === 'flee' || (e.melee && e.state === 'alert' && Math.abs(e.vx) > 0) ? (Math.floor(this.t * 10 + e.id) % 2) : 0;
       let yOff = 0;

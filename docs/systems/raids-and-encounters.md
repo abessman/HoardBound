@@ -37,6 +37,12 @@ resources, never from the dragon's age alone. A realm on Guard locks village val
   [domain-and-influence](domain-and-influence.md)), scout (not for places already yours), fly on. The card's mood
   line says what the place is to you. Cards with many choices shrink their picture and buttons to fit the screen.
 - **Night**: camp raids happen at night; the raid HUD shows a *Night* tag with a moon and the intro says so.
+- **Bosses and wards** (0.9.0): an entity with `boss: true` makes the rest flee when it dies (`r.bossSlain`); loot with
+  `access: 'warded'` and `wardedBy` cannot be taken until that entity dies. Scenes `warcamp` and `sanctuary`
+  ([endgame](endgame.md)); orc raiders for a warlord's hosts in the defend scene.
+- **Containers** (fixed in 0.9.0): templates give buildings their own ids for loot inside them; `build()` now keeps
+  those links when it renumbers entities, so burning a house spills its savings and an adult can *smash open* a keep,
+  a town hall, a mine mouth or a rival's hoard chamber (before, that loot could never be reached).
 - **Decision cards** (`src/data/encounters.js`): loot is bounded by the place's wealth.
 - After every encounter a consequence summary (see [goals-stories-renown](goals-stories-renown.md)).
 
@@ -52,4 +58,4 @@ resources, never from the dragon's age alone. A realm on Guard locks village val
 - The hero duel and rival duel reuse generic staging; monastery and glade are cards, not scenes.
 
 ## Related
-[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [domain-and-influence](domain-and-influence.md)
+[travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [domain-and-influence](domain-and-influence.md) · [endgame](endgame.md)

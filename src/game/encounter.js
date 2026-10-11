@@ -15,7 +15,9 @@
       // settlements (and any place under attack) offer a choice on arrival; so do caravans
       const settlement = !target.kind && (['village', 'town', 'city', 'castle', 'hold', 'glade', 'monastery'].includes(target.type) || target.threat || (target.type === 'farm' && (target.trust >= 15 || target.tribute || target.state === 'burned')));
       const story = !target.kind && HB.situations && (HB.situations.isStoryPlace(state, target) || HB.situations.choicesFor(state, target, map).length > 0);
+      const struggle = !target.kind && HB.endgame && HB.endgame.isPlace(state, target);
       if (!opts.direct && HB.isBrowser && HB.CardScene) {
+        if (struggle) { enc.struggleCard(state, target, map); return; }
         if (settlement || story) { enc.arrivalCard(state, target, map); return; }
         if (target.kind === 'caravan') { enc.caravanCard(state, target, map); return; }
       }
@@ -38,7 +40,7 @@
       const choices = [];
       const kind = enc.kindOf(target);
       const t = target.threat;
-      if (t) choices.push({ label: 'Drive off the raiders', desc: `${HB.fmt.cap(HB.fmt.plural(t.raiders, t.goblin ? 'goblin' : 'outlaw'))} from ${t.campName}. Saving ${target.name} wins its trust.`, tooltip: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses as readily as raiders. Afterwards you choose whether to give back what you recover.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true, defend: true }), 0); return false; } });
+      if (t) choices.push({ label: 'Drive off the raiders', desc: `${HB.fmt.cap(HB.fmt.plural(t.raiders, HB.raiderWord(t)))} from ${t.campName}. Saving ${target.name} wins its trust.`, tooltip: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses as readily as raiders. Afterwards you choose whether to give back what you recover.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true, defend: true }), 0); return false; } });
       if (HB.situations) for (const ch of HB.situations.choicesFor(state, target, map)) { const fn = ch.onChoose; choices.push(Object.assign({}, ch, { onChoose: () => { const before = HB.consequences.snapshot(state, target); const res = fn(); if (res !== false) enc.pendingSummary = { before, info: { kind: 'story', label: ch.label } }; return res; } })); }
       const sworn = HB.domain && ['protected', 'allied'].includes(HB.domain.statusOf(state, target));
       if (kind !== 'none') choices.push({ label: kind === 'raid' ? (t ? 'Raid it yourself' : 'Raid') : 'Approach', desc: kind === 'raid' ? (sworn ? 'You swore to protect them: raiding breaks your word, and every place you protect will trust you less.' : 'Enter the animated raid: take what you can, leave when you must.') : 'Deal with the place as it is.', onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true }), 0); return false; } });
@@ -58,6 +60,17 @@
       const storyText = HB.situations ? HB.situations.arrivalText(state, target) : '';
       const threatText = (t ? `Smoke rises from ${target.name}: raiders from ${t.campName} are looting it. ` : '') + (storyText && !t ? storyText + ' ' : '');
       const card = new HB.CardScene({ title: `Above ${target.name}`, illustration: target.type === 'castle' ? 'ransom' : target.type === 'glade' || target.type === 'monastery' ? 'monastery' : 'petition', text: `${threatText}${HB.preview.describe(state, target).subtitle}. ${f ? HB.preview.moodText(f) : 'No realm claims it.'} ${enc.placeMood(state, target)}`, choices, onClose: () => { const p = enc.pendingSummary; enc.pendingSummary = null; if (p && map) enc.showSummary(state, target, p.before, p.info, map); } });
+      HB.scenes.push(card);
+    },
+    /** a place of the great struggle: a lieutenant's stronghold, a crystal's sanctuary, the enemy's fortress */
+    struggleCard(state, target, map) {
+      const choices = [];
+      for (const ch of HB.endgame.choicesFor(state, target)) {
+        if (ch.raid) choices.push(Object.assign({}, ch, { onChoose: () => { HB.scenes.pop(card); setTimeout(() => enc.begin(state, target, map, { direct: true }), 0); return false; } }));
+        else choices.push(ch);
+      }
+      choices.push({ label: 'Fly on', desc: '', onChoose: () => { state.phase = 'planning'; return 'You fly on.'; } });
+      const card = new HB.CardScene({ title: target.name, illustration: target.type === 'sanctuary' ? 'sanctuary' : 'shadow', text: HB.endgame.describe(state, target), choices });
       HB.scenes.push(card);
     },
     /** what this place is to you, in a sentence for its arrival card */
@@ -190,6 +203,7 @@
       if (HB.petitions && HB.petitions.onRaid && !defend) HB.petitions.onRaid(state, target, r);
       const before = enc.before || HB.consequences.snapshot(state, target);
       enc.before = null;
+      if (HB.endgame) HB.endgame.onRaidEnd(state, target, r); // a lieutenant slain, a crystal taken
       const info = { kind: defend ? 'defend' : 'raid', outcome, r, pursuitText: HB.pursuit.start(state, target, r) };
       const next = () => enc.showSummary(state, target, before, info, map);
       const afterStory = () => { if (!HB.situations || !HB.situations.onRaidEnd(state, target, r, map, next)) next(); };
@@ -241,8 +255,8 @@
         L.fear = Math.min(100, L.fear + c.fear * 2); L.trust = Math.max(0, L.trust - c.hostility + (c.trust || 0) * 2);
         if (c.tookArtifact) { L.special = null; }
         if (c.outcome === 'defeated') { L.flags.repelled = (L.flags.repelled || 0) + 1; }
-        // learning
-        const f = L.factionId >= 0 ? W.factions[L.factionId] : null;
+        // learning (a lieutenant's warcamp belongs to the enemy, not to the realm whose land it stands on)
+        const f = L.factionId >= 0 && L.type !== 'stronghold' ? W.factions[L.factionId] : null;
         if (f) {
           const adj = { fear: c.fear, hostility: c.hostility, trust: c.trust || 0 };
           if (HB.factions) HB.factions.adjust(state, f, adj, `${c.label} at ${L.name}`); else { f.dragon.fear += adj.fear; f.dragon.hostility += adj.hostility; f.dragon.trust += adj.trust; }

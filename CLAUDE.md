@@ -13,7 +13,7 @@ through decades while the world changes and remembers. Played on desktop and iPa
 | --- | --- |
 | Where we left off, current project and its decisions, next tasks | `next_chat_kickoff.md` |
 | The owner's pillars and design decisions | `DESIGN.md` |
-| How one part of the game works: intent, rules and numbers, code, tests, known issues | `docs/systems/`: `map-and-exploration`, `travel`, `raids-and-encounters`, `lair-and-economy`, `sleep-and-growth`, `goals-stories-renown`, `realms-and-memory`, `domain-and-influence`, `art-and-sprites` |
+| How one part of the game works: intent, rules and numbers, code, tests, known issues | `docs/systems/`: `map-and-exploration`, `travel`, `raids-and-encounters`, `lair-and-economy`, `sleep-and-growth`, `goals-stories-renown`, `realms-and-memory`, `domain-and-influence`, `endgame`, `art-and-sprites` |
 | What is functional / simplified / deferred | `docs/FEATURE_STATUS.md` |
 | Version history | `CHANGELOG.md` |
 | Ideas not built yet | `docs/ideas/` |

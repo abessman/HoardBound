@@ -40,6 +40,9 @@ Tooltips explain every action, cost and disabled button.
 6. At the lair: spend gold on upgrades (with cost, balance and stat change shown first), hire or enslave workers, ransom or release captives, demand tribute from the frightened or protection money from the grateful.
 7. Sleep: five years, twenty, fifty, a century. You heal and grow (if the hoard can feed the change); towns grow, lords die, wars move borders, thieves and hunters test the lair. Wake into the same world, changed.
 8. Build a domain (once you are a young dragon): people who trust you build a refuge at the foot of your hill, people you hold by fear are driven into a camp. Protect places and take their oaths, rebuild what burned, or make them pay and occupy them. Your territory shows on the map (**Territory**, T); the settlement grows while you sleep (Lair → Domain).
+9. The great struggle (once you are grown): a kind dragon faces an ancient evil and its three lieutenants; a cruel one hunts the six Crystals of Life. In 0.9 the first lieutenant and the first crystal can be fought.
+
+To try the later game without playing up to it: `index.html?scene=map&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`). These test starts save to their own slot.
 
 ## Project layout
 

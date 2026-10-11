@@ -51,7 +51,7 @@
     },
     signature(state) {
       const h = dom.home(state);
-      return `${dom.get(state).ver}|${h.stage}|${h.path}|${state.dragon.tier}|` + dom.members(state).map(m => m.L.id + m.status[0]).join(',');
+      return `${dom.get(state).ver}|${h.stage}|${h.path}|${state.dragon.tier}|${HB.endgame ? HB.endgame.signature(state) : ''}|` + dom.members(state).map(m => m.L.id + m.status[0]).join(',');
     },
     // ---------- influence: territorial reach, by subregion, spreading from the lair and the places that serve you
     influence(state) {
@@ -96,6 +96,7 @@
         if (m.status === 'occupied') paint(m.L.x, m.L.y, 3, -1);
         else if (m.status === 'allied') paint(m.L.x, m.L.y, 2.5, 1);
       }
+      if (HB.endgame) HB.endgame.paintMarks(state, paint);
       return f;
     },
     // ---------- the settlement at the foot of your hill

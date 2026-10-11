@@ -222,6 +222,7 @@
       if (HB.lair && HB.lair.onReturn) HB.lair.onReturn(state, map);
       // people may settle at the foot of the hill now (shown after the home notice)
       const domainText = HB.domain ? HB.domain.advance(state, HB.game.rng) : null;
+      if (HB.endgame) HB.endgame.check(state, HB.game.rng); // the great struggle may begin (announced on the map)
       if (domainText && HB.isBrowser && HB.notice) HB.notice(HB.domain.home(state).stage === 1 ? 'People Come to Your Hill' : 'Your Domain Grows', `${domainText}\n\n${HB.domain.stageInfo(state).gives.map(g => '• ' + g).join('\n')}\n\nSee Lair → Domain for what it gives and how it grows.`);
       // automatic rest: stamina refills 30%/day, health heals 12%/day
       let days = 0;

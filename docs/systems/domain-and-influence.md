@@ -98,7 +98,7 @@ crush, raze, rebuild, a revolting camp, save round trip (including places made d
 - All numbers are first guesses: stage years, member counts, gold, unrest and resistance rates. Tune after the
   owner's playtest. Influence by subregion can feel large (a stage 1 home reaches about seven lands).
 - No undead settlements yet (needs dark powers from the endgame). No lair exterior view; the home shows on the map.
-- Allied places do not yet send soldiers to the endgame or ask you to defend them against a named enemy.
+- Allied places do not yet send soldiers to the endgame; the Warlord's hosts do strike them ([endgame](endgame.md)).
 
 ## Related
-[realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [goals-stories-renown](goals-stories-renown.md) · [map-and-exploration](map-and-exploration.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)
+[realms-and-memory](realms-and-memory.md) · [lair-and-economy](lair-and-economy.md) · [goals-stories-renown](goals-stories-renown.md) · [map-and-exploration](map-and-exploration.md) · [endgame](endgame.md) · [ideas: domain and endgame](../ideas/domain-and-endgame.md)

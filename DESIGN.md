@@ -40,7 +40,7 @@ document wins because it reflects later conversation.
 | Art pipeline | All pixel art generated in code from palette-indexed grids and procedural part drawing. The sprite registry accepts PNG+JSON overrides so real sprite sheets can replace generated ones later. |
 | Platform | Browser now; everything renders to one `<canvas>` at a fixed 1280×720 virtual resolution with an in-canvas UI layer, so an Electron/Steam/console port does not depend on HTML widgets. Keyboard, mouse, gamepad from the start; touch via the same pointer code. |
 | Fonts | Alegreya / Alegreya SC for reading text; IM Fell English SC only for big titles and map region names (the owner found IM Fell hard to read small). Bundled in `assets/fonts` (OFL). |
-| Endgame | Rival dragons in far regions and a final elder wyrm. Faction wars readable on the map and exploitable (depleted garrisons, battlefields, mercenary offers). |
+| Endgame | Rival dragons in far regions and a final elder wyrm. Faction wars readable on the map and exploitable (depleted garrisons, battlefields, mercenary offers). From 0.9: the great struggle by path (see the 0.9 row below). |
 | Factions | Human kingdoms (several), dwarven holds, elven realms, goblin/orc warbands, unclaimed wilds. |
 | Seasons | Light: map tint and travel cost; winter slows caravans. |
 | Death | **Legend** mode (default): raid defeat = injury, lost cargo, emergency return; slain while asleep ends the campaign with a chronicle. **Mythic** mode: being slain becomes a forced century-long slumber with a plundered lair. |
@@ -65,7 +65,9 @@ awaken older into a changed world → repeat.
 | 0.7.1 | Docs split: root CLAUDE.md as a map, folder CLAUDE.md files, one doc per system, `next_chat_kickoff.md` | [CLAUDE.md](CLAUDE.md) |
 | 0.8 | The domain (owner's expansion notes): settlements are protected, allied, tributary, occupied, resisting or ruined; influence spreads by land from the lair and its members; a refuge or a camp grows at the hill once the dragon is young; the map shows territory as light washes and changed glyphs; good and evil each have their own deeds, and a home can turn | [domain-and-influence](docs/systems/domain-and-influence.md) |
 
-Ideas not built yet: the endgames and undead settlements in [domain and endgame](docs/ideas/domain-and-endgame.md).
+| 0.9 | The endgame (owner): one opposition per world, formed when the dragon is grown and leaning one way. Kind: an ancient evil and three lieutenants; killing them opens the final battle (which can be tried early at a major disadvantage). Cruel: six Crystals of Life; taking them opens the final challenge with the god of the world. Prototype: the Warlord and the first crystal are playable | [endgame](docs/systems/endgame.md) |
+
+Ideas not built yet: the other lieutenants and crystals, the final battles, undead settlements ([domain and endgame](docs/ideas/domain-and-endgame.md)).
 
 ## 5. Where the details are
 
@@ -79,6 +81,7 @@ Ideas not built yet: the endgames and undead settlements in [domain and endgame]
 | Milestone, Aims, stories, summaries, titles, reactions | [goals-stories-renown](docs/systems/goals-stories-renown.md) |
 | Factions, heat, hunters, grudges, wars, rivals, alignment | [realms-and-memory](docs/systems/realms-and-memory.md) |
 | Allegiance, influence, the settlement at your hill, territory on the map | [domain-and-influence](docs/systems/domain-and-influence.md) |
+| The great struggle: the Hollow King and his lieutenants, the Crystals of Life | [endgame](docs/systems/endgame.md) |
 | Generated art, dragon look, sprite replacement | [art-and-sprites](docs/systems/art-and-sprites.md) |
 
 What works, what is simplified and what is deferred: [FEATURE_STATUS](docs/FEATURE_STATUS.md). Controls and how to

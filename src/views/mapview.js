@@ -154,7 +154,7 @@
       this.btnRest.visible = away && st.dragon.stamina < st.dragon.stats.maxStamina;
       const flying = st.phase === 'traveling' || st.phase === 'returning';
       this.btnPause.visible = flying; this.btnSpeed.visible = flying; this.btnTurn.visible = st.phase === 'traveling';
-      if (this.goalPanel) this.goalPanel.h = HB.situations && HB.situations.hint(st, true) ? 128 : 92;
+      if (this.goalPanel) this.goalPanel.h = 92 + (HB.situations && HB.situations.hint(st, true) ? 36 : 0) + (HB.endgame && HB.endgame.hint(st) ? 36 : 0);
       if (this.btnTerritory) this.btnTerritory.visible = !!HB.domain && HB.domain.influence(st).count > 0;
       if (flying && tr) { this.btnPause.label = tr.paused ? 'Resume' : 'Pause'; this.btnSpeed.label = `Speed ×${tr.speedMul}`; }
     }
@@ -176,6 +176,26 @@
       HB.scenes.push(card);
     }
     openAims() { if (HB.AimsScene) HB.scenes.push(new HB.AimsScene(this.state, this)); }
+    showStruggle() {
+      const st = this.state, E = st.endgame, W = st.world, eg = HB.endgame;
+      E.announced = true;
+      let title, text, first;
+      if (E.path === 'shadow') {
+        title = `${E.foe.name} Wakes`;
+        const lines = E.lieutenants.map(l => { const d = eg.lieutenantDef(l.id); return `• ${l.name}, ${d.title}. ${d.power}: ${d.powerText}`; });
+        text = `${HB.ENDGAME.shadow.intro(E.foe.name, E.foe.title)}\n\n${lines.join('\n')}\n\nKill all three and the way to ${HB.ENDGAME.shadow.foe.place} lies open. You may challenge him sooner, at a heavy cost.`;
+        first = W.locations[E.lieutenants[0].locId];
+      } else {
+        title = 'The Crystals of Life';
+        text = `${HB.ENDGAME.crystals.intro()}\n\n${E.crystals.map(c => { const d = eg.crystalDef(c.id); return `• ${d.name}: ${d.benefit}`; }).join('\n')}\n\nThe first lies at ${E.crystals[0].locId !== null ? W.locations[E.crystals[0].locId].name : 'a place not yet found'}. When all six are yours, ${E.god.name}, ${E.god.title}, will come for you.`;
+        first = E.crystals[0].locId !== null ? W.locations[E.crystals[0].locId] : null;
+      }
+      const card = new HB.CardScene({ title, illustration: E.path === 'shadow' ? 'shadow' : 'sanctuary', text, width: 860, choices: [
+        { label: first ? `Show me ${first.name}` : 'Show me', desc: 'Find it on the map.', onChoose: () => { HB.scenes.pop(card); if (first) { this.select(first); this.centerOn(first.x + 0.5, first.y + 0.5, 1.2); } return false; } },
+        { label: 'Later', desc: 'It is on the Aims board and under your goal.', onChoose: () => { HB.scenes.pop(card); return false; } },
+      ] });
+      HB.scenes.push(card);
+    }
     openMenu() { if (HB.MenuScene) HB.scenes.push(new HB.MenuScene(this.state)); else HB.scenes.push(new HB.SettingsScene({ inGame: true })); }
 
     // ---------- update
@@ -228,6 +248,8 @@
       else if (this.frame % 30 === 0) { /* lazy sync: revealed cells cleared, rumoured cells sketched (e.g. after load or rumours) */ const R = st.know.rumor; for (let i = 0; i < F.length; i++) { if (K[i]) { if (F[i] > 0 && !this.revealAnim.has(i)) F[i] = 0; } else if (R[i] && F[i] > RUMOR_ALPHA) F[i] = RUMOR_ALPHA; } }
       // hunters caught up with you
       if (st.ambush && HB.scenes.top() === this) this.showAmbush();
+      // the great struggle has begun: say so once, plainly
+      if (st.endgame && st.endgame.path && st.endgame.announced === false && HB.scenes.top() === this) this.showStruggle();
       // travel / world ticks
       if (HB.travel && HB.travel.update) HB.travel.update(st, dt, this);
       if (HB.worldsim && HB.worldsim.tickRealtime) HB.worldsim.tickRealtime(st, dt);
@@ -482,6 +504,7 @@
       this.drawHazyPlaces(ctx, tl, br);
       this.drawThreats(ctx, tl, br);
       this.drawStoryMarks(ctx, tl, br);
+      this.drawStruggleMarks(ctx, tl, br);
       // labels
       this.drawLabels(ctx, tl, br);
       // selection ring / hover
@@ -709,6 +732,8 @@
       HB.text.paragraph(ctx, 'Next: ' + m.nextStep, x + 14, y + 52, w - 28, { size: 13, italic: true, maxLines: 2, lineHeight: 16, color: P.ink });
       const story = HB.situations ? HB.situations.hint(st, true) : '';
       if (story) HB.text.paragraph(ctx, 'Story: ' + story, x + 14, y + 88, w - 28, { size: 13, maxLines: 2, lineHeight: 16, color: '#7a2418' });
+      const strife = HB.endgame ? HB.endgame.hint(st) : '';
+      if (strife) HB.text.paragraph(ctx, strife, x + 14, y + 88 + (story ? 36 : 0), w - 28, { size: 13, maxLines: 2, lineHeight: 16, color: '#4a2a5a' });
     }
     /** a red seal over places in a local story; wind swirls over crags; hunting parties shown even through cloud */
     drawStoryMarks(ctx, tl, br) {
@@ -733,6 +758,24 @@
         const p = this.worldToScreen(e.x + 0.5, e.y + 0.8), s2 = Math.max(4, Math.min(9, 7 * Math.sqrt(this.cam.zoom)));
         ctx.save(); HB.mapart.setup(ctx); HB.mapart.walker(ctx, p.x, p.y, s2, '#7a2418'); ctx.restore();
         HB.text.draw(ctx, e.kind === 'hero' ? `${e.name}, slayer` : e.name, p.x, p.y - s2 * 2.6, { size: 12, italic: true, align: 'center', color: '#7a2418', stroke: 'rgba(240,228,200,0.85)', strokeWidth: 2.5 });
+      }
+    }
+    /** a dark seal over the places of the great struggle, gold-green over the sanctuaries */
+    drawStruggleMarks(ctx, tl, br) {
+      const st = this.state, W = st.world, z = CELL * this.cam.zoom, eg = HB.endgame;
+      if (!eg || !eg.active(st)) return;
+      for (const L of W.locations) {
+        if (!eg.isPlace(st, L) || L.state === 'ruin' || !HB.world.known(L)) continue;
+        if (L.x < tl.x - 2 || L.x > br.x + 2 || L.y < tl.y - 2 || L.y > br.y + 2) continue;
+        const p = this.worldToScreen(L.x + 0.5, L.y - 0.6), r = HB.clamp(z * 0.34, 6, 10), crystal = L.type === 'sanctuary';
+        ctx.save();
+        ctx.fillStyle = crystal ? '#3f6d3a' : '#3a1e48'; ctx.beginPath(); ctx.arc(p.x, p.y - r * 2, r, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = crystal ? '#d9c66a' : '#c9541e'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = '#f6ecd2'; ctx.beginPath();
+        if (crystal) { ctx.moveTo(p.x, p.y - r * 2.6); ctx.lineTo(p.x + r * 0.4, p.y - r * 2); ctx.lineTo(p.x, p.y - r * 1.4); ctx.lineTo(p.x - r * 0.4, p.y - r * 2); }
+        else { const yb = p.y - r * 1.6, w = r * 0.6; ctx.moveTo(p.x - w, yb); ctx.lineTo(p.x - w, yb - r * 0.6); ctx.lineTo(p.x - w * 0.4, yb - r * 0.3); ctx.lineTo(p.x, yb - r * 0.8); ctx.lineTo(p.x + w * 0.4, yb - r * 0.3); ctx.lineTo(p.x + w, yb - r * 0.6); ctx.lineTo(p.x + w, yb); }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
       }
     }
     /** crossed swords over places being raided by outlaws */

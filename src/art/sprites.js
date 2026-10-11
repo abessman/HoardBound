@@ -160,6 +160,69 @@
     '..u.u...',
     '..o.o...',
   ], { e: '#7a9a3a' });
+  // the Hollow King's warbands: grey-green skin, iron, a blade
+  def('orc', [
+    '..ooo...',
+    '.ojjjo..',
+    '.ojjjo..',
+    '.ojqjo..',
+    '..iii...',
+    '.oiiio.I',
+    'ojiiijoI',
+    '.oiuio.o',
+    '..ddd...',
+    '..d.d...',
+    '..u.u...',
+    '..o.o...',
+  ], { j: '#6f8a4a' });
+  // the Warlord: bigger, horned, a great cleaver
+  def('warlord', [
+    'o........o',
+    'oo.oooo.oo',
+    '.ooiiiioo.',
+    '..ojjjjo..',
+    '..ojqjqo..',
+    '..ojjjjo..',
+    '...oiio..I',
+    '.oiiIIiioI',
+    'ojiiIIiijI',
+    'ojidIIdijo',
+    '.o.iiii.o.',
+    '...iiii...',
+    '...dd.dd..',
+    '...dd.dd..',
+    '...uu.uu..',
+    '...oo.oo..',
+  ], { j: '#5f7a3a' });
+  // a warden of a sanctuary: hooded in white and green, a staff
+  def('warden', [
+    '..ooo..o',
+    '.oLLLo.W',
+    '.okkko.W',
+    '.okKko.W',
+    '..xxx..W',
+    '.oxgxo.W',
+    'okxgxkoW',
+    '.oxgxo.W',
+    '..xgx..W',
+    '..x.x..W',
+    '..u.u..W',
+    '..o.o..o',
+  ]);
+  // a Crystal of Life on its altar stone
+  def('crystal', [
+    '...o...',
+    '..oeo..',
+    '.oeLeo.',
+    '.oeLeo.',
+    'oeLxLeo',
+    'oeLLLeo',
+    '.oeLeo.',
+    '.oeeeo.',
+    '..oeo..',
+    '.osSso.',
+    'ooooooo',
+  ]);
   def('child', [
     '..ooo...',
     '.ohhho..',

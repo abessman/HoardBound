@@ -259,6 +259,33 @@
         case 'battlefield':
           A.crossedSwords(ctx, x, y - s * 0.6, s * 1.1);
           break;
+        // ---- the great struggle
+        case 'fortress': {
+          const tw = (tx, th, tw2) => { ctx.beginPath(); ctx.moveTo(tx - tw2, y); ctx.lineTo(tx - tw2 * 0.8, y - th); ctx.lineTo(tx - tw2 * 1.1, y - th); ctx.lineTo(tx, y - th - s * 1.1); ctx.lineTo(tx + tw2 * 1.1, y - th); ctx.lineTo(tx + tw2 * 0.8, y - th); ctx.lineTo(tx + tw2, y); ctx.closePath(); ctx.fillStyle = '#4a3a34'; ctx.fill(); stroke(ctx, 1.2, '#1a1010'); };
+          ctx.beginPath(); ctx.moveTo(x - s * 2.2, y); ctx.lineTo(x - s * 2.0, y - s * 0.9); ctx.lineTo(x - s * 1.6, y - s * 0.6); ctx.lineTo(x - s * 1.1, y - s * 1.0); ctx.lineTo(x + s * 1.1, y - s * 1.0); ctx.lineTo(x + s * 1.6, y - s * 0.6); ctx.lineTo(x + s * 2.0, y - s * 0.9); ctx.lineTo(x + s * 2.2, y); ctx.closePath(); ctx.fillStyle = '#5a4a40'; ctx.fill(); stroke(ctx, 1.1, '#1a1010');
+          tw(x - s * 1.4, s * 1.8, s * 0.4); tw(x + s * 1.4, s * 1.8, s * 0.4); tw(x, s * 2.8, s * 0.55);
+          ctx.beginPath(); ctx.rect(x - s * 0.1, y - s * 2.0, s * 0.2, s * 0.3); ctx.fillStyle = '#d9542a'; ctx.fill();
+          break;
+        }
+        case 'stronghold':
+          if (L.lieutenant === 'sorcerer') {
+            ctx.beginPath(); ctx.moveTo(x - s * 0.5, y); ctx.lineTo(x - s * 0.3, y - s * 3.2); ctx.lineTo(x, y - s * 3.8); ctx.lineTo(x + s * 0.3, y - s * 3.2); ctx.lineTo(x + s * 0.5, y); ctx.closePath(); ctx.fillStyle = '#2e2a38'; ctx.fill(); stroke(ctx, 1.1, '#100c18');
+            ctx.beginPath(); ctx.arc(x, y - s * 3.3, s * 0.18, 0, Math.PI * 2); ctx.fillStyle = '#9a6ad0'; ctx.fill();
+          } else if (L.lieutenant === 'blightmother') {
+            A.swampTuft(ctx, x - s * 1.2, y + s * 0.2, s * 0.5, rng); A.swampTuft(ctx, x + s * 1.3, y + s * 0.3, s * 0.5, rng);
+            A.house(ctx, x, y, s * 0.8, rng, { fill: '#9a8a6a' }); A.treeBare(ctx, x + s * 1.0, y, s * 0.7, rng);
+          } else {
+            const tent = (tx, ts) => { ctx.beginPath(); ctx.moveTo(tx - ts, y); ctx.lineTo(tx, y - ts * 1.3); ctx.lineTo(tx + ts, y); ctx.closePath(); ctx.fillStyle = '#8a7a5a'; ctx.fill(); stroke(ctx, 1); };
+            tent(x - s * 1.1, s * 0.7); tent(x + s * 0.9, s * 0.75); tent(x - s * 0.1, s * 0.9);
+            ctx.beginPath(); ctx.moveTo(x + s * 1.9, y); ctx.lineTo(x + s * 1.9, y - s * 2.2); stroke(ctx, 1.1);
+            ctx.beginPath(); ctx.moveTo(x + s * 1.9, y - s * 2.2); ctx.lineTo(x + s * 3.0, y - s * 1.9); ctx.lineTo(x + s * 1.9, y - s * 1.6); ctx.closePath(); ctx.fillStyle = '#5a1810'; ctx.fill(); stroke(ctx, 0.8);
+          }
+          break;
+        case 'sanctuary':
+          for (const [dx, hh] of [[-1.4, 1.2], [-0.6, 1.5], [0.6, 1.5], [1.4, 1.2]]) { ctx.beginPath(); ctx.rect(x + dx * s - s * 0.18, y - hh * s, s * 0.36, hh * s); ctx.fillStyle = FILL_DARK; ctx.fill(); stroke(ctx, 0.9); }
+          ctx.beginPath(); ctx.rect(x - s * 0.45, y - s * 0.45, s * 0.9, s * 0.45); ctx.fillStyle = FILL; ctx.fill(); stroke(ctx, 0.9);
+          if (L.state !== 'ruin') { ctx.beginPath(); ctx.moveTo(x, y - s * 1.5); ctx.lineTo(x + s * 0.3, y - s * 0.95); ctx.lineTo(x, y - s * 0.45); ctx.lineTo(x - s * 0.3, y - s * 0.95); ctx.closePath(); ctx.fillStyle = '#7ac08a'; ctx.fill(); stroke(ctx, 0.8); }
+          break;
         default:
           A.house(ctx, x, y, s, rng);
       }

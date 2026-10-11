@@ -9,6 +9,8 @@
       if (target.kind === 'caravan') return 'caravan';
       if (target.kind === 'hero' || target.kind === 'hunters') return 'hero';
       if (target.kind === 'army') return 'battlefield';
+      if (target.type === 'stronghold') return target.lieutenant === 'warlord' && target.state === 'normal' ? 'warcamp' : null;
+      if (target.type === 'sanctuary') return target.crystal === 'greenmarrow' && target.state === 'normal' ? 'sanctuary' : null;
       const m = { farm: 'village', village: 'village', town: 'village', city: 'village', castle: 'castle', camp: 'camp', warren: 'camp', mine: 'mine', battlefield: 'battlefield', rivalLair: 'dragonDuel' };
       return m[target.type] || null;
     },
@@ -18,7 +20,10 @@
       const scene = builder(state, target, rng, T.ctx(state, target));
       scene.templateId = id;
       if (HB.situations) HB.situations.decorateScene(state, target, scene, rng);
-      scene.entities.forEach((e, i) => { e.id = i + 1; });
+      // number the entities, keeping the links builders made with their own ids (loot inside a keep, a ward on a crystal)
+      const old = scene.entities.map(e => e.id), remap = new Map();
+      scene.entities.forEach((e, i) => { if (old[i] !== undefined && !remap.has(old[i])) remap.set(old[i], i + 1); e.id = i + 1; });
+      for (const e of scene.entities) for (const k of ['insideOf', 'wardedBy', 'containerId']) if (e[k] !== undefined && e[k] !== null && remap.has(e[k])) e[k] = remap.get(e[k]);
       return scene;
     },
     ctx(state, target) {
@@ -286,16 +291,18 @@
         if (stolen.gold > 0) goods.push({ gold: stolen.gold, value: stolen.gold, weight: Math.max(0.3, stolen.gold / 100), label: `${HB.fmt.int(stolen.gold)} gold of theirs`, recovered: true });
         for (const it of stolen.items) goods.push({ item: it, value: it.value, weight: it.weight, label: `${HB.hoard.itemLabel(it)} (stolen)`, recovered: true });
         const n = HB.clamp(t.raiders || 3, 2, 7);
-        const kind = goblin ? 'goblin' : 'bandit';
+        const orc = !!t.orc; // a warlord's host: tougher and braver than outlaws
+        const kind = orc ? 'orc' : goblin ? 'goblin' : 'bandit';
+        const word = orc ? 'an orc of the host' : goblin ? 'a goblin raider' : 'a raider';
         for (let i = 0; i < n; i++) {
           const rx = 110 + i * (length - 170) / n + rng.int(18);
           const lead = i === 0;
-          ents.push(T.person(kind, rx, lead ? 'the raid leader' : goblin ? 'a goblin raider' : 'a raider', { raider: true, state: 'idle', courage: lead ? 1.4 : goblin ? 0.8 : 1.0, hp: lead ? 16 : goblin ? 7 : 10, attack: lead ? 5 : goblin ? 3 : 4, drop: goods.shift() || null }));
+          ents.push(T.person(kind, rx, lead ? (orc ? 'the warband leader' : 'the raid leader') : word, { raider: true, state: 'idle', courage: lead ? (orc ? 2 : 1.4) : orc ? 1.4 : goblin ? 0.8 : 1.0, hp: lead ? (orc ? 26 : 16) : orc ? 16 : goblin ? 7 : 10, attack: lead ? (orc ? 8 : 5) : orc ? 6 : goblin ? 3 : 4, drop: goods.shift() || null }));
         }
         for (const g of goods.splice(0, 2)) ents.push(Object.assign({ kind: g.gold ? 'coins' : 'chest', x: 60 + rng.int(length - 120), y: G(), w: 10, h: 8, loot: g, access: 'exposed', label: g.gold ? 'a sack of stolen coin' : g.label }));
-        return { mode: 'defend', entities: ents, length, intro: `${target.name} is burning: ${HB.fmt.plural(n, goblin ? 'goblin' : 'outlaw')} from ${t.campName} are looting it.`, hint: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses too.', backdrop: 'village', alarmBase: 1.0, escalations: [
+        return { mode: 'defend', entities: ents, length, intro: `${target.name} is burning: ${HB.fmt.plural(n, HB.raiderWord(t))} from ${t.campName} are looting it.`, hint: 'Bite them, burn them, or roar to break their nerve. Your fire burns houses too.', backdrop: 'village', alarmBase: 1.0, escalations: [
           { at: 30, text: 'The raiders set another roof alight.', effect: (r) => HB.raid.raiderFire(r) },
-          { at: 60, text: 'More outlaws come down from the hills.', spawn: [{ kind, x: -24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }, { kind, x: length + 24, label: goblin ? 'a goblin raider' : 'a raider', raider: true, courage: 1.0, hp: 10, attack: 4 }] },
+          { at: 60, text: orc ? 'More of the host come over the hill.' : 'More outlaws come down from the hills.', spawn: [{ kind, x: -24, label: word, raider: true, courage: orc ? 1.4 : 1.0, hp: orc ? 16 : 10, attack: orc ? 6 : 4 }, { kind, x: length + 24, label: word, raider: true, courage: orc ? 1.4 : 1.0, hp: orc ? 16 : 10, attack: orc ? 6 : 4 }] },
           { at: 90, text: 'They torch the barn.', effect: (r) => HB.raid.raiderFire(r, 'barn') },
         ] };
       },
@@ -318,6 +325,47 @@
         return { mode: 'defend', entities: ents, length, intro: `Outlaws pour out of the trees onto the wagons of the ${target.name || 'caravan'}.`, hint: 'Drive them off: bite, burn, roar. Fire will burn the wagons too.', backdrop: 'road', alarmBase: 1.0, escalations: [
           { at: 40, text: 'An outlaw sets a wagon cover alight.', effect: (r) => { const w = r.entities.find(e => e.kind === 'wagon' && !e.burning && !e.burnedDown); if (w) { w.burning = 8; w.raiderFire = true; } } },
           { at: 70, text: 'More outlaws come out of the trees.', spawn: [{ kind: 'bandit', x: -24, label: 'an outlaw', raider: true, hp: 10, attack: 4 }, { kind: 'bandit', x: length + 24, label: 'an outlaw', raider: true, hp: 10, attack: 4 }] },
+        ] };
+      },
+      /** the Warlord's camp: warbands, war drums, and the Warlord himself. Allies' scouts lead you in while many sleep. */
+      warcamp(state, target, rng, ctx) {
+        const ents = [], length = 500, tier = state.dragon.tier;
+        const lt = HB.endgame ? HB.endgame.lieutenantAt(state, target) : null;
+        const allies = HB.domain ? HB.domain.members(state).filter(m => m.status === 'allied').length : 0;
+        const sleepers = Math.min(4, allies * 2);
+        for (let i = 0; i < 4; i++) ents.push({ kind: 'tent', x: 80 + i * 90, y: G(), w: 14, h: 10, label: i === 3 ? 'the Warlord’s tent' : 'a war tent', building: true, sprite: 'tentDark', contents: 'Weapons, plunder and the warband’s pay.', id: 500 + i });
+        ents.push({ kind: 'campfire', x: 220, y: G(), w: 8, h: 6, label: 'the war drums', decor: true });
+        const n = 7 + tier * 2;
+        for (let i = 0; i < n; i++) {
+          const archer = i % 3 === 2;
+          ents.push(T.person(archer ? 'orcArcher' : 'orc', 70 + i * (length - 160) / n + rng.int(12), archer ? 'an orc archer' : 'an orc warrior', { state: i < sleepers ? 'asleep' : 'idle' }));
+        }
+        const chest = HB.hoard.generateLoot(rng, Object.assign({}, target, { type: 'castle', wealth: 1400 + tier * 400 }), 1, state.time.year);
+        let g = chest.gold, k = 0; while (g > 0 && k < 4) { const take = k === 3 ? g : Math.round(g * 0.4); ents.push(T.lootNode(rng, { gold: take }, 120 + k * 80, k < 2 ? 'exposed' : 'inside', k < 2 ? 'the warband’s pay' : 'plunder', k < 2 ? null : { insideOf: 500 + k, container: 'a war tent' })); g -= take; k++; }
+        for (const it of chest.items.slice(0, 3)) ents.push(T.lootNode(rng, it, 360 + rng.int(60), 'inside', null, { insideOf: 503, container: 'the Warlord’s tent' }));
+        ents.push(T.person('warlord', 400, lt ? lt.name : 'the Warlord', { boss: true, leader: true, hp: 340 + tier * 50, attack: 19 + tier * 3, speed: 15, courage: 9, w: 12, h: 16 }));
+        return { entities: ents, length, intro: `${lt ? lt.name.split(' ')[0] : 'The Warlord'}’s camp at dusk. ${sleepers ? `Your allies’ scouts led you in: ${sleepers} still sleep.` : 'The warbands are awake.'}`, hint: `Kill ${lt ? lt.name.split(' ')[0] : 'the Warlord'} and the warbands break.`, backdrop: 'dusk', alarmBase: 1.4, escalations: [
+          { at: 25, text: 'War drums. The whole camp wakes.', effect: (r) => { for (const e of r.entities) if (e.state === 'asleep') e.state = 'alert'; } },
+          { at: 55, text: 'A warband comes running from the latrines and the horse lines.', spawn: [{ kind: 'orc', x: -20, label: 'an orc warrior' }, { kind: 'orc', x: length + 20, label: 'an orc warrior' }] },
+          { at: 80, text: 'The Warlord bellows for his guard.', spawn: [{ kind: 'orc', x: 420, label: 'a guard of the Warlord', hp: 24, attack: 8 }, { kind: 'orcArcher', x: 440, label: 'an orc archer' }] },
+          { at: 95, text: 'Whole warbands pour in from the hills.', spawn: [{ kind: 'orc', x: -30, label: 'an orc warrior' }, { kind: 'orc', x: -44, label: 'an orc warrior' }, { kind: 'orcArcher', x: length + 30, label: 'an orc archer' }] },
+        ] };
+      },
+      /** a sanctuary of a Crystal of Life: a guardian, its wardens, and the crystal on the altar, warded while the guardian lives */
+      sanctuary(state, target, rng, ctx) {
+        const ents = [], length = 440;
+        const c = HB.endgame ? HB.endgame.crystalAt(state, target) : null;
+        const def = c ? HB.endgame.crystalDef(c.id) : { name: 'the crystal', guardian: 'the guardian' };
+        for (let i = 0; i < 6; i++) ents.push(T.person('elfArcher', 70 + i * 55 + rng.int(12), 'a warden archer', { sprite: 'warden', hp: 16, attack: 6 }));
+        for (let i = 0; i < 3; i++) ents.push(T.person('priest', 150 + i * 60, 'a keeper of the grove'));
+        const warden = T.person('warden', 330, HB.fmt.cap(def.guardian), { boss: true, leader: true, hp: 520, attack: 36, range: 190, rate: 0.9, courage: 9, w: 10, h: 14, id: 600 });
+        ents.push(warden);
+        const art = HB.hoard.makeArtifact('crystal_' + (c ? c.id : 'greenmarrow'), target.name, state.time.year);
+        ents.push({ kind: 'crystal', x: 380, y: G(), w: 10, h: 12, loot: { item: art, value: art.value, weight: art.weight, tag: 'crystal:' + (c ? c.id : 'greenmarrow') }, access: 'warded', wardedBy: 600, label: `${def.name}, the Crystal of Life`, artifact: true });
+        for (let i = 0; i < 3; i++) { const it = HB.hoard.makeItem(rng.pick(HB.LOOT.gems || HB.LOOT.royal), rng, target.name, state.time.year); ents.push(T.lootNode(rng, it, 200 + i * 50, 'exposed', `an offering: ${HB.hoard.itemLabel(it)}`)); }
+        return { entities: ents, length, intro: `${def.name} glows on its altar. ${HB.fmt.cap(def.guardian)} stands guard.`, hint: `The crystal is warded while ${def.guardian} lives.`, backdrop: 'forest', alarmBase: 1.2, escalations: [
+          { at: 40, text: 'The grove wakes: arrows from every tree.', spawn: [{ kind: 'elfArcher', x: -20, label: 'a warden archer', sprite: 'warden' }, { kind: 'elfArcher', x: length + 20, label: 'a warden archer', sprite: 'warden' }] },
+          { at: 75, text: 'More wardens come running through the trees.', spawn: [{ kind: 'elfArcher', x: -30, label: 'a warden archer', sprite: 'warden' }, { kind: 'elfArcher', x: length + 30, label: 'a warden archer', sprite: 'warden' }] },
         ] };
       },
       dragonDuel(state, target, rng, ctx) {

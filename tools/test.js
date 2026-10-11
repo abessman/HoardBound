@@ -452,5 +452,67 @@ section('domain: allegiance, influence, the settlement at your hill');
   ok(bf2 && bf2.x === bf.x && bf2.y === bf.y && st2.world.locAt[bf.cell] === bf.id, 'places made during play keep their position on the map');
 }
 
+section('endgame: the great struggle (prototype)');
+{
+  const E = HB.endgame;
+  const fresh = (tag) => HB.game.newCampaign({ seed: seed + '-end-' + tag, name: 'E', keeper: false });
+  const killBoss = (r) => { const b = r.entities.find(e => e.boss); b.hp = 0; HB.raid.kill(r, b, 'bitten'); return b; };
+  let st = fresh('none');
+  ok(!E.active(st) && !E.check(st, HB.game.rng), 'a hatchling has no endgame');
+  st.dragon.tier = 1; st.dragon.age = 26; st.dragon.alignment = 20;
+  ok(E.check(st, HB.game.rng) && st.reactions.some(x => /will not stay dead/.test(x.text)) && !E.active(st), 'a grown young dragon hears a rumour of what is coming');
+  st.dragon.tier = 2; st.dragon.alignment = 0; HB.stats.recompute(st);
+  ok(!E.check(st, HB.game.rng) && HB.endgame.opportunities(st).some(o => /Choose what you are/.test(o.title)), 'an adult known as neither waits, and is told why');
+  // a kind dragon: the Hollow King and three lieutenants
+  st = fresh('kind'); HB.presets.apply(st, 'adult-kind');
+  const S = E.get(st), W = st.world;
+  ok(S.path === 'shadow' && S.foe && S.lieutenants.length === 3 && S.lieutenants.every(l => l.locId !== null), 'a kind adult faces the Hollow King: three lieutenants placed: ' + (S.foe && S.foe.name));
+  const camp = W.locations[S.lieutenants[0].locId];
+  ok(camp.type === 'stronghold' && camp.lieutenant === 'warlord' && HB.world.known(camp) && W.locations[S.fortressId].type === 'fortress', 'the Warlord’s camp is known, the fortress rumoured');
+  ok(HB.goals.opportunities(st).some(o => o.aim === 'endgame') && /lieutenants 0 of 3/.test(E.hint(st)), 'the Aims board and goal panel show the struggle');
+  ok(E.choicesFor(st, W.locations[S.lieutenants[1].locId]).some(c => c.disabled) && E.choicesFor(st, W.locations[S.fortressId]).some(c => c.disabled), 'the other lieutenants and the last battle say they are not built yet');
+  const wl = S.lieutenants[0];
+  const V = E.hostStrike(st, HB.game.rng, wl, false);
+  ok(V && V.threat && V.threat.host && V.threat.orc, 'the Warlord’s host strikes a place that trusts you: ' + (V && V.name));
+  if (V) { st.dragon.x = V.x; st.dragon.y = V.y; st.phase = 'planning'; const r = HB.encounter.begin(st, V, null, { direct: true, defend: true }); ok(r.entities.some(e => e.kind === 'orc' && e.raider), 'its defence is fought against orcs'); }
+  st.dragon.x = camp.x; st.dragon.y = camp.y; st.phase = 'planning';
+  const r = HB.encounter.begin(st, camp, null, { direct: true });
+  ok(r && r.entities.some(e => e.kind === 'warlord' && e.boss) && r.entities.some(e => e.kind === 'orc'), 'the warcamp scene has the Warlord and his warbands');
+  ok(r.entities.some(e => e.kind === 'orc' && e.state === 'asleep'), 'allies’ scouts lead you in while some sleep');
+  killBoss(r);
+  ok(r.bossSlain && r.entities.filter(e => e.defender && !e.dead).every(e => e.fearT > 0), 'the Warlord falls and the rest run');
+  HB.raid.perform(r, 'withdraw'); HB.encounter.finishRaid(st, camp, r, null);
+  ok(!wl.alive && camp.state === 'ruin' && !W.locations.some(L => L.threat && L.threat.host), 'the Warlord is dead, his hosts stop');
+  ok(S.lieutenants[1].found && HB.world.known(W.locations[S.lieutenants[1].locId]), 'rumours point to the next lieutenant');
+  ok(st.lastConsequence && st.lastConsequence.lines.some(l => /is dead/.test(l.text)) && st.lastConsequence.lines.some(l => /1 of 3/.test(l.text)), 'the summary says what changed');
+  st.dragon.alignment = -80; E.check(st, HB.game.rng);
+  ok(S.path === 'shadow', 'the opposition does not change once it has formed');
+  const st2 = HB.save.deserialize(HB.save.serialize(st));
+  const camp2 = st2.world.locations[camp.id];
+  ok(st2.endgame.path === 'shadow' && !st2.endgame.lieutenants[0].alive && camp2 && camp2.lieutenant === 'warlord' && camp2.x === camp.x && st2.world.locAt[camp.cell] === camp.id, 'saves keep the struggle and its places');
+  // a cruel dragon: the six Crystals of Life
+  st = fresh('cruel'); HB.presets.apply(st, 'adult-cruel');
+  const C = E.get(st), W3 = st.world;
+  ok(C.path === 'crystals' && C.crystals.length === 6 && C.crystals.filter(c => c.locId !== null).length >= 5, 'a cruel adult hunts six Crystals of Life');
+  ok(new Set(C.crystals.filter(c => c.locId !== null).map(c => W3.locations[c.locId].regionId)).size >= 4, 'the sanctuaries lie in different realms');
+  const sanc = W3.locations[C.crystals[0].locId];
+  ok(HB.world.known(sanc) && C.crystals[0].id === 'greenmarrow', 'the first sanctuary is known');
+  st.dragon.x = sanc.x; st.dragon.y = sanc.y; st.phase = 'planning';
+  const r2 = HB.encounter.begin(st, sanc, null, { direct: true });
+  const cr = r2.entities.find(e => e.kind === 'crystal');
+  ok(cr && cr.access === 'warded' && HB.raid.actionsFor(r2, cr).some(a => a.id === 'grab' && !a.enabled), 'the crystal is warded while its guardian lives');
+  killBoss(r2);
+  ok(cr.access === 'exposed', 'the ward breaks when the guardian falls');
+  HB.raid.takeLoot(r2, cr);
+  const wealthBefore = W3.locations.filter(L => L.regionId === sanc.regionId && L.type === 'village').map(L => L.wealthMax);
+  HB.raid.perform(r2, 'withdraw'); HB.encounter.finishRaid(st, sanc, r2, null);
+  ok(C.crystals[0].taken && st.cargo.items.some(i => i.artifactId === 'crystal_greenmarrow'), 'the crystal is taken and carried');
+  const wealthAfter = W3.locations.filter(L => L.regionId === sanc.regionId && L.type === 'village').map(L => L.wealthMax);
+  ok(wealthBefore.length === 0 || wealthAfter.every((w, i) => w < wealthBefore[i]), 'its realm withers');
+  ok(HB.domain.markField(st).some(v => v < 0) && C.crystals[1].found, 'the land around the sanctuary is blighted on the map, and the next crystal is rumoured');
+  const hp0 = st.dragon.stats.maxHealth; HB.hoard.deposit(st); HB.stats.recompute(st);
+  ok(st.dragon.stats.maxHealth > hp0, 'stored in the hoard, the crystal gives its power');
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

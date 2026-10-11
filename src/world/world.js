@@ -100,7 +100,7 @@
     terrainName(t) { return HB.TERRAIN_NAMES[t]; },
     factionName(W, fid) { return fid >= 0 ? W.factions[fid].name : 'no realm'; },
     locTypeName(L) {
-      const names = { farm: 'farmstead', village: 'village', town: 'town', city: L && L.tier >= 4 ? 'great city' : 'city', castle: 'castle', camp: L && L.camp ? (L.camp === 'goblin' ? 'goblin warband' : L.camp === 'hunter' ? "hunters' camp" : L.camp === 'military' ? 'military camp' : 'bandit camp') : 'camp', mine: 'mine', hold: 'dwarven hold', glade: 'elven glade', monastery: 'monastery', shrine: 'shrine', ruin: 'ruin', warren: 'goblin warren', tower: 'tower', lair: 'your lair', rivalLair: "dragon's lair", battlefield: 'battlefield' };
+      const names = { farm: 'farmstead', village: 'village', town: 'town', city: L && L.tier >= 4 ? 'great city' : 'city', castle: 'castle', camp: L && L.camp ? (L.camp === 'goblin' ? 'goblin warband' : L.camp === 'hunter' ? "hunters' camp" : L.camp === 'military' ? 'military camp' : 'bandit camp') : 'camp', mine: 'mine', hold: 'dwarven hold', glade: 'elven glade', monastery: 'monastery', shrine: 'shrine', ruin: 'ruin', warren: 'goblin warren', tower: 'tower', lair: 'your lair', rivalLair: "dragon's lair", battlefield: 'battlefield', fortress: 'dark fortress', sanctuary: 'sanctuary', stronghold: L && L.lieutenant === 'warlord' ? 'warcamp' : L && L.lieutenant === 'sorcerer' ? 'sorcerer’s tower' : L && L.lieutenant === 'blightmother' ? 'blighted fen' : 'stronghold' };
       return names[L.type] || L.type;
     },
     seasonName(day) { return ['Spring', 'Summer', 'Autumn', 'Winter'][Math.floor(((day % 360) / 90)) % 4]; },

@@ -52,6 +52,22 @@
     petition(g, t) { sky(g, 'day', t); distance(g, 'day', 16); ground(g, 'dirt', 16); people(g, ['noble', 'guard', 'priest'], 230, PH - 36, 14); px.blit(g, S.get('chest'), 212, PH - 32); dragon(g, 120, PH - 32, t, 'idle', 1); },
     ransom(g, t) { sky(g, 'dusk', t); distance(g, 'day', 17); ground(g, 'dirt', 17); people(g, ['knight', 'noble', 'guard'], 240, PH - 36, 14); px.blit(g, S.get('chest'), 222, PH - 32); px.blit(g, S.get('noble'), 150, PH - 36); dragon(g, 100, PH - 32, t, 'idle', 1); },
     war(g, t) { sky(g, 'dusk', t); distance(g, 'day', 18); ground(g, 'grass', 18); people(g, ['knight', 'guard', 'archer', 'guard'], 180, PH - 36, 11); people(g, ['guard', 'knight', 'archer'], 260, PH - 36, 11); px.blit(g, S.get('banner'), 170, PH - 44); px.blit(g, S.get('bannerBlue'), 300, PH - 44); px.blit(g, S.get('corpse'), 225, PH - 30); },
+    shadow(g, t) {
+      sky(g, 'storm', t); distance(g, 'storm', 21); ground(g, 'dirt', 21);
+      g.fillStyle = '#2a2024';
+      for (const [x, h, w] of [[214, 40, 12], [234, 64, 14], [258, 48, 12]]) { g.fillRect(x, PH - 24 - h, w, h); g.beginPath(); g.moveTo(x - 2, PH - 24 - h); g.lineTo(x + w / 2, PH - 24 - h - 14); g.lineTo(x + w + 2, PH - 24 - h); g.fill(); }
+      g.fillStyle = '#d9542a'; g.fillRect(240, PH - 70, 3, 4);
+      people(g, ['orc', 'orc'], 160, PH - 36, 13); px.blit(g, S.get('warlord'), 188, PH - 40); people(g, ['orc', 'orc'], 202, PH - 36, 13);
+      dragon(g, 100, 34, t);
+    },
+    sanctuary(g, t) {
+      sky(g, 'day', t); distance(g, 'day', 22); ground(g, 'grass', 22);
+      for (let i = 0; i < 6; i++) px.blit(g, S.get(i % 2 ? 'pine' : 'tree'), 170 + i * 26, PH - 44 - (i % 3) * 2);
+      px.blit(g, S.get('crystal'), 240, PH - 35);
+      if (Math.floor(t * 4) % 2) { g.fillStyle = P.goldLight; g.fillRect(238, PH - 40, 1, 1); g.fillRect(249, PH - 33, 1, 1); }
+      people(g, ['warden'], 260, PH - 36, 0);
+      dragon(g, 110, 36, t);
+    },
     monastery(g, t) { sky(g, 'day', t); distance(g, 'day', 19); ground(g, 'grass', 19); px.blit(g, S.get('house', 40, 20, 1), 220, PH - 54); px.blit(g, S.get('towerSeg', 14, 40, 0), 206, PH - 76); people(g, ['priest', 'priest'], 262, PH - 36, 12); dragon(g, 120, 40, t); },
     ruin(g, t) { sky(g, 'dusk', t); distance(g, 'day', 20); ground(g, 'stone', 20); g.fillStyle = P.stone; g.fillRect(210, PH - 60, 8, 36); g.fillRect(240, PH - 48, 8, 24); g.fillRect(270, PH - 66, 8, 42); g.fillStyle = P.outline; g.fillRect(206, PH - 62, 16, 3); g.fillRect(266, PH - 68, 16, 3); px.blit(g, S.get('skull'), 250, PH - 28); px.blit(g, S.get('chest'), 228, PH - 32); dragon(g, 130, 44, t); },
     sleep(g, t) { g.fillStyle = '#1a1420'; g.fillRect(0, 0, PW, PH); ground(g, 'stone', 21); px.blit(g, S.get('coins'), 130, PH - 30, 2); px.blit(g, S.get('coins'), 200, PH - 28, 2); dragon(g, 170, PH - 32, t, 'sleep', 1); for (let i = 0; i < 3; i++) { const k = (t * 0.4 + i * 0.33) % 1; g.fillStyle = `rgba(230,220,200,${0.6 - k * 0.6})`; g.fillRect(205 + k * 10, PH - 48 - k * 24, 2, 2); } },
