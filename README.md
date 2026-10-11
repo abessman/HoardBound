@@ -48,13 +48,17 @@ src/core/             rng, noise, input, ui toolkit, text, loop, save, audio, se
 src/art/              palette, pixel helpers + sprite registry, sprites, dragon, map glyphs, parchment, illustrations
 src/world/            worldgen (terrain, rivers, regions, factions, locations, roads), world helpers (fog, gating)
 src/game/             state, stats, hoard, travel, preview, raid/ (engine + templates), encounter, lair, ransom, tribute,
-                      factions, history, worldsim, keeper, sleep, petitions, renown, consequences, goals
+                      factions, history, heat, worldsim, situations, keeper, sleep, petitions, renown, consequences, goals
 src/views/            title, newgame, settings, generating, intro, cardview, raidview, lairview, sleepview, consequenceview,
                       aimsview, menus, mapview
 src/data/             names, treasures (loot + artifacts), events (travel/roost), encounters (decision cards), upgrades/workers
-tools/                screenshot.mjs, playthrough.mjs (Playwright), headless.js + test.js + worldstats.js (Node)
-docs/                 BRIEF.md (original brief), FEATURE_STATUS.md
-DESIGN.md             design decisions
+tools/                screenshot.mjs, playthrough.mjs (Playwright), headless.js, test.js, cyclebot.js, worldstats.js,
+                      docscheck.js (Node)
+docs/                 systems/ (one doc per part of the game), ideas/ (not built yet), BRIEF.md, FEATURE_STATUS.md
+DESIGN.md             the owner's pillars and decisions
+CLAUDE.md             notes for Claude sessions (plus a CLAUDE.md in each code folder)
+next_chat_kickoff.md  where we left off and the working decisions of the current project
+CHANGELOG.md          version history (the version shows on the title screen)
 ```
 
 ### Tests and tools
@@ -63,11 +67,13 @@ DESIGN.md             design decisions
 - `node tools/worldstats.js [seed] [size] [--ascii]` — world generation report.
 - `node tools/screenshot.mjs out.png "js" --url="index.html?debug=1&scene=map"` — headless screenshot after running JS in the page.
 - `node tools/playthrough.mjs shots/` — scripted full run with screenshots at every stage.
+- `node tools/cyclebot.js [seed]` — a robber bot plays the opening cycle and reports pacing.
+- `node tools/docscheck.js` — doc size budgets and links.
 - `index.html?debug=1&scene=dragons` — dragon sprite review sheet. `?scene=map&seed=…` jumps straight into a world.
 
 ### Replacing the generated art
 
-All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/sprites/` (see `assets/sprites/README.md`); matching ids override generated sprites. Dragon layers are keyed `dragon.<tier>.<pose>.<frame>`.
+All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/sprites/` (see `assets/sprites/README.md`); matching ids override generated sprites. Dragon layers are keyed `dragon.<tier>.<part>.<pose>`. Details: `docs/systems/art-and-sprites.md`.
 
 ### Continuing development
 
@@ -75,4 +81,4 @@ Data tables are plain objects: `src/data/treasures.js` (artifacts and loot), `sr
 
 Fonts (OFL, in `assets/fonts`): Alegreya and Alegreya SC for text, IM Fell English SC for display titles.
 
-Starting a new Claude Code session? `CLAUDE.md` is the handoff: architecture rules, where things live, how to verify, owner preferences and the backlog.
+Starting a new Claude Code session? Say "Read next_chat_kickoff.md and continue." `CLAUDE.md` loads by itself and maps the rest: the hard rules, how to verify, versioning, and which doc in `docs/systems/` explains each part of the game.

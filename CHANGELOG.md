@@ -4,6 +4,14 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.7.1 — 2026-10-11
+- iPad fix: dragging (especially with a mouse) or a long press could select the page and tint the whole map pale.
+  The page can no longer be selected, dragged or long-pressed.
+- Docs split: a short root `CLAUDE.md` that maps the docs, a `CLAUDE.md` in each code folder, one doc per game
+  system in `docs/systems/`, `docs/ideas/` (the domain and endgame notes moved there unchanged), a trimmed
+  `DESIGN.md` of decisions, and `next_chat_kickoff.md` holding where we left off and the current project's decisions.
+- Tools: `tools/cyclebot.js` (opening-cycle bot) and `tools/docscheck.js` (doc budgets and links).
+
 ## 0.7.0 — 2026-10-11 · The first valley
 - Every new world opens with one of four local stories built from the places around your cave: outlaws sacking a farm; a captain holding a village's tribute chest (and wearing a wind charm); a dwarf envoy held for ransom (with a seal that opens a vault); a dragon-slayer raising a bounty (carrying a smoke-glass). Each has several ways in that lead to different futures. A new story appears after each long sleep when none is open.
 - Treasures that open things: the Gale-Feather Charm reaches a wind-locked crag, the Deepwarden's Seal opens a dwarf-sealed vault, the Smoke-Glass shakes off riders and hunters.

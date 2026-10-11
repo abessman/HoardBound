@@ -1,87 +1,66 @@
 # HoardBound — notes for Claude sessions
 
-Read this first in any new session. It is loaded automatically by Claude Code.
+Loaded automatically. Read `next_chat_kickoff.md` next: where we left off, and the working decisions of any
+project in progress. Keep this file short; details live in the docs below.
 
 ## What this is
-A browser dragon-life simulator: hatch weak, explore a hand-drawn Tolkien-style parchment map that inks itself in as
-you fly, raid in animated side-view pixel scenes, carry treasure home (stored treasure = power), build the lair, sleep
+A browser dragon-life simulator: hatch weak, explore a hand-drawn parchment map that inks itself in as you fly,
+raid in animated side-view pixel scenes, carry treasure home (stored treasure = power), build the lair, sleep
 through decades while the world changes and remembers. Played on desktop and iPad (live at hoardbound.netlify.app).
 
-- `DESIGN.md` — every design decision agreed with the owner (world shape, raid control, dragon appearance, tone…). Follow it.
-- `docs/BRIEF.md` — the original build brief (intent; DESIGN.md wins where they differ).
-- `docs/FEATURE_STATUS.md` — what is functional / simplified / deferred. Update it when you change features.
-- `README.md` — how to play, controls, layout, tools.
+## Doc map
+| Need | Read |
+| --- | --- |
+| Where we left off, current project and its decisions, next tasks | `next_chat_kickoff.md` |
+| The owner's pillars and design decisions | `DESIGN.md` |
+| How one part of the game works: intent, rules and numbers, code, tests, known issues | `docs/systems/`: `map-and-exploration`, `travel`, `raids-and-encounters`, `lair-and-economy`, `sleep-and-growth`, `goals-stories-renown`, `realms-and-memory`, `art-and-sprites` |
+| What is functional / simplified / deferred | `docs/FEATURE_STATUS.md` |
+| Version history | `CHANGELOG.md` |
+| Ideas not built yet | `docs/ideas/` |
+| Original brief (intent; DESIGN.md wins) | `docs/BRIEF.md` |
+| How to play, controls | `README.md` |
 
-## Tech rules
-- Plain JavaScript, classic `<script>` tags, one global namespace `HB`. No framework, no bundler, no npm deps, no backend.
-  Must work from `file://`, a static server, and Netlify.
-- Everything renders into one `<canvas>` at a fixed 1280×720 virtual resolution with the in-canvas UI toolkit
-  (`src/core/ui.js`). No HTML widgets (keeps a Steam/console port possible). Keyboard, mouse, touch and gamepad all
-  go through `src/core/input.js`.
-- **Load order matters.** A new file must be added to `index.html` in the right place, and if it is game logic also
-  to `LOGIC_FILES` in `tools/headless.js`.
-- Logic in `src/world/`, `src/game/`, `src/data/`, `src/core/save.js` must stay headless-safe: no DOM at load time,
-  no canvas. Views and art (`src/views/`, `src/art/`) start with `if (!HB.isBrowser) return;`.
-- Authoritative state is `HB.state` (built in `src/game/state.js`); views read it, systems mutate it.
-  Randomness: `worldRng` for generation (seeded), `HB.game.rng` for outcomes (persisted in saves).
-- Saves store only mutable state; the static world is regenerated from the seed (`src/core/save.js`). If you add
-  fields to locations, add them to `LOC_FIELDS` there. If you change world generation, old saves will not match —
-  bump `GEN_VERSION` and say so.
-- Fonts: Alegreya / Alegreya SC for reading text, IM Fell English SC (`family: 'display'`) only for big titles and map
-  region names. `HB.text.MIN_SIZE` is the readability floor. The owner found IM Fell hard to read at small sizes.
-- All pixel art is generated in code. The owner plans to replace it with real sprites via `assets/sprites/`
-  (PNG + JSON atlas overrides, see the README there). Keep sprite ids stable.
+Folder rules load by themselves when you work there: `src/game/CLAUDE.md` (logic, state, saves),
+`src/views/CLAUDE.md` (in-canvas UI, fonts, iPad), `src/art/CLAUDE.md` (generated art, sprite ids),
+`tools/CLAUDE.md` (tests, bots, screenshots).
+
+## Hard rules
+- Plain JavaScript, classic `<script>` tags, one global namespace `HB`. No framework, no bundler, no npm deps, no
+  backend. Must work from `file://`, a static server, and Netlify.
+- Everything renders into one `<canvas>` at 1280×720 with the in-canvas UI toolkit (`src/core/ui.js`). No HTML
+  widgets (keeps a Steam/console port possible). Keyboard, mouse, touch and gamepad all go through `src/core/input.js`.
+- **Load order matters.** A new file goes into `index.html` in the right place, and if it is game logic also into
+  `LOGIC_FILES` in `tools/headless.js`.
+
+## Owner preferences
+- Goals first: at every moment the player sees what they are trying to achieve, how the next action helps, and
+  what changed because of it. Good play has its own actions and rewards; evil is tempting, its costs visible.
+  Consequences are reported plainly, never moralised. Art waits until the loop is fun.
+- Long campaign; enormous world revealed little by little; storm walls gate regions by size tier.
+- Tone: Tolkien gravitas with lighter Zelda/Pokémon readability. Raids auto-advance with slow-motion decisions.
+- Endgame matters: rival dragons, readable and exploitable faction wars.
+- The owner plays on an iPad: check touch flows and readability at that size. Discuss big changes before building
+  when asked to ("don't make anything yet" means talk only).
 
 ## Verify before pushing
 ```
-node tools/test.js              # ~155 headless checks (count varies by seed): world, travel, raid, economy, sleep, save, goals, situations, heat, pursuit, offerings
-node tools/test.js other-seed   # try a second seed
-for f in src/**/*.js; do node --check $f; done   # syntax (class bodies: no commas between methods!)
-node tools/playthrough.mjs <outDir>              # scripted browser run with screenshots (Playwright, preinstalled Chromium)
-node tools/screenshot.mjs out.png "js to run" --url="index.html?debug=1&scene=map&seed=ember-quill-42"
+node tools/test.js              # ~155 headless checks (count varies by seed)
+node tools/test.js other-seed   # a second seed
+for f in src/*/*.js src/game/raid/*.js; do node --check $f; done   # syntax (class bodies: no commas between methods!)
+node tools/docscheck.js         # doc size budgets, links, system-doc sections
+node tools/playthrough.mjs <outDir>   # scripted browser run with screenshots: look at them
 ```
-Look at the screenshots — layout bugs only show up visually. `?debug=1` shows fps; `?scene=dragons` is the dragon
-sprite sheet; `?scene=map&seed=…` jumps straight into a world.
-
-## Where things live
-- World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).
-- Fog / knowledge / rumours / gating: `src/world/world.js`.
-- Map rendering (chunk cache, ink glyphs, cloud fog, labels, previews, tap-to-explore): `src/views/mapview.js`, `src/art/mapart.js`.
-- Travel (flight, stamina, events, roost, rest, points, arrival): `src/game/travel.js`; road events in `src/data/events.js`.
-- Raids: engine `src/game/raid/raid.js`, layouts `src/game/raid/templates.js`, view `src/views/raidview.js`;
-  decision-card places in `src/data/encounters.js`; dispatch and consequences in `src/game/encounter.js`.
-- Power: `src/game/stats.js` (`HB.CATEGORIES`), tiers in `src/game/state.js` (`HB.TIERS`), treasure in `src/data/treasures.js`.
-- Lair/workers/upgrades: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`.
-- Ransom/tribute/petitions: `src/game/ransom.js`, `tribute.js`, `petitions.js`.
-- Goals and feedback (see DESIGN §3a): milestone + Aims board `src/game/goals.js` / `src/views/aimsview.js`; consequence summaries and the world-reaction log `src/game/consequences.js` / `src/views/consequenceview.js`; titles `src/game/renown.js`; outlaw threats `worldsim.spawnThreat/updateThreats`; defend raid `templates.defend` + `raid.mode === 'defend'`; caravan toll/escort in `encounter.js`; why-now reasons `lair.whyNow`; turn-back chances `sleep.stopChances`.
-- Local stories (see DESIGN §3b): `src/game/situations.js` (templates, capability gates `HB.caps`, scene decoration, story hooks); heat, hunting parties, pursuit `src/game/heat.js`; offerings in `tribute.js`; escort ambush `templates.ambush`.
-- Sleep/keeper/awakening: `src/game/sleep.js`, `keeper.js`, view `src/views/sleepview.js`.
-- World memory: `src/game/factions.js` (wars, armies, rivals), `history.js` (grudges, orders, loyal houses), `worldsim.js` (caravans, heroes, yearly settlement change).
-
-## Owner preferences (from the design conversation)
-- Goals first: at every moment the player should see what they are trying to achieve, how the next action helps, and what changed because of it. Good deeds must be playable, consequences reported plainly (not moralised), renown visible with real effects, upgrades tied to problems already met. Art waits until this loop works.
-- Long campaign; enormous world revealed little by little; vision grows with size; storm walls gate regions by tier.
-- Dragon appearance evolves with tyranny/benevolence, artifacts and treasure (Binding-of-Isaac-style mutations), 4 size tiers.
-- Tone: Tolkien gravitas with lighter Zelda/Pokémon readability.
-- Raids: auto-advance with slow-motion decision points, not twitch.
-- Endgame matters: rival dragons, readable and exploitable faction wars.
-- The owner tests on an iPad: check touch flows (tap to select, drag to pan) and readability at that size.
-
-## Open backlog (most valuable next)
-1. Playtest the first valley on iPad: do the stories create competing wants in ten minutes? Tune heat rates, hunter speed, offerings.
-2. Seasonal calendar events (tax convoy, harvest, pilgrims, winter) and more story templates.
-3. CLAUDE.md split into components + `next_chat_kickoff.md` (proposed to the owner; waiting for a go).
-4. Raid balance pass (town watch may be too strong for hatchlings; castles are deadly by design).
-5. Distinct staging for the wandering-hero duel and rival-dragon duel; more good deeds (rescue a captive from a camp, escort a pilgrim) and their own scenes.
-6. Visual seasons on the map; armies that move day by day.
-7. A persistent low-res overview canvas for the fully zoomed-out map (performance).
-8. Hand-test gamepad and touch; pinch-zoom tuning on iPad.
-9. More raid templates (monastery and glade as animated scenes), more artifacts and road events.
 
 ## Versioning (keep doing this)
-Every update you push bumps `HB.VERSION` and `HB.VERSION_DATE` in `src/core/namespace.js` (shown on the title screen
-and in the in-game menu) and adds an entry to `CHANGELOG.md`. Pre-1.0: minor for a feature update, patch for fixes
-and tweaks. Always tell the owner which version they are on after each update.
+Every update you push bumps `HB.VERSION` and `HB.VERSION_DATE` in `src/core/namespace.js` (shown on the title
+screen and in the in-game menu) and adds an entry to `CHANGELOG.md`. Pre-1.0: minor for a feature update, patch
+for fixes and tweaks. Always tell the owner which version they are on after each update.
+
+## End of every session (or update)
+1. Version bump + `CHANGELOG.md` entry.
+2. Update the `docs/systems/` doc(s) you touched and the `docs/FEATURE_STATUS.md` rows, in the same commit.
+3. Rewrite `next_chat_kickoff.md`: state, current project and its working decisions, next tasks, open questions.
+4. `node tools/docscheck.js` passes; tell the owner the version.
 
 ## Git
 Work on the branch named in the session instructions; commit with clear messages; push when a change is verified.

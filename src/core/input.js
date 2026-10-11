@@ -76,6 +76,15 @@
 
     const p = input.pointer;
     canvas.style.touchAction = 'none';
+    // the page is a game, not a document: no text selection, drag images or long-press callouts anywhere
+    const noDefault = (e) => e.preventDefault();
+    document.addEventListener('selectstart', noDefault);
+    document.addEventListener('dragstart', noDefault);
+    document.addEventListener('gesturestart', noDefault);
+    document.addEventListener('touchmove', (e) => { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    const clearSelection = () => { const sel = window.getSelection && window.getSelection(); if (sel && sel.rangeCount) sel.removeAllRanges(); };
+    document.addEventListener('pointerdown', clearSelection, true);
+    document.addEventListener('selectionchange', clearSelection);
     canvas.addEventListener('pointerdown', (e) => {
       canvas.setPointerCapture(e.pointerId);
       input.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });

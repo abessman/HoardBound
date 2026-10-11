@@ -8,6 +8,8 @@
   html, body { margin: 0; padding: 0; height: 100%; background: #120a06; overflow: hidden; }
   body { display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #1d120a 0%, #0d0704 100%); }
   canvas { display: block; box-shadow: 0 0 60px rgba(0,0,0,0.8); }
+  /* never let the browser select, highlight or drag the page: on iPad a drag or long press otherwise tints the whole canvas */
+  html, body, canvas { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; -webkit-user-drag: none; }
   @font-face { font-family: 'Alegreya'; src: url('assets/fonts/Alegreya-400.woff') format('woff'); font-style: normal; font-weight: 400; }
   @font-face { font-family: 'Alegreya'; src: url('assets/fonts/Alegreya-400i.woff') format('woff'); font-style: italic; font-weight: 400; }
   @font-face { font-family: 'Alegreya'; src: url('assets/fonts/Alegreya-700.woff') format('woff'); font-style: normal; font-weight: 700; }

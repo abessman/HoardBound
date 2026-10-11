@@ -1,6 +1,6 @@
 # Feature status
 
-Honest accounting against the brief (`docs/BRIEF.md`) and the design conversation (`../DESIGN.md`).
+How each part works is in `docs/systems/`; this file is only the status. Honest accounting against the brief (`docs/BRIEF.md`) and the design conversation (`../DESIGN.md`).
 **Functional** = implemented and exercised by `tools/test.js` or `tools/playthrough.mjs`. **Simplified** = works but shallower than the long-term intent. **Deferred** = not built; where it would go.
 
 ## Core loop
