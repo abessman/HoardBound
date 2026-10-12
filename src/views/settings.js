@@ -22,8 +22,8 @@
       row('Tutorial hints', S.hints, v => { S.hints = v; S.save(); }, null, 'Short guidance during the first expeditions.');
       row('Default travel speed', S.travelSpeed, v => { S.travelSpeed = v; S.save(); }, [{ label: 'Slow', value: 0.6 }, { label: 'Normal', value: 1 }, { label: 'Brisk', value: 1.6 }], 'How fast map flights play by default. You can always change speed during a flight.');
       row('Reduce motion', S.reduceMotion, v => { S.reduceMotion = v; S.save(); }, null, 'Shortens transitions and flashes; on the map, ink and watercolour fade in instead of flowing.');
-      const packs = [{ label: 'Hand-drawn', value: 'none' }].concat((HB.MAP_PACKS || []).map(p => ({ label: p.label || p.name, value: p.name })));
-      if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Artwork for the world map. Packs live in assets/map/packs/; anything a pack lacks is drawn by hand as before.');
+      const packs = [{ label: 'Original ink', value: 'none' }].concat((HB.MAP_PACKS || []).map(p => ({ label: p.label || p.name, value: p.name })));
+      if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Choose the map illustrations. Original ink restores the earlier artwork; your campaign stays the same.');
       y += 10;
       this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 220, h: 40, label: 'Reset to defaults', onClick: () => { S.reset(); if (HB.mapAssets && HB.mapAssets.packName !== S.mapPack) HB.mapAssets.use(S.mapPack); HB.scenes.pop(this); HB.scenes.push(new SettingsScene({ inGame: this.inGame })); } }));
       this.ui.add(new HB.ui.Button({ x: x + w / 2 + 10, y, w: 220, h: 40, label: 'Back', primary: true, onClick: () => HB.scenes.pop(this) }));

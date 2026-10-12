@@ -4,6 +4,16 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.14.0 — 2026-10-12 · Illustrated parchment map
+- New **Illuminated parchment** pack: nine transparent ink illustrations for mountains, hills, broadleaf and pine
+  forests, farms, villages, towns and castles, with quieter roads and muted blue rivers. New settings default to it;
+  existing choices are preserved. Choose it in Settings → Map art, or use `?mappack=illuminated`.
+- Sharper terrain at close zoom (2× cache above zoom 1.3), with a 64 MiB cache budget. Symbol anchors, geography,
+  labels, hit areas and saved games keep their existing coordinates.
+- **Original ink** remains selectable. Switching away while art is loading now cancels that pack correctly.
+- Exact 0.13.0 backup: `backup/map-before-illuminated-2026-10-12` at `cb0e5f4`; rollback steps and prompts in
+  `assets/map/packs/illuminated/README.md`. Reveal and territory effects remain the 0.13 implementation.
+
 ## 0.13.0 — 2026-10-12 · Land washes in
 - **Newly explored land washes in like watercolour.** As the dragon flies, the blank paper over the land it uncovers
   dissolves along a soft, uneven edge that bleeds outward from the dragon, with a thin warm wash at the wet edge that

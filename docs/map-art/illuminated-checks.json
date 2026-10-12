@@ -1,0 +1,64 @@
+{
+  "loaded": {
+    "pack": "illuminated",
+    "variants": 9,
+    "warnings": [],
+    "allReady": true
+  },
+  "zooms": [
+    {
+      "zoom": 0.45,
+      "logicalSize": 440,
+      "rasterScale": 1,
+      "bytes": 19369600,
+      "budget": 67108864
+    },
+    {
+      "zoom": 1,
+      "logicalSize": 440,
+      "rasterScale": 1,
+      "bytes": 25564800,
+      "budget": 67108864
+    },
+    {
+      "zoom": 1.9,
+      "logicalSize": 440,
+      "rasterScale": 2,
+      "bytes": 25564800,
+      "budget": 67108864
+    },
+    {
+      "zoom": 3.2,
+      "logicalSize": 440,
+      "rasterScale": 2,
+      "bytes": 25564800,
+      "budget": 67108864
+    }
+  ],
+  "rollback": true,
+  "pendingRollback": true,
+  "saveUnchanged": true,
+  "fileProtocol": {
+    "pack": "illuminated",
+    "report": {
+      "pack": "illuminated",
+      "ids": 8,
+      "drawing": [
+        "map.terrain.mountain",
+        "map.terrain.hill",
+        "map.terrain.tree.round",
+        "map.terrain.tree.pine",
+        "map.place.farm",
+        "map.place.village",
+        "map.place.town",
+        "map.place.castle"
+      ],
+      "images": 9,
+      "decodedBytes": 1431808,
+      "loading": 0,
+      "warnings": []
+    },
+    "allReady": true
+  },
+  "errors": []
+}

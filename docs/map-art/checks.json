@@ -69,7 +69,7 @@
   "map.wash.benevolent: no usable variants; procedural art is used",
   "map.place.village variant missing: could not load assets/map/packs/test-broken/no-such-file.png",
   "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused",
-  "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused",
-  "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused"
+  "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused",
+  "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused"
  ]
 }

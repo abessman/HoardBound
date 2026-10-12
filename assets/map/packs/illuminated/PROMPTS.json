@@ -1,0 +1,43 @@
+{
+  "tool": "OpenAI built-in image generation",
+  "reference": "Owner-approved parchment map concept from this conversation, 2026-10-11",
+  "integration": "Transparent padding trimmed, proportional resize, anchored into 8x frames. No repainting or recolouring.",
+  "prompts": [
+    {
+      "name": "mountain-a",
+      "prompt": "Create a SINGLE isolated game map glyph on a truly transparent RGBA background, inspired by the fine pen cartography in the reference. Hand drawn literary fantasy parchment map illustration. Dark warm sepia ink #2b1a0e, irregular organic pen outlines, delicate purposeful right-side hatching. The object interior has flat warm ivory #f0e3c3 opaque fill so it occludes shapes behind; outside object is transparent. No parchment rectangle, no cast shadow, no ground oval, no labels, no text, no UI. Simple readable silhouette when reduced to 40 pixels. Not photoreal, not vector clipart, not 3D game icon. Centered object fully in frame with generous transparent margin. One craggy broad mountain with one offset main peak, a smaller shoulder, three angular ridge folds; sparse hatching on its right slopes, open ivory left slopes. Width:height about 1.25. No foothill landscape. A map symbol, not a scenic painting."
+    },
+    {
+      "name": "tree-round",
+      "prompt": "Create a SINGLE isolated game map glyph on a truly transparent RGBA background, inspired by the fine pen cartography in the reference. Hand drawn literary fantasy parchment map illustration. Dark warm sepia ink #2b1a0e, irregular organic pen outlines, delicate purposeful right-side hatching. The object interior has flat warm ivory #f0e3c3 opaque fill so it occludes shapes behind; outside object is transparent. No parchment rectangle, no cast shadow, no ground oval, no labels, no text, no UI. Simple readable silhouette when reduced to 40 pixels. Not photoreal, not vector clipart, not 3D game icon. Centered object fully in frame with generous transparent margin. One old oak tree, rounded irregular leafy canopy in 4 loose overlapping masses, fine trunk and exposed branching. Thin muted olive watercolor touches only within canopy, mostly ivory. Broadleaf map symbol width:height about .8. Sparse purposeful ink details readable small."
+    },
+    {
+      "name": "village",
+      "prompt": "Create a SINGLE isolated game map glyph on a truly transparent RGBA background, inspired by the fine pen cartography in the reference. Hand drawn literary fantasy parchment map illustration. Dark warm sepia ink #2b1a0e, irregular organic pen outlines, delicate purposeful right-side hatching. The object interior has flat warm ivory #f0e3c3 opaque fill so it occludes shapes behind; outside object is transparent. No parchment rectangle, no cast shadow, no ground oval, no labels, no text, no UI. Simple readable silhouette when reduced to 40 pixels. Not photoreal, not vector clipart, not 3D game icon. Centered object fully in frame with generous transparent margin. One tiny medieval hamlet of five cottages, staggered overlapping asymmetrically, high pitched faded terracotta roofs, pale ivory walls, a very small square bell tower. Front oblique map view, width:height about 1.4. No grass or terrain outside the buildings. Few windows, minimal clear penwork."
+    },
+    {
+      "name": "mountain-b",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One narrow high crooked mountain peak, two subsidiary ridges, asymmetrical almost triangular profile, ivory left slope and sparse diagonal hatching to right. Width:height 1.1."
+    },
+    {
+      "name": "tree-pine",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One tall fir tree with five irregular tiers of fine pointed branches, dark ink trunk, faint desaturated olive within foliage. Width:height .5. Tiny simple woodland symbol."
+    },
+    {
+      "name": "hill",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One low rounded rolling hill with two rounded humps, three contour strokes and six short hatch marks to the right. Warm ivory fill; wide:short 2.8:1."
+    },
+    {
+      "name": "castle",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One small medieval castle symbol, narrow and tall: three crenellated towers, one slender taller pointed turret, low gate wall. Warm ivory stone with very pale desaturated grey hatching, a muted rust roof. No flag. Width:height .8. Simple elegant illustrated map fortress."
+    },
+    {
+      "name": "farm",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One small medieval thatched cottage and a low adjoining barn, tiny fence. Warm ivory walls with pale ochre roofs. Width:height 1.4. Simple map farm icon."
+    },
+    {
+      "name": "town",
+      "prompt": "Create a SINGLE isolated tiny game map symbol on transparent RGBA, matching the pen cartography in reference, not a full illustration. VERY SIMPLE fine sepia ink #2b1a0e, ivory #f0e3c3 opaque interiors, transparent outside silhouette. Only 15-25 main pen strokes, a few short hatching lines on the right. Original hand drawn medieval literary fantasy map. Must read clearly at 35 pixels. No texture, no fine ornate details, no scenery, no ground oval, no shadow, no text, no paper rectangle. Center entire symbol with margin. One small walled medieval town symbol: six simple pitched rust-roof houses surrounding one square keep with crenellations, ivory walls. Width:height 1.25. Very few windows, simple line work."
+    }
+  ]
+}

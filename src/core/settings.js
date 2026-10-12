@@ -10,7 +10,7 @@
     travelSpeed: 1,          // default travel speed multiplier
     reduceMotion: false,
     showGrid: false,
-    mapPack: 'none',         // map art pack in assets/map/packs/<name>/ ('none' = the procedural ink drawing)
+    mapPack: 'illuminated',  // map art pack in assets/map/packs/<name>/ ('none' = the original ink drawing)
   };
   const settings = HB.settings = Object.assign({}, DEFAULTS);
   settings.load = function () {

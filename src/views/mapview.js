@@ -16,6 +16,7 @@
       const W = state.world;
       this.cam = { x: W.home.x + 0.5, y: W.home.y + 0.5, zoom: 1.9, tx: null, ty: null, tzoom: null };
       this.chunks = new Map(); this.chunkOrder = []; this.maxChunks = 90;
+      this.maxChunkBytes = 64 * 1024 * 1024; // bound close-up raster memory on tablets
       this.fogAlpha = new Float32Array(W.w * W.h).fill(1);
       for (let i = 0; i < this.fogAlpha.length; i++) if (state.know.revealed[i]) this.fogAlpha[i] = 0; else if (state.know.rumor[i]) this.fogAlpha[i] = RUMOR_ALPHA;
       this.selected = null; this.hoverLoc = null; this.t = 0; this.frame = 0;
@@ -278,7 +279,8 @@
     flyToSelected() { if (!this.selected) return; if (HB.travel && HB.travel.begin) { const err = HB.travel.canBegin(this.state, this.selected); if (err) { this.showToast(err); return; } HB.travel.begin(this.state, this.selected, this); this.selected = null; } else this.showToast('Travel is not built yet.'); }
 
     // ---------- chunk cache
-    chunkKey(cx, cy, lod) { return `${lod}:${cx},${cy}`; }
+    chunkResolution(lod) { return lod === 0 && this.cam.zoom > 1.3 ? 2 : 1; }
+    chunkKey(cx, cy, lod) { return `${lod}:${this.chunkResolution(lod)}:${cx},${cy}`; }
     getChunk(cx, cy, lod, budget) {
       const key = this.chunkKey(cx, cy, lod);
       let c = this.chunks.get(key);
@@ -289,7 +291,13 @@
       const fresh = !c;
       c = this.renderChunk(cx, cy, lod); c.artRev = this._artRev;
       this.chunks.set(key, c); if (fresh) this.chunkOrder.push(key);
-      while (this.chunkOrder.length > this.maxChunks) { const k = this.chunkOrder.shift(); this.chunks.delete(k); }
+      let bytes = 0;
+      for (const image of this.chunks.values()) bytes += image.width * image.height * 4;
+      while (this.chunkOrder.length > this.maxChunks || bytes > this.maxChunkBytes) {
+        const k = this.chunkOrder.shift(), old = this.chunks.get(k);
+        if (old) bytes -= old.width * old.height * 4;
+        this.chunks.delete(k);
+      }
       return c;
     }
     renderChunk(cx, cy, lod) {
@@ -297,8 +305,10 @@
       const cp = lod === 0 ? CELL : LOD1_CELL;
       const m = MARGIN; // both levels of detail keep a 2-cell margin so art that spills over a cell is not clipped
       const size = (CHUNK + 2 * m) * cp;
-      const c = document.createElement('canvas'); c.width = size; c.height = size;
+      const c = document.createElement('canvas'); c.rasterScale = this.chunkResolution(lod);
+      c.width = size * c.rasterScale; c.height = size * c.rasterScale;
       const g = c.getContext('2d');
+      g.scale(c.rasterScale, c.rasterScale);
       A.setup(g);
       const rng = new HB.RNG(`chunk:${st.seed}:${cx},${cy}`);
       const x0 = cx * CHUNK, y0 = cy * CHUNK;
@@ -483,7 +493,7 @@
         const c = this.getChunk(cx, cy, lod, budget);
         if (!c) continue;
         const p = this.worldToScreen(cx * CHUNK - m, cy * CHUNK - m);
-        ctx.drawImage(c, p.x, p.y, c.width * scale, c.height * scale);
+        ctx.drawImage(c, p.x, p.y, c.width / c.rasterScale * scale, c.height / c.rasterScale * scale);
       }
       ctx.restore();
       if (this.showChunkEdges) this.drawChunkEdges(ctx, cx0, cx1, cy0, cy1);

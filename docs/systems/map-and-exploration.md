@@ -51,7 +51,8 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 
 ### Rendering and art packs (0.10)
 - Terrain sits in cached chunks of 16×16 cells with a 2-cell margin (both levels of detail), at 22 px per cell
-  (7 px below zoom 0.55); places, markers, fog and labels are drawn every frame. Glyph placement uses the cell's seed;
+  (7 px below zoom 0.55); above zoom 1.3 a 2× backing canvas preserves fine ink details. The cache is bounded
+  to 64 MiB and 90 chunks. Places, markers, fog and labels are drawn every frame. Glyph placement uses the cell's seed;
   each glyph draws with its own seed and stable key, so swapping its art never moves another glyph.
 - Every symbol can be replaced by PNG art from a map art pack, with procedural fallback: see
   [art-and-sprites](art-and-sprites.md) and `docs/map-art/README.md`. Preview: `?scene=mappreview`.

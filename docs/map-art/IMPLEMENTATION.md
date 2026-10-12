@@ -55,9 +55,9 @@ drawn when the chosen art lacks the state.
 
 ## Known limits
 
-- Terrain is cached at 22 px per cell (7 in the far view) and scaled with the map, so terrain art is no sharper than
-  1× at zoom 1 and gets soft at zoom 3: the same as the hand-drawn glyphs. Raising the chunk resolution would cost
-  about 4× the 66 MB cache bound; not done.
+- Terrain uses 22 logical px per cell (7 in the far view), with 2× backing bitmaps above zoom 1.3 since 0.14.
+  Chunk keys include resolution; eviction caps backing bitmap storage at 64 MiB and 90 chunks. Maximum zoom still
+  enlarges the 2× cache slightly. Placement, margin and hit-test coordinates remain logical.
 - Terrain glyph wobble now comes from a per-glyph seed: positions and sizes are as before, the waves near coasts sit
   at slightly different spots and each stroke's jitter changed once (compare the two `adult-kind` screens).
 - Places are capped at k = 1.2, so close zoom does not enlarge them further (unchanged).
@@ -110,10 +110,12 @@ reveal layer about 2 ms a frame on the live map while land is uncovering, at mos
   textures); mountain variants at 4× and 2× draw at the same size and anchor; the broken pack draws only its valid
   pine and warns 12 times; campaign saves
   are identical with and without the pack and round-trip; no page errors.
-- Performance ([perf.json](perf.json), headless Chromium, software rendering, 30 fps cap; re-measured in 0.13): map
-  draw median 3.0 ms without a pack and 3.3 ms with it; rebuilding the 9 visible chunks 25 ms without a pack, 20 ms
-  with the sample pack (0.10 measured 47 and 61 ms for 12 chunks); sample pack decoded images 2.1 MB (its seven 256²
-  watercolour textures); chunk cache bound 90 × 440² px ≈ 66 MB (unchanged).
+- Performance ([perf.json](perf.json), 0.14, headless Chromium): Illuminated parchment drew at median 2.8 ms,
+  rebuilt nine visible chunks in 19.4 ms, and used 1.43 MB of decoded pack images. Chunk bitmaps are bounded to
+  64 MiB including mixed resolutions. These measurements are not a physical iPad benchmark.
+- Illuminated integration ([illuminated-checks.json](illuminated-checks.json)): all nine images ready without warnings,
+  four zoom levels retain their logical footprint and stay under budget; art switching preserves the save, switching
+  to Original ink during a pending load works, and all images load from `file://`. No runtime errors.
 - Desktop: the playthrough script and screenshots at 1280×720. iPad: only an iPad-sized viewport (1180×820 at 2×,
   touch enabled) in headless Chromium; **no physical iPad was used**. Touch input is unchanged (hit areas do not use
   art bounds), but the owner should look at the sample pack on the iPad.

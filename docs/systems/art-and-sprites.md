@@ -6,8 +6,7 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
 - Appearance is earned: size from age, palette and horns from tyranny or benevolence, mutations from artifacts
   and treasure, scars from defeats (Binding-of-Isaac-style mutations).
 - Tone: Tolkien gravitas with lighter Zelda/Pokémon readability.
-- All art is generated in code for now; the owner will replace it with real sprites. Art work is paused while
-  the gameplay loop is fixed.
+- Pixel scene art remains generated. The owner authorised a parchment map illustration pass in 0.14.
 
 ## How it works
 - Pixel scenes render to 320×180 offscreen buffers and scale 4× with nearest-neighbour.
@@ -30,6 +29,14 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
   chunks built with older art, a few per frame. Problems are logged once with `[map art]` and fall back.
 - Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps, summary). Manifest fields:
   `assets/map/README.md`.
+
+### Illuminated parchment (0.14)
+- Nine generated transparent PNGs replace mountains (two variants), hills, two tree types and four settlement types.
+  `assets/map/packs/illuminated/README.md` records prompts, scope and rollback. Other symbols use the procedural fallback.
+- New settings default to `illuminated`; existing preferences remain. URL `?mappack=illuminated` previews it without
+  changing saved preferences. Settings → Map art → Original ink restores the earlier symbols.
+- Close terrain is cached at 2× above zoom 1.3, bounded to 64 MiB of chunk bitmap storage. Anchors do not change.
+- Choosing Original ink cancels a pending pack script or manifest request; a late load cannot restore that pack.
 
 ### Watercolour (0.12; reveal wash 0.13)
 - `src/art/mapfx.js`. **Reveal wash** (`HB.mapReveal.Layer`, 0.13): newly revealed cells get a start time that grows
@@ -71,7 +78,7 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
-- Map terrain is cached at 22 px per cell and scaled with the map, so terrain art is no sharper than 1× (as the ink).
+- Terrain uses 1× or 2× chunk bitmaps; maximum zoom still enlarges the 2× cache slightly. Physical iPad performance needs review.
 - Still hand-coded on the map: parchment, roads, rivers, coasts, washes (restylable via a pack's `style`), labels,
   selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
 - The sample pack's art is deliberate test art, not a style proposal; so are its watercolour textures.

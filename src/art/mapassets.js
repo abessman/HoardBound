@@ -33,6 +33,8 @@
     /** choose a pack ('none' = procedural). Resolves true once its manifest is read (images keep loading after) */
     use(name) {
       name = name || 'none';
+      const request = MA._request = (MA._request || 0) + 1;
+      MA._pending = name; // also cancel a pending pack when the original art is selected
       MA.entries.clear(); MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
       if (name === 'none') return Promise.resolve(false);
       if (!/^[\w-]+$/.test(name)) { MA.warn(`bad pack name "${name}"`); return Promise.resolve(false); }
@@ -40,10 +42,11 @@
       return new Promise((resolve) => {
         const s = document.createElement('script');
         s.src = `assets/map/packs/${name}/pack.js`;
-        s.onload = () => resolve(!!MA.pack);
+        s.onload = () => resolve(request === MA._request && !!MA.pack);
         s.onerror = async () => {
+          if (request !== MA._request) { resolve(false); return; }
           if (/^https?:/.test(location.protocol)) {
-            try { const r = await fetch(`assets/map/packs/${name}/pack.json`, { cache: 'no-cache' }); if (r.ok) { MA.definePack(await r.json(), name); resolve(true); return; } } catch (e) { /* fall through */ }
+            try { const r = await fetch(`assets/map/packs/${name}/pack.json`, { cache: 'no-cache' }); if (r.ok) { const pack = await r.json(); if (request !== MA._request) { resolve(false); return; } MA.definePack(pack, name); resolve(true); return; } } catch (e) { /* fall through */ }
           }
           MA.warn(`pack "${name}" not found (looked for assets/map/packs/${name}/pack.js${/^https?:/.test(location.protocol) ? ' and pack.json' : ''}); using procedural art`);
           resolve(false);

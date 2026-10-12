@@ -4,21 +4,21 @@
   "none": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 24.6,
-    "msPerChunk": 2.74
+    "ms": 29.7,
+    "msPerChunk": 3.3
    },
    "frame": {
-    "drawMedianMs": 3,
-    "drawP90Ms": 4.6,
-    "frameIntervalMedianMs": 33.3,
-    "fps": 30
+    "drawMedianMs": 2.9,
+    "drawP90Ms": 3.7,
+    "frameIntervalMedianMs": 16.7,
+    "fps": 60
    },
    "cache": {
     "maxChunks": 90,
-    "lod0ChunkPx": "440×440",
-    "lod0ChunkBytes": 774400,
+    "lod0ChunkPx": "880×880",
+    "lod0ChunkBytes": 3097600,
     "lod1ChunkPx": "140×140",
-    "worstCaseMB": 66.5
+    "worstCaseMB": 64
    },
    "pack": {
     "pack": "none",
@@ -32,21 +32,21 @@
   "sample": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 20.1,
-    "msPerChunk": 2.24
+    "ms": 19.2,
+    "msPerChunk": 2.13
    },
    "frame": {
-    "drawMedianMs": 3.3,
-    "drawP90Ms": 4.6,
-    "frameIntervalMedianMs": 33.3,
-    "fps": 30
+    "drawMedianMs": 3.1,
+    "drawP90Ms": 3.9,
+    "frameIntervalMedianMs": 16.7,
+    "fps": 60
    },
    "cache": {
     "maxChunks": 90,
-    "lod0ChunkPx": "440×440",
-    "lod0ChunkBytes": 774400,
+    "lod0ChunkPx": "880×880",
+    "lod0ChunkBytes": 3097600,
     "lod1ChunkPx": "140×140",
-    "worstCaseMB": 66.5
+    "worstCaseMB": 64
    },
    "pack": {
     "pack": "sample",
@@ -64,6 +64,43 @@
     ],
     "images": 14,
     "decodedBytes": 2074672,
+    "loading": 0
+   }
+  },
+  "illuminated": {
+   "chunkRebuild": {
+    "chunks": 9,
+    "ms": 19.4,
+    "msPerChunk": 2.16
+   },
+   "frame": {
+    "drawMedianMs": 2.8,
+    "drawP90Ms": 3.4,
+    "frameIntervalMedianMs": 16.7,
+    "fps": 60
+   },
+   "cache": {
+    "maxChunks": 90,
+    "lod0ChunkPx": "880×880",
+    "lod0ChunkBytes": 3097600,
+    "lod1ChunkPx": "140×140",
+    "worstCaseMB": 64
+   },
+   "pack": {
+    "pack": "illuminated",
+    "ids": 8,
+    "drawing": [
+     "map.terrain.mountain",
+     "map.terrain.hill",
+     "map.terrain.tree.round",
+     "map.terrain.tree.pine",
+     "map.place.farm",
+     "map.place.village",
+     "map.place.town",
+     "map.place.castle"
+    ],
+    "images": 9,
+    "decodedBytes": 1431808,
     "loading": 0
    }
   }

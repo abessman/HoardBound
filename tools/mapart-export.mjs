@@ -158,7 +158,7 @@ try {
   // ---------- performance and memory (headless Chromium: compare the two columns, not absolute numbers)
   if (want('perf')) {
     const perf = { note: 'Headless Chromium on the build container, 1280×720 at 1×. Compare the columns; absolute numbers are not an iPad.', runs: {} };
-    for (const pack of ['none', 'sample']) {
+    for (const pack of ['none', 'sample', 'illuminated']) {
       const page = await open(PREVIEW + '&mappack=' + pack); await settle(page);
       perf.runs[pack] = await page.evaluate(() => new Promise((resolve) => {
         const map = HB.flow.map, out = {};
@@ -178,8 +178,8 @@ try {
           const q = (a, p) => { const b = a.slice().sort((x, y) => x - y); return +b[Math.floor(b.length * p)].toFixed(2); };
           const gaps = stamps.slice(1).map((t, i) => t - stamps[i]);
           out.frame = { drawMedianMs: q(times, 0.5), drawP90Ms: q(times, 0.9), frameIntervalMedianMs: q(gaps, 0.5), fps: +(1000 / q(gaps, 0.5)).toFixed(0) };
-          const lod0 = (16 + 4) * 22, lod1 = (16 + 4) * 7;
-          out.cache = { maxChunks: map.maxChunks, lod0ChunkPx: `${lod0}×${lod0}`, lod0ChunkBytes: lod0 * lod0 * 4, lod1ChunkPx: `${lod1}×${lod1}`, worstCaseMB: +(map.maxChunks * lod0 * lod0 * 4 / 1048576).toFixed(1) };
+          const lod0 = (16 + 4) * 22 * map.chunkResolution(0), lod1 = (16 + 4) * 7;
+          out.cache = { maxChunks: map.maxChunks, lod0ChunkPx: `${lod0}×${lod0}`, lod0ChunkBytes: lod0 * lod0 * 4, lod1ChunkPx: `${lod1}×${lod1}`, worstCaseMB: +(Math.min(map.maxChunkBytes, map.maxChunks * lod0 * lod0 * 4) / 1048576).toFixed(1) };
           out.pack = HB.mapAssets.report();
           delete out.pack.warnings;
           resolve(out);
