@@ -24,6 +24,8 @@
       this.cloudField = new Float32Array(W.w * W.h * 3);
       for (let i = 0; i < W.w * W.h; i++) { this.cloudField[i * 3] = this.cloudSeed.range(-0.3, 0.3); this.cloudField[i * 3 + 1] = this.cloudSeed.range(-0.3, 0.3); this.cloudField[i * 3 + 2] = this.cloudSeed.range(0.75, 1.15); }
       this.pendingReveal = [];
+      // newly revealed land is uncovered by a thin watercolour wash bleeding outward from the dragon (src/art/mapfx.js)
+      this.revealWash = HB.mapReveal ? new HB.mapReveal.Layer({ seed: state.seed }) : null;
       this.dragonFrameT = 0;
       // the dragon's domain: washes over its territory and changed glyphs near its rule (rebuilt when the domain changes)
       this.showTerritory = true; this._domSig = null; this.mark = null;
@@ -227,8 +229,13 @@
       if (this.selected && inp.pressed('confirm') && !this.ui.focus) this.flyToSelected();
       // fog animation
       const F = this.fogAlpha, K = st.know.revealed;
-      if (this.pendingReveal.length) { for (const i of this.pendingReveal) this.revealAnim.add(i); this.pendingReveal.length = 0; }
-      if (this.revealAnim && this.revealAnim.size) { const rate = dt * 1.6; for (const i of this.revealAnim) { F[i] -= rate; if (F[i] <= 0) { F[i] = 0; this.revealAnim.delete(i); } } }
+      const RW = this.revealWash;
+      if (this.pendingReveal.length) {
+        if (RW) RW.add(this.pendingReveal, st.world.w, this.t, st.dragon.x + 0.5, st.dragon.y + 0.5); else for (const i of this.pendingReveal) this.revealAnim.add(i);
+        this.pendingReveal.length = 0;
+      }
+      if (RW && RW.active()) { for (const i of RW.cells.keys()) F[i] = 1 - RW.progress(i, this.t); RW.prune(this.t); }
+      else if (this.revealAnim && this.revealAnim.size) { const rate = dt * 1.6; for (const i of this.revealAnim) { F[i] -= rate; if (F[i] <= 0) { F[i] = 0; this.revealAnim.delete(i); } } }
       else if (this.frame % 30 === 0) { /* lazy sync: revealed cells cleared, rumoured cells sketched (e.g. after load or rumours) */ const R = st.know.rumor; for (let i = 0; i < F.length; i++) { if (K[i]) { if (F[i] > 0 && !this.revealAnim.has(i)) F[i] = 0; } else if (R[i] && F[i] > RUMOR_ALPHA) F[i] = RUMOR_ALPHA; } }
       // hunters caught up with you
       if (st.ambush && HB.scenes.top() === this) this.showAmbush();
@@ -587,7 +594,7 @@
       HB.dragonArt.draw(ctx, spec, pose, frame, p.x, p.y - (flying ? 10 : 2) * scale + bobY, scale, facing);
     }
     drawFog(ctx, tl, br) {
-      const st = this.state, W = st.world, F = this.fogAlpha, cam = this.cam, z = CELL * cam.zoom;
+      const st = this.state, W = st.world, F = this.fogAlpha, cam = this.cam, z = CELL * cam.zoom, RW = this.revealWash;
       const step = cam.zoom < 0.4 ? 4 : cam.zoom < 0.8 ? 2 : 1;
       const x0 = Math.max(0, Math.floor(tl.x) - 2), x1 = Math.min(W.w - 1, Math.ceil(br.x) + 2), y0 = Math.max(0, Math.floor(tl.y) - 2), y1 = Math.min(W.h - 1, Math.ceil(br.y) + 2);
       const A = HB.mapart;
@@ -598,7 +605,7 @@
       // pass 1: fills — untouched parchment (same pattern as the background, so the unexplored world is blank paper)
       for (let y = y0; y <= y1; y += step) for (let x = x0; x <= x1; x += step) {
         const i = y * W.w + x; const a = F[i];
-        if (a <= 0) continue;
+        if (a <= 0 || (RW && step === 1 && RW.revealing(i))) continue;
         const p = this.worldToScreen(x, y);
         const rid = W.region[i];
         const storm = rid >= 0 && W.regions[rid].tier > dragonTier;
@@ -608,16 +615,24 @@
         ctx.fillStyle = storm ? 'rgba(90,80,70,0.22)' : 'rgba(255,250,235,0.22)';
         ctx.fillRect(p.x - 1, p.y - 1, z * step + 2, z * step + 2);
       }
+      // the reveal wash: blank paper dissolving off newly revealed land along a soft irregular edge, a thin warm wash
+      // at the wet edge (cell by cell in the far views, where the fill above already fades)
+      if (RW && step === 1 && RW.active()) {
+        ctx.globalAlpha = 1;
+        RW.draw(ctx, this.t, (x, y) => this.worldToScreen(x, y), (i) => st.know.revealed[i] && !RW.revealing(i), (g, x, y, w, h) => { g.fillStyle = HB.parchment.pattern; g.fillRect(x, y, w, h); g.fillStyle = 'rgba(255,250,235,0.22)'; g.fillRect(x, y, w, h); });
+      }
       // pass 2: cloud puffs on the boundary + sparse interior puffs
       const puffR = z * 0.75 * step;
       for (let y = y0; y <= y1; y += step) for (let x = x0; x <= x1; x += step) {
-        const i = y * W.w + x; const a = F[i];
+        const i = y * W.w + x;
+        // clouds over land being revealed clear early, so the wash's bleeding edge shows
+        const a = RW && RW.revealing(i) ? HB.clamp((F[i] - 0.6) / 0.4, 0, 1) : F[i];
         if (a <= 0.02) continue;
         const rid = W.region[i];
         const storm = rid >= 0 && W.regions[rid].tier > dragonTier;
         // an edge: revealed land next door, or the storm wall itself (fogged land on either side of it)
         let edge = false;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx * step, ny = y + dy * step; if (nx < 0 || ny < 0 || nx >= W.w || ny >= W.h) continue; const ni = ny * W.w + nx; if (F[ni] < 0.5) { edge = true; break; } if (storm && HB.isLand(W.terrain[ni])) { const rn = W.region[ni]; if (rn >= 0 && W.regions[rn].tier <= dragonTier) { edge = true; break; } } }
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx * step, ny = y + dy * step; if (nx < 0 || ny < 0 || nx >= W.w || ny >= W.h) continue; const ni = ny * W.w + nx; if (F[ni] < 0.5 || (RW && RW.revealing(ni))) { edge = true; break; } if (storm && HB.isLand(W.terrain[ni])) { const rn = W.region[ni]; if (rn >= 0 && W.regions[rn].tier <= dragonTier) { edge = true; break; } } }
         const cf = this.cloudField;
         const interior = !edge && ((x * 7 + y * 13) % 5 === 0);
         if (!edge && !interior) continue;

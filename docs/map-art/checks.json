@@ -18,7 +18,7 @@
    "ok": true
   },
   {
-   "name": "sample pack: all 9 ids loaded (6 symbols, 2 watercolour textures, a bloom mask), 18 images (with 4 ink masks, 6 wash textures), no warnings",
+   "name": "sample pack: all 9 ids loaded (6 symbols, 2 watercolour textures, a bloom mask), 14 images (with 6 wash textures and a bloom mask), no warnings",
    "ok": true
   },
   {
@@ -26,7 +26,7 @@
    "ok": true
   },
   {
-   "name": "broken pack: the valid pine draws, the 9 mistakes (and its wrong-size ink mask) warn and fall back",
+   "name": "broken pack: the valid pine draws, the 9 mistakes warn and fall back",
    "ok": true
   },
   {
@@ -70,7 +70,6 @@
   "map.place.village variant missing: could not load assets/map/packs/test-broken/no-such-file.png",
   "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused",
   "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused",
-  "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused",
-  "map.terrain.tree.pine variant ok: inkMask is 32×32 but the art is 28×52; the engine derives it instead"
+  "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused"
  ]
 }

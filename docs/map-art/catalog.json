@@ -1,6 +1,6 @@
 {
  "generated": "node tools/mapart-export.mjs",
- "game": "0.12.0",
+ "game": "0.13.0",
  "spec": {
   "schemaVersion": 1,
   "cell": 22,

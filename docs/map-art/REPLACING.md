@@ -23,11 +23,10 @@ For each symbol you replace: one PNG per variant, and an entry in the pack's `pa
 `sourceSize` is the PNG's pixel size; `logicalSize` is `sourceSize / 4` if you drew at 4×; `anchorPx` is the anchor
 pixel in the PNG, counted from its top-left corner including the transparent padding.
 
-Optional, for the ink discovery (0.12): `"inkMask"` (alpha = the line work the ink becomes) and `"revealMask"`
-(luminance = the order it is drawn in, black first), both exactly the PNG's size and pixel-aligned with it. Optional,
-for the territory: tileable watercolour textures under `map.wash.benevolent`, `map.wash.tyrannical` and
-`map.wash.neutral`, and bloom order masks under `map.wash.bloom`. The exact rules, with fallbacks:
-[INK_AND_WASH.md](INK_AND_WASH.md); try them in the [ink and wash preview](INK_PREVIEW.md).
+Nothing extra is needed for discovery: new land washes in over whatever you draw. Optional, for the territory:
+tileable watercolour textures under `map.wash.benevolent`, `map.wash.tyrannical` and `map.wash.neutral`, and bloom
+order masks under `map.wash.bloom`. The exact rules, with fallbacks: [WASH.md](WASH.md); try them in the
+[watercolour preview](WASH_PREVIEW.md).
 
 ## 2. Add a variant
 
@@ -43,8 +42,8 @@ node tools/mappack.js <pack>          # validates every entry and PNG, then writ
 
 It reports unknown or duplicate ids, missing files, PNG sizes that do not match `sourceSize` or `rect`, anchors
 outside the frame, aspect mismatches and terrain art that reaches past the chunk margin. Errors mean the game will
-fall back to the hand-drawn symbol for that variant. Ink and reveal masks of the wrong size are warnings (the engine
-derives its own); watercolour textures that are not square, not a power of two or not their declared `size` are errors.
+fall back to the hand-drawn symbol for that variant. Watercolour textures that are not square, not a power of two or
+not their declared `size` are errors.
 
 ## 4. Select the pack
 

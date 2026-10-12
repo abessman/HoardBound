@@ -86,7 +86,7 @@
       // ---- fog and decoration
       'map.fog.cloud': M('A cloud puff of the fog (state "storm": over lands behind a storm wall)', 16.5, { layer: 'fog', param: 'r', builder: 'HB.mapart.cloud(ctx, x, y, r, rng, opts)', states: ['storm'], anchor: 'centre of the puff', maxK: 3.7 }),
       'map.fog.lightning': M('Lightning in a storm wall', 8.25, { layer: 'fog', builder: 'HB.mapart.lightning(ctx, x, y, s, rng)', anchor: 'top of the bolt', maxK: 3.6 }),
-      // ---- watercolour influence (0.12; contract: docs/map-art/INK_AND_WASH.md). Not glyphs: masks the wash reads
+      // ---- watercolour influence (0.12; contract: docs/map-art/WASH.md). Not glyphs: masks the wash reads
       'map.wash.benevolent': WASH('Watercolour masks for kind territory (coverage, pooling, hue; tileable)'),
       'map.wash.tyrannical': WASH('Watercolour masks for cruel territory (coverage, pooling, hue; tileable)'),
       'map.wash.neutral': WASH('Watercolour masks for territory that is neither kind nor cruel'),

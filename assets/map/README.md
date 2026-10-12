@@ -88,7 +88,7 @@ symbol's stable identity (world seed and cell, or the place's id): they never re
   (≈ 30 logical px for a mountain) from its anchor at its largest size. Larger art is refused with a warning.
 - Roads, rivers, coasts, the sea wash and territory washes stay procedural so they join up; a pack may restyle them
   with `style` (keys: `road`, `river`, `coast`, `water`, and `wash` = each path's two watercolour colours; see
-  `DEFAULT_STYLE` in `src/art/mapassets.js` and [INK_AND_WASH.md](../../docs/map-art/INK_AND_WASH.md)).
+  `DEFAULT_STYLE` in `src/art/mapassets.js` and [WASH.md](../../docs/map-art/WASH.md)).
 - Art never changes where things are or what a tap selects: positions and hit areas come from the world.
 - Mistakes (unknown or duplicate ids, missing files, wrong sizes, anchors outside the frame, oversized terrain) are
   reported in the browser console with `[map art]` and by `tools/mappack.js`; the symbol falls back, the rest load.

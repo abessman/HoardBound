@@ -4,6 +4,20 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.13.0 — 2026-10-12 · Land washes in
+- **Newly explored land washes in like watercolour.** As the dragon flies, the blank paper over the land it uncovers
+  dissolves along a soft, uneven edge that bleeds outward from the dragon, with a thin warm wash at the wet edge that
+  dries away in about a second. No more hard squares fading out. The clouds still mark the edge of the unknown. It
+  works over any map art, so new sprites need nothing extra.
+- **Ink discovery removed.** The 0.12 ink drops, pools and rivulets (preview only) are gone, along with their mask
+  files; packs that still list `inkMask` or `revealMask` load as before and the fields are ignored.
+- The preview is now `index.html?scene=washpreview` (the old `?scene=inkpreview` link still works): fly across a
+  mountain, a forest and a village and watch them wash in; slow motion; the territory buttons as before.
+- Big pack art drawn small on the map is scaled down in halving steps, so fine lines in high-resolution sprites do not
+  shimmer.
+- For artists: `docs/map-art/WASH.md` (the reveal needs no assets; the territory's optional textures) and
+  `docs/map-art/WASH_PREVIEW.md`.
+
 ## 0.12.0 — 2026-10-12 · Ink and watercolour
 - **Your territory is painted in watercolour.** Translucent, uneven washes on the parchment: green with gold blooms
   where your rule is kind, rust with charcoal edges where it is cruel, sepia while undecided. When the territory

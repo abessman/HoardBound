@@ -1,10 +1,10 @@
 # Map art catalog
 
-Measured from the procedural drawing in HoardBound 0.12.0 by `node tools/mapart-export.mjs`. Machine-readable: [catalog.json](catalog.json). How to use it: [REPLACING.md](REPLACING.md); art rules: [ART_SPEC.md](ART_SPEC.md).
+Measured from the procedural drawing in HoardBound 0.13.0 by `node tools/mapart-export.mjs`. Machine-readable: [catalog.json](catalog.json). How to use it: [REPLACING.md](REPLACING.md); art rules: [ART_SPEC.md](ART_SPEC.md).
 
 Units: **logical px** = screen px at zoom 1 when the drawing's size parameter equals `ref` (k = 1). **Bounds** are the ink extent measured from the anchor (left, top → right, bottom), the union of 24 random draws for glyphs that vary. **Recommended** adds 1 px padding: draw your PNG at 4× that size and put the anchor at the 4× point. **On screen** is the recommended frame's size at zoom 1 / 2.5 / 3.2 (the largest).
 
-Watercolour masks (`map.wash.*`) and the per-variant ink and reveal masks are not glyphs and are not listed here: [INK_AND_WASH.md](INK_AND_WASH.md).
+Watercolour masks (`map.wash.*`) are not glyphs and are not listed here: [WASH.md](WASH.md).
 
 Layers: `terrain` is drawn into cached map chunks (reach limited to 2.2 cells, checked at both levels of detail); `places`, `markers`, `fog` and `ui` are drawn every frame at screen resolution.
 

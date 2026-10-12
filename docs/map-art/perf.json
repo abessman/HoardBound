@@ -4,12 +4,12 @@
   "none": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 25.8,
-    "msPerChunk": 2.88
+    "ms": 24.6,
+    "msPerChunk": 2.74
    },
    "frame": {
-    "drawMedianMs": 3.1,
-    "drawP90Ms": 4.7,
+    "drawMedianMs": 3,
+    "drawP90Ms": 4.6,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },
@@ -32,12 +32,12 @@
   "sample": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 18,
-    "msPerChunk": 2
+    "ms": 20.1,
+    "msPerChunk": 2.24
    },
    "frame": {
-    "drawMedianMs": 3.2,
-    "drawP90Ms": 4.3,
+    "drawMedianMs": 3.3,
+    "drawP90Ms": 4.6,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },
@@ -62,8 +62,8 @@
      "map.wash.tyrannical",
      "map.wash.bloom"
     ],
-    "images": 18,
-    "decodedBytes": 2273584,
+    "images": 14,
+    "decodedBytes": 2074672,
     "loading": 0
    }
   }

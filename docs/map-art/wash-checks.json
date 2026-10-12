@@ -1,0 +1,236 @@
+{
+ "generated": "node tools/mapart-export.mjs --only=wash",
+ "note": "Headless Chromium on the build container, 1280×720 at 1×, software canvas: compare numbers with each other, not with an iPad. The preview is stepped at 60 frames a second and every frame is drawn and checked.",
+ "checks": [
+  {
+   "name": "before the flight: nothing under the fog is drawn (the mountain, the forest and the village are unknown)",
+   "ok": true,
+   "detail": {
+    "t": 1.22,
+    "cells": 0,
+    "shown": [],
+    "fogLeft": 0
+   }
+  },
+  {
+   "name": "the paper dissolves along an irregular edge, not as a uniform square fade (inside a half-uncovered cell the cover varies pixel to pixel)",
+   "ok": true,
+   "detail": {
+    "progress": 0.45,
+    "mean": 27,
+    "sd": 69,
+    "uncovered": 55,
+    "covered": 4,
+    "px": 64,
+    "tint": 26
+   }
+  },
+  {
+   "name": "a thin warm wash lies at the wet edge while it spreads",
+   "ok": true,
+   "detail": {
+    "tint": 26
+   }
+  },
+  {
+   "name": "the wash bleeds outward from the dragon: land farther from it starts later",
+   "ok": true,
+   "detail": {
+    "near": 0.1,
+    "far": 0.42,
+    "monotone": true
+   }
+  },
+  {
+   "name": "world-anchored: panning two cells mid-reveal moves the wash exactly with the land",
+   "ok": true,
+   "detail": {
+    "panPx": 110,
+    "pixels": 80271,
+    "meanDiff": 0.001,
+    "cells": 28
+   }
+  },
+  {
+   "name": "knowledge on every frame: nothing is drawn before its cell is revealed; the village appears only once discovered",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "the wash dries away completely: every revealed cell clear, nothing left over the map",
+   "ok": true,
+   "detail": {
+    "t": 10.02,
+    "cells": 0,
+    "shown": [
+     "pv:mountain",
+     "pv:tree0",
+     "pv:tree1",
+     "pv:tree2",
+     "pv:tree3",
+     "pv:tree4",
+     "pv:tree5",
+     "pv:tree6",
+     "loc9001"
+    ],
+    "fogLeft": 0
+   }
+  },
+  {
+   "name": "a place that joins blooms from itself: part-way after 0.45 s, complete and still after 3 s",
+   "ok": true,
+   "detail": {
+    "midway": 0.165,
+    "end": 0.947
+   }
+  },
+  {
+   "name": "growing territory spreads outward from its old edge; the land already painted stays painted",
+   "ok": true,
+   "detail": {
+    "innerBefore": 1,
+    "innerDuring": 1,
+    "ringDuring": 0.459,
+    "ringAfter": 0.927
+   }
+  },
+  {
+   "name": "kind territory reads green-gold, cruel rust-charcoal",
+   "ok": true,
+   "detail": {
+    "kind": [
+     118,
+     133,
+     53
+    ],
+    "cruel": [
+     145,
+     43,
+     17
+    ]
+   }
+  },
+  {
+   "name": "reduced motion: newly revealed land fades in within 0.3 s, without spreading or tint",
+   "ok": true,
+   "detail": {
+    "cells": 6,
+    "tint": 0
+   }
+  },
+  {
+   "name": "live map: flying uncovers new land through the reveal wash, which then dries away (no fog left on revealed land)",
+   "ok": true,
+   "detail": {
+    "maxRevealing": 27,
+    "newCells": 53,
+    "left": 0
+   }
+  },
+  {
+   "name": "live map: the territory is painted from the real territory sources and stays on home-region land",
+   "ok": true,
+   "detail": {
+    "sources": 2,
+    "painted": 11366,
+    "outsideShare": 0
+   }
+  },
+  {
+   "name": "live map: drawing the washes leaves the campaign save unchanged",
+   "ok": true
+  },
+  {
+   "name": "live map: occupying a place adds its source and a bloom spreads from it, then settles",
+   "ok": true,
+   "detail": {
+    "place": "Elderdell",
+    "before": 2,
+    "after": 3
+   }
+  },
+  {
+   "name": "live map: a kind dragon's territory is green-gold, a cruel one's rust",
+   "ok": true,
+   "detail": {
+    "kind": [
+     119,
+     133,
+     54
+    ],
+    "cruel": [
+     145,
+     43,
+     17
+    ]
+   }
+  },
+  {
+   "name": "nothing written to localStorage by the preview (no saves, no settings)",
+   "ok": true
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": []
+  }
+ ],
+ "perf": {
+  "preview": {
+   "frameMedianMs": 10,
+   "revealFrameMedianMs": 12,
+   "revealFrameP90Ms": 16.1,
+   "revealFrameMaxMs": 20.7,
+   "revealFrames": 459,
+   "revealLayerMedianMs": 0,
+   "revealLayerMaxMs": 7.5,
+   "maxRevealingCells": 62,
+   "washUpdateMedianMs": 0.3,
+   "washSliceMaxMs": 7.4,
+   "washComposeMedianMs": 0.2
+  },
+  "liveReveal": {
+   "revealLayerMedianMs": 2.2,
+   "revealLayerMaxMs": 5.2,
+   "frames": 206,
+   "maxRevealingCells": 27
+  }
+ },
+ "colours": {
+  "kind": [
+   118,
+   133,
+   53
+  ],
+  "cruel": [
+   145,
+   43,
+   17
+  ],
+  "liveCruel": [
+   145,
+   43,
+   17
+  ],
+  "liveKind": [
+   119,
+   133,
+   54
+  ]
+ },
+ "edge": {
+  "progress": 0.45,
+  "mean": 27,
+  "sd": 69,
+  "uncovered": 55,
+  "covered": 4,
+  "px": 64,
+  "tint": 26
+ },
+ "anchoring": {
+  "panPx": 110,
+  "pixels": 80271,
+  "meanDiff": 0.001,
+  "cells": 28
+ }
+}

@@ -20,7 +20,7 @@
     river: { color: 'rgba(48,78,118,0.78)', baseWidth: 0.8, perWidth: 0.6 },
     coast: { color: '#2b1a0e', width: 1.5 },
     water: { color: [105, 140, 170], alpha: 0.07, alphaPerDepth: 0.03 },
-    // watercolour territory: each path's two colours (the wash's hue mask mixes them; docs/map-art/INK_AND_WASH.md)
+    // watercolour territory: each path's two colours (the wash's hue mask mixes them; docs/map-art/WASH.md)
     wash: { benevolent: [[110, 140, 58], [196, 160, 58]], tyrannical: [[176, 48, 16], [44, 36, 32]], neutral: [[128, 104, 70], [96, 74, 48]] },
   };
   const merge = (a, b) => { const o = Array.isArray(a) ? a.slice() : Object.assign({}, a); for (const k in b || {}) o[k] = (a && typeof a[k] === 'object' && !Array.isArray(a[k]) && b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) ? merge(a[k], b[k]) : b[k]; return o; };
@@ -100,13 +100,10 @@
       MA.loadImage(out, src, (img) => {
         const nw = img.naturalWidth, nh = img.naturalHeight;
         if (rect ? (rect[0] + rect[2] > nw || rect[1] + rect[3] > nh) : (nw !== size[0] || nh !== size[1])) { out.failed = true; MA.warn(`${where}: ${src} is ${nw}×${nh}, which does not match ${rect ? 'the rect ' + rect.join(',') : 'sourceSize ' + size.join('×')}; refused`); MA.bump(); return; }
-        out.img = img; out.ready = true; MA.featureMasks(out); MA.bump();
+        out.img = img; out.ready = true; MA.bump();
       }, () => { out.failed = true; MA.warn(`${where}: could not load ${src}`); MA.bump(); });
       if (typeof v.occlusionMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.occlusionMask) ? v.occlusionMask : base + v.occlusionMask, (m) => { out.maskCanvas = MA.colourise(m, out.rect, PAPER, 1); MA.bump(); }, () => MA.warn(`${where}: could not load occlusionMask`));
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
-      // ink discovery masks (docs/map-art/INK_AND_WASH.md): same size as the art file, checked once both have loaded
-      out.inkEntry = num(v.inkEntryPx, 2) ? v.inkEntryPx.slice() : null;
-      for (const key of ['inkMask', 'revealMask']) if (typeof v[key] === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v[key]) ? v[key] : base + v[key], (m) => { out[key] = m; MA.featureMasks(out); MA.bump(); }, () => MA.warn(`${where}: could not load ${key}; the engine derives it from the art`));
       return out;
     },
     /** a watercolour variant (map.wash.*): tileable world-anchored masks, or a bloom order mask */
@@ -156,15 +153,11 @@
       const v = ok[HB.hash32('bloom:' + key) % ok.length], px = MA.pixels(v.img, v.n, v.n);
       return { n: v.n, span: v.span, flip: v.allowFlipX && (HB.hash32('bflip:' + key) & 1), ord: px.lum, alpha: px.alpha };
     },
-    /** a resolved variant's ink masks, checked against the art's size: { ink, order, entry } (missing ones null) */
-    featureMasks(v) {
-      const out = { ink: null, order: null, entry: v.inkEntry };
-      for (const [key, slot] of [['inkMask', 'ink'], ['revealMask', 'order']]) {
-        const m = v[key]; if (!m || !v.img) continue;
-        if (m.naturalWidth !== v.img.naturalWidth || m.naturalHeight !== v.img.naturalHeight) { if (!v['_warned' + key]) { v['_warned' + key] = true; MA.warn(`${v.where}: ${key} is ${m.naturalWidth}×${m.naturalHeight} but the art is ${v.img.naturalWidth}×${v.img.naturalHeight}; the engine derives it instead`); } continue; }
-        out[slot] = m;
-      }
-      return out;
+    /** a halved copy of a variant's frame, about 1–2× the size it is drawn at (built once, then cached) */
+    mip(v, shrink) {
+      if (!v.mips) { v.mips = []; let cur = null, w = v.sw, h = v.sh; for (let k = 0; k < 6 && w > 8; k++) { w = Math.ceil(w / 2); h = Math.ceil(h / 2); const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; if (cur) g.drawImage(cur, 0, 0, w, h); else g.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, 0, 0, w, h); v.mips.push(c); cur = c; } }
+      let lvl = 0, s = shrink; while (s > 2 && lvl < v.mips.length) { s /= 2; lvl++; }
+      return lvl ? v.mips[lvl - 1] : v.img;
     },
     loadImage(owner, src, ok, fail) { const img = new Image(); MA.loading++; img.onload = () => { MA.loading--; ok(img); }; img.onerror = () => { MA.loading--; fail(); }; img.src = src; },
     /** an image's alpha filled with one colour (occlusion fill in paper colour, or a faction tint) */
@@ -197,7 +190,10 @@
       ctx.imageSmoothingEnabled = v.sampling !== 'pixel';
       if (flip) { ctx.translate(2 * x, 0); ctx.scale(-1, 1); }
       if (v.maskCanvas) ctx.drawImage(v.maskCanvas, dx, dy, dw, dh);
-      ctx.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, dx, dy, dw, dh);
+      // drawn far smaller than its source (big art in a map chunk): through halved copies, so fine lines do not shimmer
+      const tf = ctx.getTransform ? ctx.getTransform() : null, shrink = v.sw / Math.abs(dw * (tf ? Math.hypot(tf.a, tf.b) : 1));
+      if (shrink > 2.5 && v.sampling !== 'pixel') { const m = MA.mip(v, shrink); ctx.drawImage(m, 0, 0, m.width, m.height, dx, dy, dw, dh); }
+      else ctx.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, dx, dy, dw, dh);
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
       ctx.restore();
       return { id: r.id, v, sx, sy, dx, dy, dw, dh, flip };
@@ -224,7 +220,7 @@
       let bytes = 0, images = 0; const seen = new Set();
       for (const e of MA.entries.values()) for (const v of e.variants) if (v.img && !seen.has(v.img.src)) { seen.add(v.img.src); images++; bytes += v.img.naturalWidth * v.img.naturalHeight * 4; }
       const drawing = [...MA.entries.values()].filter(e => e.variants.some(v => v.ready)).map(e => e.id);
-      for (const e of MA.entries.values()) for (const v of e.variants) { for (const k of ['inkMask', 'revealMask']) if (v[k] && !seen.has(v[k].src)) { seen.add(v[k].src); images++; bytes += v[k].naturalWidth * v[k].naturalHeight * 4; } if (v.imgs) for (const k in v.imgs) if (!seen.has(v.imgs[k].src)) { seen.add(v.imgs[k].src); images++; bytes += v.n * v.n * 4; } if (v.bloom && v.img && !seen.has(v.img.src)) { seen.add(v.img.src); images++; bytes += v.n * v.n * 4; } }
+      for (const e of MA.entries.values()) for (const v of e.variants) { if (v.imgs) for (const k in v.imgs) if (!seen.has(v.imgs[k].src)) { seen.add(v.imgs[k].src); images++; bytes += v.n * v.n * 4; } if (v.bloom && v.img && !seen.has(v.img.src)) { seen.add(v.img.src); images++; bytes += v.n * v.n * 4; } }
       return { pack: MA.packName, ids: MA.entries.size, drawing, images, decodedBytes: bytes, loading: MA.loading, warnings: MA.warnings.slice() };
     },
   };

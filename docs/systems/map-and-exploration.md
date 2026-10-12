@@ -6,7 +6,7 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - One finite continent plus overseas isles; enormous (default 200×200 leagues); seeded, different each world.
 - Seven regions (0.11; older campaigns keep their 6–16) → subregions (≈40–60 per region) → cells (leagues). A hatchling uncovers thin corridors; an ancient
   dragon uncovers provinces. Vision grows with size tier.
-- Unexplored land hides under cloud banks that roll back; cartography inks in behind them. Region borders are
+- Unexplored land hides under cloud banks that roll back; the land behind them washes in like watercolour. Region borders are
   storm walls, mountain walls or sea, each needing a size tier to cross.
 - Full decisions table: [DESIGN.md §2](../../DESIGN.md).
 
@@ -55,9 +55,10 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   each glyph draws with its own seed and stable key, so swapping its art never moves another glyph.
 - Every symbol can be replaced by PNG art from a map art pack, with procedural fallback: see
   [art-and-sprites](art-and-sprites.md) and `docs/map-art/README.md`. Preview: `?scene=mappreview`.
-- Ink discovery (0.12, preview only): terrain near known land as a faint sketch (places never), an ink pool that
-  drains into what a step reveals. Built in `src/art/mapfx.js` and tried at `?scene=inkpreview`; the map still lifts
-  clouds. Wiring it in means drawing just-revealed cells' glyphs through `HB.mapInk` until drawn, then into the chunk.
+- The reveal wash (0.13): land the dragon uncovers washes in. The fog's blank paper over newly revealed cells
+  dissolves along a soft irregular edge that bleeds outward from the dragon, with a thin warm wash at the wet edge that
+  dries away (`HB.mapReveal` in `src/art/mapfx.js`; `onReveal` → `revealWash.add`, the fog skips those cells and
+  clears their clouds early). Preview: `?scene=washpreview`. Reduced motion: a 0.3 s fade.
 
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).

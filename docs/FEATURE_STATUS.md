@@ -86,15 +86,16 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Roads, rivers, coasts and washes as art | Simplified | Stay procedural so they join; restylable via a pack's `style` (0.12: the territory wash also takes textures and bloom masks from a pack). Parchment, labels and selection are not in packs. |
 | Real map artwork | Deferred | Only test art ships; terrain art is cached at 1× (no sharper than the ink at high zoom). |
 
-## Ink and watercolour (0.12.0)
+## Watercolour (0.12.0; reveal wash 0.13.0)
 
 | Requirement | Status | Notes |
 | --- | --- | --- |
 | Territory as watercolour, tied to real state | Functional | `HB.mapWash` paints the live map's territory from `HB.domain.influence` sources; kind green/gold, cruel rust/charcoal, neutral sepia; blooms from what changed (a place joining or occupied, growth, a recolour); repaint spread over frames. |
-| Ink discovery (sketch, pool, absorption) | Simplified | Built and checked in the isolated preview (`?scene=inkpreview`): sketches near known land that never show places, one pool per discovery step, rivulets, wet ink then drying colour, 24-feature and 4-pool caps. The live map still uses cloud fog. |
-| Mask contract for finished art | Functional | `docs/map-art/INK_AND_WASH.md`: ink silhouette, reveal order, watercolour coverage/pooling/hue, bloom order; validated by `tools/mappack.js`; placeholders in the sample pack. |
-| Reduced motion for map effects | Functional | Settings → Reduce motion or `?reducedmotion=1`: no pools or spreading; fades of 0.25–0.3 s. |
-| Finished ink and watercolour art | Deferred | Placeholder masks only; the artist's PNGs drop into a pack. |
+| Newly explored land washes in | Functional | 0.13: the fog's paper over newly revealed cells dissolves along a soft irregular edge bleeding outward from the dragon, with a thin warm wash at the wet edge that dries away; clouds still mark the unknown; works with any symbol art (`HB.mapReveal`). Far views (zoom < 0.8) fade cell by cell. |
+| Ink discovery (drops draining into the symbols) | Removed | Built in 0.12 for the preview only; dropped in 0.13 for the simpler reveal wash. Packs' `inkMask` / `revealMask` fields are ignored. |
+| Watercolour contract for finished art | Functional | `docs/map-art/WASH.md`: the reveal wash needs no assets; territory coverage/pooling/hue textures and bloom order masks, validated by `tools/mappack.js`; placeholders in the sample pack. |
+| Reduced motion for map effects | Functional | Settings → Reduce motion or `?reducedmotion=1`: revealed land and the territory fade in (0.3 s) without spreading or tint. |
+| Finished watercolour textures | Deferred | Placeholder textures only; an artist's PNGs drop into a pack. |
 
 ## Encounters and travel
 

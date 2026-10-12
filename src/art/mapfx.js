@@ -1,236 +1,22 @@
-/* Map effects (0.12): ink discovery (HB.mapInk) and watercolour influence (HB.mapWash). Both are view-only (they read
- * knowledge and territory, never write state), world-anchored (callers pass world positions and the camera), art-pack
- * aware (masks from HB.mapAssets, procedural fallbacks) and bounded for the iPad (LIMITS).
- * Asset contract: docs/map-art/INK_AND_WASH.md. Isolated preview: docs/map-art/INK_PREVIEW.md (?scene=inkpreview). */
+/* Map effects: watercolour on the parchment. HB.mapWash (0.12) paints your territory; HB.mapReveal (0.13) uncovers
+ * newly revealed land with a thin wash that bleeds outward. Both are view-only (they read knowledge and territory, never
+ * write state), world-anchored (callers pass world positions and the camera), independent of the map's symbol art, and
+ * bounded for the iPad (LIMITS). Asset contract: docs/map-art/WASH.md. Preview: docs/map-art/WASH_PREVIEW.md. */
 (function () {
   const HB = globalThis.HB;
   if (!HB.isBrowser) return;
 
-  const LIMITS = { features: 24, buffer: 160, pools: 4, washHz: 20, blooms: 6, sketchBand: 3, washSliceMs: 6 };
-  const INK = [36, 22, 12], SKETCH = [76, 62, 46];
-  // seconds: the pool grows, holds, drains; rivulets run to each feature; the ink runs through it; colour dries behind
-  const TIME = { pool: 0.3, hold: 0.15, drain: 0.6, rivulet: 0.35, travel: 0.3, inkTerrain: 0.9, inkPlace: 1.1, dry: 0.35, fade: 0.25, washFade: 0.3 };
+  const LIMITS = { washHz: 20, blooms: 6, washSliceMs: 6 };
+  // seconds: a territory wash fading in under reduced motion
+  const TIME = { washFade: 0.3 };
   const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-  const hashf = (x, y, s) => { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263) + Math.imul(s | 0, 1013904223); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
-  const newCtx = (w, h) => { const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); return c.getContext('2d', { willReadFrequently: true }); };
 
   const fx = HB.mapFx = {
     LIMITS, TIME,
     /** null: follow Settings → Reduce motion; true/false: an override (the preview's toggle, ?reducedmotion=1) */
     reducedOverride: null,
     reduced() { return fx.reducedOverride !== null ? fx.reducedOverride : !!(HB.settings && HB.settings.reduceMotion); },
-    stats: { composed: 0, pixels: 0, ms: 0 },
-  };
-
-  // =====================================================================================================
-  // Ink discovery
-  // A feature is one map symbol in world cells: { key, place, ids (art-pack id chain), param, paramY, proc(ctx, x, y, s),
-  // x, y (anchor in cells) }. proc draws the hand-drawn version at anchor (x, y) with its size parameter times s.
-  // States: hidden → sketch (near what you know: first strokes only) → revealing (pool, rivulet, ink, dry) → drawn.
-  // =====================================================================================================
-  const ink = HB.mapInk = {
-    pools: [],
-    /** render a feature into its work buffer (2 px per logical px) and derive or read its ink and order masks */
-    prepare(f) {
-      const MA = HB.mapAssets, r = MA && MA.entries.size ? MA.resolve(f.ids, f.key) : null;
-      let S = 2, out = null;
-      for (let pass = 0; pass < 2; pass++) {
-        const W = 420, H = 420, AX = 210, AY = 300, g = newCtx(W, H);
-        g.setTransform(S, 0, 0, S, AX, AY); HB.mapart.setup(g);
-        let d = null;
-        if (r) d = MA.drawResolved(g, r, 0, 0, f.param, { key: f.key, paramY: f.paramY });
-        else f.proc(g, 0, 0, 1);
-        const full = g.getImageData(0, 0, W, H).data;
-        let x0 = W, y0 = H, x1 = -1, y1 = -1;
-        for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (full[(y * W + x) * 4 + 3] > 6) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
-        if (x1 < 0) { x0 = AX - 2; y0 = AY - 2; x1 = AX + 2; y1 = AY + 2; }
-        x0 = Math.max(0, x0 - 3); y0 = Math.max(0, y0 - 3); x1 = Math.min(W - 1, x1 + 3); y1 = Math.min(H - 1, y1 + 3);
-        const w = x1 - x0 + 1, h = y1 - y0 + 1;
-        if (Math.max(w, h) > LIMITS.buffer && pass === 0) { S = S * LIMITS.buffer / Math.max(w, h); continue; }
-        const art = new Uint8ClampedArray(w * h * 4);
-        for (let y = 0; y < h; y++) art.set(full.subarray(((y + y0) * W + x0) * 4, ((y + y0) * W + x0 + w) * 4), y * w * 4);
-        out = { w, h, ax: AX - x0, ay: AY - y0, S, art, r, d, crop: [x0, y0, W, H, AX, AY] };
-        break;
-      }
-      // masks: the pack's (pixel-aligned with the art), else derived from the art's dark line work
-      const n = out.w * out.h, inkA = new Float32Array(n), ordMask = new Int16Array(n).fill(-1);
-      const masks = r ? MA.featureMasks(r.v) : { ink: null, order: null, entry: null };
-      const maskPixels = (img) => {
-        const [x0, y0, W, H, AX, AY] = out.crop, g = newCtx(W, H), v = r.v, d = out.d;
-        g.setTransform(out.S, 0, 0, out.S, AX, AY); g.imageSmoothingEnabled = v.sampling !== 'pixel';
-        if (d.flip) { g.scale(-1, 1); }
-        g.drawImage(img, v.rect[0], v.rect[1], v.sw, v.sh, d.dx, d.dy, d.dw, d.dh);
-        return g.getImageData(x0, y0, out.w, out.h).data;
-      };
-      if (masks.ink) {
-        const m = maskPixels(masks.ink), opaque = MA.pixels(masks.ink, masks.ink.naturalWidth, masks.ink.naturalHeight).opaque;
-        // alpha is ink; an opaque file is read by luminance instead (black = ink)
-        for (let i = 0; i < n; i++) inkA[i] = opaque ? (m[i * 4 + 3] ? (255 - (m[i * 4] + m[i * 4 + 1] + m[i * 4 + 2]) / 3) / 255 : 0) : m[i * 4 + 3] / 255;
-      } else {
-        for (let i = 0; i < n; i++) { const a = out.art[i * 4 + 3] / 255; if (!a) continue; const lum = (out.art[i * 4] + out.art[i * 4 + 1] + out.art[i * 4 + 2]) / 3; inkA[i] = a * Math.min(1, Math.max(0.15, (200 - lum) / 120)); }
-      }
-      if (masks.order) { const m = maskPixels(masks.order); for (let i = 0; i < n; i++) if (m[i * 4 + 3] > 0) ordMask[i] = Math.round((m[i * 4] + m[i * 4 + 1] + m[i * 4 + 2]) / 3); }
-      const entry = masks.entry && r ? (() => { const d = out.d, v = r.v, sx = d.dw / v.sw, sy = d.dh / v.sh; let ex = d.dx + masks.entry[0] * sx; if (d.flip) ex = -ex; return [ex * out.S + out.ax, (d.dy + masks.entry[1] * sy) * out.S + out.ay]; })() : null;
-      const canvas = newCtx(out.w, out.h).canvas;
-      f.buf = Object.assign(out, { ink: inkA, ordMask, entry, canvas, img: canvas.getContext('2d').createImageData(out.w, out.h), order: null, usedPackMasks: { ink: !!masks.ink, order: !!masks.order }, rev: MA ? MA.revision : 0 });
-      ink.computeOrder(f, entry || [out.ax, out.ay]);
-      ink.buildSketch(f);
-      return f;
-    },
-    /** order of appearance (0–255): the pack's reveal mask where it has one, else ink flowing from the entry point
-     *  through the line work (0–200), then fills by straight distance (200–255) */
-    computeOrder(f, entryPt) {
-      const b = f.buf, w = b.w, h = b.h, n = w * h, I = b.ink, A = b.art, dist = new Float32Array(n).fill(Infinity);
-      // start from the ink pixel nearest the entry point
-      let start = -1, best = Infinity;
-      for (let i = 0; i < n; i++) if (I[i] > 0.12) { const dx = (i % w) - entryPt[0], dy = ((i / w) | 0) - entryPt[1], d = dx * dx + dy * dy; if (d < best) { best = d; start = i; } }
-      let maxD = 1;
-      if (start >= 0) {
-        const q = new Int32Array(n); let qh = 0, qt = 0; q[qt++] = start; dist[start] = 0;
-        // breadth-first through the ink (no allocation per pixel: this runs for every feature discovered)
-        const visit = (j, d) => { if (j >= 0 && j < n && dist[j] === Infinity && I[j] > 0.12) { dist[j] = d; q[qt++] = j; } };
-        while (qh < qt) { const i = q[qh++], x = i % w, d = dist[i] + 1; if (d > maxD) maxD = d; if (x > 0) visit(i - 1, d); if (x < w - 1) visit(i + 1, d); visit(i - w, d); visit(i + w, d); }
-      }
-      const sx = start >= 0 ? start % w : entryPt[0], sy = start >= 0 ? (start / w) | 0 : entryPt[1], maxE = Math.hypot(w, h);
-      const order = new Uint8Array(n);
-      for (let i = 0; i < n; i++) {
-        if (b.ordMask[i] >= 0) { order[i] = b.ordMask[i]; continue; }
-        if (dist[i] < Infinity) order[i] = Math.round(dist[i] / maxD * 200);
-        else if (A[i * 4 + 3] > 0 || I[i] > 0) order[i] = Math.min(255, 200 + Math.round(55 * Math.hypot((i % w) - sx, ((i / w) | 0) - sy) / maxE));
-        else order[i] = 255;
-      }
-      b.order = order; b.entryPx = [sx, sy];
-    },
-    /** the faint pre-discovery sketch, broken up by a fixed noise: with a pack reveal mask its first strokes
-     *  (order ≤ 107); without one the strongest line work (ink ≥ 0.6), so the outline is recognisable */
-    buildSketch(f) {
-      const b = f.buf, g = newCtx(b.w, b.h), img = g.createImageData(b.w, b.h), D = img.data, seed = HB.hash32('sketch:' + f.key), packOrder = b.usedPackMasks.order;
-      for (let i = 0; i < b.w * b.h; i++) {
-        if (packOrder ? (b.order[i] > 107 || b.ink[i] < 0.15) : b.ink[i] < 0.6) continue;
-        const x = i % b.w, y = (i / b.w) | 0; if (hashf(x >> 1, y >> 1, seed) < 0.4 || hashf(x >> 3, y >> 3, seed + 1) < 0.18) continue;
-        D[i * 4] = SKETCH[0]; D[i * 4 + 1] = SKETCH[1]; D[i * 4 + 2] = SKETCH[2]; D[i * 4 + 3] = Math.round(255 * 0.5 * Math.min(1, b.ink[i]));
-      }
-      g.putImageData(img, 0, 0); b.sketch = g.canvas;
-    },
-    /** screen scale of a feature (screen px per logical px): terrain follows the zoom; places grow more slowly */
-    scaleOf(f, zoom) { return f.place ? HB.clamp(Math.sqrt(zoom), 0.4, 1.2) : zoom; },
-    /** one frame of a feature's reveal: wet ink runs ahead through the line work in order, colour dries behind it */
-    compose(f, tInk) {
-      const b = f.buf, dur = f.place ? TIME.inkPlace : TIME.inkTerrain, p = tInk / dur, q = (tInk - TIME.dry) / dur;
-      const D = b.img.data, A = b.art, I = b.ink, O = b.order, n = b.w * b.h, band = 0.06;
-      for (let i = 0; i < n; i++) {
-        const a = A[i * 4 + 3] / 255, k = I[i], j = i * 4;
-        if (a <= 0 && k <= 0) { D[j + 3] = 0; continue; }
-        const o = O[i] / 255, wet = smooth(o - band, o, p), dry = smooth(o - band * 2, o, q);
-        const inkA = k * wet * (1 - dry * 0.9), artA = a * dry, outA = Math.max(inkA, artA);
-        if (outA <= 0.004) { D[j + 3] = 0; continue; }
-        const share = inkA / (inkA + artA + 1e-6);
-        D[j] = A[j] + (INK[0] - A[j]) * share; D[j + 1] = A[j + 1] + (INK[1] - A[j + 1]) * share; D[j + 2] = A[j + 2] + (INK[2] - A[j + 2]) * share;
-        D[j + 3] = Math.round(outA * 255);
-      }
-      b.canvas.getContext('2d').putImageData(b.img, 0, 0);
-      fx.stats.composed++; fx.stats.pixels += n;
-    },
-    /** features just discovered: one ink pool near them drains into each (reduced motion: they fade in) */
-    reveal(features, pool, now) {
-      const live = features.filter(f => f.state !== 'drawn' && f.state !== 'revealing' && f.state !== 'fading');
-      if (!live.length) return null;
-      for (const f of live) if (!f.buf || f.buf.rev !== (HB.mapAssets ? HB.mapAssets.revision : 0)) ink.prepare(f);
-      const animating = (fs) => fs.filter(f => f.state === 'revealing');
-      if (fx.reduced() || ink.pools.length >= LIMITS.pools) { for (const f of live) { f.state = 'fading'; f.t0 = now; } return null; }
-      // discoveries a moment apart and close together share one pool (the dragon reveals a little at a time)
-      const recent = ink.pools.find(Q => now - Q.t0 < 0.45 && Math.hypot(Q.x - pool.x, Q.y - pool.y) < 4);
-      const P = recent || { x: pool.x, y: pool.y, t0: now, r: pool.r || 0.42, seed: HB.hash32(`pool:${pool.x},${pool.y}`), targets: [] };
-      const age = now - P.t0;
-      const cap = Math.max(0, LIMITS.features - (pool.allActive ? animating(pool.allActive).length : 0));
-      live.forEach((f, k) => {
-        if (k >= cap) { f.state = 'fading'; f.t0 = now; return; }
-        const dist = Math.hypot(f.x - P.x, f.y - P.y), travel = Math.min(0.55, TIME.travel + dist * 0.04) + Math.max(0, age - TIME.rivulet + 0.1);
-        // the ink enters each feature on the side facing the pool (pack reveal masks keep their own order)
-        const dirx = (P.x - f.x) * 22 * f.buf.S, diry = (P.y - f.y) * 22 * f.buf.S;
-        if (!f.buf.entry) ink.computeOrder(f, [f.buf.ax + dirx, f.buf.ay + diry]);
-        f.state = 'revealing'; f.t0 = P.t0 + TIME.rivulet + travel; f.pool = P;
-        P.targets.push({ f, arrive: TIME.rivulet + travel, bend: (hashf(k + P.targets.length, P.seed, 7) - 0.5) * 0.6 });
-      });
-      if (!recent) ink.pools.push(P);
-      return P;
-    },
-    /** draw a feature at its screen anchor (sx, sy) and scale; returns true while it is still animating */
-    drawFeature(ctx, f, sx, sy, scale, now) {
-      if (f.state === 'hidden' || !f.state) return false;
-      if (!f.buf || (f.state !== 'drawn' && f.buf.rev !== (HB.mapAssets ? HB.mapAssets.revision : 0))) ink.prepare(f);
-      const b = f.buf, s = scale / b.S, bx = sx - b.ax * s, by = sy - b.ay * s;
-      ctx.save(); ctx.imageSmoothingEnabled = true;
-      let busy = false;
-      if (f.state === 'sketch') ctx.drawImage(b.sketch, bx, by, b.w * s, b.h * s);
-      else if (f.state === 'fading') {
-        const t = smooth(0, TIME.fade, now - f.t0);
-        ctx.globalAlpha = 1 - t; ctx.drawImage(b.sketch, bx, by, b.w * s, b.h * s);
-        ctx.globalAlpha = t; ink.drawCrisp(ctx, f, sx, sy, scale);
-        if (t >= 1) f.state = 'drawn'; else busy = true;
-      } else if (f.state === 'revealing') {
-        const tInk = now - f.t0, dur = f.place ? TIME.inkPlace : TIME.inkTerrain;
-        // terrain keeps its sketch until the ink has run through it; places were never sketched
-        if (!f.place) { ctx.globalAlpha = Math.max(0, 1 - Math.max(0, tInk) / dur * 1.3); ctx.drawImage(b.sketch, bx, by, b.w * s, b.h * s); ctx.globalAlpha = 1; }
-        if (tInk > 0) {
-          const end = dur + TIME.dry + 0.15;
-          if (tInk >= end) { f.state = 'drawn'; ink.drawCrisp(ctx, f, sx, sy, scale); }
-          else {
-            ink.compose(f, tInk); ctx.drawImage(b.canvas, bx, by, b.w * s, b.h * s);
-            // the last moment hands over to the crisp drawing
-            const hand = smooth(end - 0.2, end, tInk); if (hand > 0) { ctx.globalAlpha = hand; ink.drawCrisp(ctx, f, sx, sy, scale); }
-            busy = true;
-          }
-        } else busy = true;
-      } else ink.drawCrisp(ctx, f, sx, sy, scale);
-      ctx.restore();
-      return busy;
-    },
-    /** the finished feature at screen resolution: the pack's art, else the hand-drawn version */
-    drawCrisp(ctx, f, sx, sy, scale) {
-      const MA = HB.mapAssets, r = MA && MA.entries.size ? MA.resolve(f.ids, f.key) : null;
-      HB.mapart.setup(ctx);
-      if (r) MA.drawResolved(ctx, r, sx, sy, f.param * scale, { key: f.key, paramY: f.paramY !== undefined ? f.paramY * scale : undefined });
-      else f.proc(ctx, sx, sy, scale);
-    },
-    /** pools and rivulets; screenOf(f) gives a feature's screen anchor and scale: { x, y, s } */
-    drawPools(ctx, now, worldToScreen, zoom, screenOf) {
-      const z = 22 * zoom;
-      ink.pools = ink.pools.filter(P => now - P.t0 < TIME.pool + TIME.hold + TIME.drain + 1.2);
-      for (const P of ink.pools) {
-        const t = now - P.t0, c = worldToScreen(P.x, P.y);
-        const grow = smooth(0, TIME.pool, t), drain = 1 - smooth(TIME.pool + TIME.hold, TIME.pool + TIME.hold + TIME.drain, t), rr = P.r * z * grow * (0.25 + 0.75 * drain);
-        ctx.save();
-        // rivulets: thin lines of ink running from the pool into each feature's entry point
-        for (const T of P.targets) {
-          const sc = screenOf(T.f); if (!sc || !T.f.buf) continue;
-          const b = T.f.buf, s = sc.s / b.S, ex = sc.x + (b.entryPx[0] - b.ax) * s, ey = sc.y + (b.entryPx[1] - b.ay) * s;
-          const u = smooth(TIME.rivulet, T.arrive, t), fade = 1 - smooth(T.arrive + 0.25, T.arrive + 0.7, t);
-          if (u <= 0 || fade <= 0) continue;
-          const mx = (c.x + ex) / 2 - (ey - c.y) * T.bend, my = (c.y + ey) / 2 + (ex - c.x) * T.bend;
-          ctx.strokeStyle = `rgba(${INK[0]},${INK[1]},${INK[2]},${0.85 * fade})`; ctx.lineCap = 'round';
-          ctx.beginPath(); ctx.moveTo(c.x, c.y);
-          const steps = 14; for (let k = 1; k <= steps * u; k++) { const v = k / steps, x = (1 - v) * (1 - v) * c.x + 2 * (1 - v) * v * mx + v * v * ex, y = (1 - v) * (1 - v) * c.y + 2 * (1 - v) * v * my + v * v * ey; ctx.lineWidth = Math.max(0.8, z * 0.05 * (1 - v * 0.6)); ctx.lineTo(x, y); }
-          ctx.stroke();
-        }
-        if (rr > 0.3) {
-          // the pool: a small round drop of wet ink, a darker drying rim, a glint of light on its surface
-          ctx.beginPath();
-          for (let k = 0; k <= 24; k++) { const a = k / 24 * Math.PI * 2, wob = 1 + 0.1 * Math.sin(3 * a + P.seed % 7) + 0.06 * Math.sin(7 * a + (P.seed >> 3) % 5); const x = c.x + Math.cos(a) * rr * wob, y = c.y + Math.sin(a) * rr * wob * 0.82; if (k) ctx.lineTo(x, y); else ctx.moveTo(x, y); }
-          ctx.closePath();
-          const gr = ctx.createRadialGradient(c.x - rr * 0.2, c.y - rr * 0.2, rr * 0.1, c.x, c.y, rr * 1.1);
-          gr.addColorStop(0, `rgba(${INK[0] + 30},${INK[1] + 20},${INK[2] + 12},0.82)`); gr.addColorStop(0.75, `rgba(${INK[0]},${INK[1]},${INK[2]},0.88)`); gr.addColorStop(1, 'rgba(14,8,3,0.95)');
-          ctx.fillStyle = gr; ctx.fill();
-          ctx.lineWidth = Math.max(0.8, rr * 0.12); ctx.strokeStyle = 'rgba(14,8,3,0.6)'; ctx.stroke();
-          ctx.fillStyle = 'rgba(255,244,220,0.32)'; ctx.beginPath(); ctx.ellipse(c.x - rr * 0.32, c.y - rr * 0.3, rr * 0.22, rr * 0.1, -0.5, 0, Math.PI * 2); ctx.fill();
-        }
-        ctx.restore();
-      }
-      return ink.pools.length > 0;
-    },
-    /** what a feature should be, from knowledge: drawn if its cell is revealed, sketch if within the band, else hidden.
-     *  Places are never sketched. Call on knowledge change; reveal() then animates the newly revealed ones */
-    stateFromKnowledge(f, revealed, nearRevealed) { if (revealed) return 'drawn'; if (!f.place && nearRevealed) return 'sketch'; return 'hidden'; },
+    stats: { ms: 0 },
   };
 
   // =====================================================================================================
@@ -382,4 +168,97 @@
     }
   }
   HB.mapWash = { Layer: WashLayer, DEFAULT_COLOURS, colours };
+
+  // =====================================================================================================
+  // Reveal wash (0.13): newly revealed land is uncovered by a thin watercolour wash that bleeds outward from the
+  // dragon: the blank paper over it dissolves along a soft, irregular, speckled edge, and a faint warm wash lingers
+  // at the wet edge, then dries away. Works over any map art (it is a mask over the map, not part of the symbols).
+  // Cells are world cells; the layer draws the paper still covering them and the wet tint; the caller skips its own
+  // fog fill for cells the layer reports as revealing.
+  // =====================================================================================================
+  const REVEAL = { dur: 1.0, tail: 0.75, delayPerCell: 0.08, maxDelay: 0.7, res: 8, tint: [140, 98, 52], tintA: 0.26 };
+  /** a seamless 128 px noise texture (16 cells at 8 px per cell): broad blobs, finer grain and a speckle, 0–1 */
+  const revealNoise = (seed) => {
+    const N = 128, out = new Float32Array(N * N), h = (x, y, s) => { let v = Math.imul(x, 374761393) + Math.imul(y, 668265263) + Math.imul(s, 1013904223); v = Math.imul(v ^ (v >>> 13), 1274126177); return ((v ^ (v >>> 16)) >>> 0) / 4294967296; };
+    const octave = (n, s) => (x, y) => { const gx = x / N * n, gy = y / N * n, ix = Math.floor(gx), iy = Math.floor(gy), fx = gx - ix, fy = gy - iy, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy), v = (a, b) => h(((ix + a) % n + n) % n, ((iy + b) % n + n) % n, s);
+      return (v(0, 0) * (1 - sx) + v(1, 0) * sx) * (1 - sy) + (v(0, 1) * (1 - sx) + v(1, 1) * sx) * sy; };
+    const A = octave(10, seed), B = octave(32, seed + 1);
+    for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) out[y * N + x] = 0.55 * A(x, y) + 0.27 * B(x, y) + 0.18 * h(x, y, seed + 2);
+    return out;
+  };
+  class RevealLayer {
+    constructor(o = {}) { this.cells = new Map(); this.noise = revealNoise(HB.hash32('reveal:' + (o.seed || ''))); this.mask = null; this.tintC = null; this.cover = null; }
+    /** cells just revealed (indices into a w-wide grid), spreading from (fx, fy) in cells */
+    add(cells, w, now, fx, fy) {
+      const reduced = fx === undefined || HB.mapFx.reduced();
+      for (const i of cells) {
+        if (this.cells.has(i)) continue;
+        const x = i % w, y = (i / w) | 0, d = fx === undefined ? 0 : Math.hypot(x + 0.5 - fx, y + 0.5 - fy);
+        this.cells.set(i, { t0: now + (reduced ? 0 : Math.min(REVEAL.maxDelay, d * REVEAL.delayPerCell)), reduced });
+      }
+      this.w = w;
+    }
+    /** how far a cell is uncovered: 0 (paper) … 1 (land shown); the tint lingers until (dur + tail) */
+    progress(i, now) { const c = this.cells.get(i); if (!c) return 1; return HB.clamp((now - c.t0) / (c.reduced ? 0.3 : REVEAL.dur), 0, 1); }
+    revealing(i) { return this.cells.has(i); }
+    active() { return this.cells.size > 0; }
+    /** draw the paper still covering revealing cells and their wet tint. known(i): 1 if a cell not in the layer is
+     *  revealed land, 0 if it is still under the fog. paper(ctx, x, y, w, h) fills screen px with blank paper */
+    /** forget cells whose wash has dried */
+    prune(now) { for (const [i, c] of this.cells) if (now - c.t0 > (c.reduced ? 0.3 : REVEAL.dur + REVEAL.tail)) this.cells.delete(i); }
+    draw(ctx, now, w2s, known, paper) {
+      this.prune(now);
+      if (!this.cells.size) return;
+      const w = this.w; let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const i of this.cells.keys()) { const x = i % w, y = (i / w) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      x0 -= 1; y0 -= 1; x1 += 1; y1 += 1;
+      const R = REVEAL.res, gw = (x1 - x0 + 1) * R, gh = (y1 - y0 + 1) * R, N = 128, NZ = this.noise;
+      // how far each cell is uncovered, then smoothly between cell centres
+      const cw = x1 - x0 + 1, ch = y1 - y0 + 1, P = new Float32Array(cw * ch), Tn = new Float32Array(cw * ch);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const k = (y - y0) * cw + (x - x0), i = y * w + x, c = x >= 0 && y >= 0 && x < w ? this.cells.get(i) : null;
+        // revealing: its progress (past 1 while the tint dries); revealed earlier: 2; still under the fog: NaN (the fog
+        // pass draws those, and a revealing cell must not inherit their paper, or it would pop off at the end)
+        if (c) { const u = (now - c.t0) / (c.reduced ? 0.3 : REVEAL.dur); P[k] = c.reduced ? HB.clamp(u, 0, 1) * 1.5 : u; Tn[k] = c.reduced ? 0 : 1; }
+        else { P[k] = x >= 0 && y >= 0 && x < w && known(i) ? 2 : NaN; Tn[k] = 0; }
+      }
+      const at = (A, fx, fy, own) => { const gx = HB.clamp(fx - 0.5, 0, cw - 1), gy = HB.clamp(fy - 0.5, 0, ch - 1), ix = Math.min(cw - 2, Math.floor(gx)), iy = Math.min(ch - 2, Math.floor(gy)), tx = gx - ix, ty = gy - iy, s = (a, b) => { const v = A[(iy + b) * cw + ix + a]; return v === v ? v : own; };
+        return (s(0, 0) * (1 - tx) + s(1, 0) * tx) * (1 - ty) + (s(0, 1) * (1 - tx) + s(1, 1) * tx) * ty; };
+      if (!this.mask || this.mask.width < gw || this.mask.height < gh) {
+        const mk = () => { const c = document.createElement('canvas'); c.width = Math.max(gw, 32); c.height = Math.max(gh, 32); return c; };
+        this.mask = mk(); this.tintC = mk(); this.mctx = this.mask.getContext('2d'); this.tctx = this.tintC.getContext('2d');
+      }
+      const mi = this.mctx.createImageData(gw, gh), ti = this.tctx.createImageData(gw, gh), M = mi.data, Ti = ti.data, [tr, tg, tb] = REVEAL.tint;
+      for (let py = 0; py < gh; py++) for (let px = 0; px < gw; px++) {
+        const fx = (px + 0.5) / R, fy = (py + 0.5) / R, ko = Math.floor(fy) * cw + Math.floor(fx), own = P[ko];
+        if (own !== own) continue; // under the fog: left to the fog pass
+        const p = own === 2 ? 2 : at(P, fx, fy, own), wx = x0 * R + px, wy = y0 * R + py;
+        const n = NZ[((wy % N + N) % N) * N + ((wx % N + N) % N)], tn = at(Tn, fx, fy, 0);
+        // the paper dissolves where the wash has reached: pixels go in the order of the noise, so the edge is irregular
+        const th = 0.12 + 0.72 * n, cover = 1 - HB.clamp((p - th) / 0.08 + 0.5, 0, 1);
+        const o = (py * gw + px) * 4;
+        M[o] = M[o + 1] = M[o + 2] = 255; M[o + 3] = cover * 255;
+        // the wet edge: a thin warm wash just behind the front, a little stronger right at it, drying away
+        const dp = p - th;
+        if (tn > 0.01 && dp > 0) { const a = REVEAL.tintA * tn * Math.max(0, 1 - dp / 0.75) * (0.75 + 0.25 * Math.max(0, 1 - dp / 0.1)); Ti[o] = tr; Ti[o + 1] = tg; Ti[o + 2] = tb; Ti[o + 3] = a * 255; }
+      }
+      this.mctx.clearRect(0, 0, this.mask.width, this.mask.height); this.mctx.putImageData(mi, 0, 0);
+      this.tctx.clearRect(0, 0, this.tintC.width, this.tintC.height); this.tctx.putImageData(ti, 0, 0);
+      const a = w2s(x0, y0), b = w2s(x1 + 1, y1 + 1), bw = b.x - a.x, bh = b.y - a.y;
+      ctx.save(); ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(this.tintC, 0, 0, gw, gh, a.x, a.y, bw, bh);
+      // the paper still covering: blank paper masked by the dissolve, only over the visible part of the screen
+      const sx0 = Math.max(0, Math.floor(a.x)), sy0 = Math.max(0, Math.floor(a.y)), sx1 = Math.min(HB.W, Math.ceil(b.x)), sy1 = Math.min(HB.H, Math.ceil(b.y));
+      if (sx1 > sx0 && sy1 > sy0) {
+        const vw = sx1 - sx0, vh = sy1 - sy0;
+        if (!this.cover || this.cover.width < vw || this.cover.height < vh) { this.cover = document.createElement('canvas'); this.cover.width = Math.max(vw, 64); this.cover.height = Math.max(vh, 64); this.cctx = this.cover.getContext('2d'); }
+        const g = this.cctx; g.save(); g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, this.cover.width, this.cover.height);
+        g.translate(-sx0, -sy0); paper(g, sx0, sy0, vw, vh);
+        g.globalCompositeOperation = 'destination-in'; g.imageSmoothingEnabled = true; g.drawImage(this.mask, 0, 0, gw, gh, a.x, a.y, bw, bh); g.restore();
+        ctx.drawImage(this.cover, 0, 0, vw, vh, sx0, sy0, vw, vh);
+      }
+      ctx.restore();
+    }
+  }
+  HB.mapReveal = { Layer: RevealLayer, REVEAL };
 })();

@@ -22,8 +22,8 @@
    "map.wash.tyrannical",
    "map.wash.bloom"
   ],
-  "images": 18,
-  "decodedBytes": 2273584,
+  "images": 14,
+  "decodedBytes": 2074672,
   "loading": 0,
   "warnings": []
  },
@@ -41,8 +41,8 @@
    "map.wash.tyrannical",
    "map.wash.bloom"
   ],
-  "images": 18,
-  "decodedBytes": 2273584,
+  "images": 14,
+  "decodedBytes": 2074672,
   "loading": 0,
   "warnings": []
  },
@@ -60,8 +60,8 @@
    "map.wash.tyrannical",
    "map.wash.bloom"
   ],
-  "images": 18,
-  "decodedBytes": 2273584,
+  "images": 14,
+  "decodedBytes": 2074672,
   "loading": 0,
   "warnings": []
  },
@@ -88,8 +88,8 @@
    "map.wash.tyrannical",
    "map.wash.bloom"
   ],
-  "images": 18,
-  "decodedBytes": 2273584,
+  "images": 14,
+  "decodedBytes": 2074672,
   "loading": 0,
   "warnings": []
  },
@@ -99,8 +99,8 @@
   "drawing": [
    "map.terrain.tree.pine"
   ],
-  "images": 2,
-  "decodedBytes": 9920,
+  "images": 1,
+  "decodedBytes": 5824,
   "loading": 0,
   "warnings": [
    "duplicate id map.terrain.tree.pine: the first one is used",
@@ -112,10 +112,9 @@
    "map.wash.benevolent variant not-square: \"size\" must be square and a power of two (256, 512, 1024); refused",
    "map.wash.benevolent: no usable variants; procedural art is used",
    "map.place.village variant missing: could not load assets/map/packs/test-broken/no-such-file.png",
-   "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused",
-   "map.terrain.tree.pine variant ok: inkMask is 32×32 but the art is 28×52; the engine derives it instead",
+   "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused",
    "map.place.farm variant bad-rect: assets/map/packs/test-broken/small-32.png is 32×32, which does not match the rect 16,16,32,32; refused",
-   "map.place.town variant wrong-size: assets/map/packs/test-broken/small-32.png is 32×32, which does not match sourceSize 64×64; refused"
+   "map.wash.tyrannical variant wrong-size: coverage is 32×32, not 64×64; refused"
   ]
  }
 }

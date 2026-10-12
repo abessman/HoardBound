@@ -38,7 +38,7 @@
       HB.flow.enterWorld(state, false);
     }
     else if (name === 'mappreview') HB.debug.mapPreview(params);
-    else if (name === 'inkpreview' && HB.InkPreviewScene) HB.scenes.replace(new HB.InkPreviewScene(params)); // docs/map-art/INK_PREVIEW.md
+    else if ((name === 'washpreview' || name === 'inkpreview') && HB.WashPreviewScene) HB.scenes.replace(new HB.WashPreviewScene(params)); // docs/map-art/WASH_PREVIEW.md
     else if (HB.debug.gotoGame) HB.debug.gotoGame(name, params);
   };
   /** the map-art preview scene (docs/map-art/REPLACING.md): index.html?scene=mappreview[&mappack=sample][&chunks=1]

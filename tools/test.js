@@ -622,15 +622,14 @@ section('map art: the contract, the packs, the preview');
   const used = [...src.matchAll(/'(map\.[a-z]+\.[A-Za-z.]+)'/g)].map(m => m[1]);
   ok(used.length > 20 && used.every(id => fam(id)), 'every id the map drawing asks for is in the contract');
   for (const [id, spec] of Object.entries(S.families)) if (spec.layer !== 'wash' && !(spec.ref > 0 && spec.maxK > 0 && spec.layer && spec.anchor)) ok(false, 'family is complete: ' + id);
-  ok(['benevolent', 'tyrannical', 'neutral', 'bloom'].every(k => fam('map.wash.' + k) && fam('map.wash.' + k).spec.layer === 'wash') && fam('map.wash.bloom').spec.kind === 'bloom' && !fam('map.wash.kind'), 'the watercolour mask ids are in the contract (docs/map-art/INK_AND_WASH.md); a misspelt one is not');
+  ok(['benevolent', 'tyrannical', 'neutral', 'bloom'].every(k => fam('map.wash.' + k) && fam('map.wash.' + k).spec.layer === 'wash') && fam('map.wash.bloom').spec.kind === 'bloom' && !fam('map.wash.kind'), 'the watercolour mask ids are in the contract (docs/map-art/WASH.md); a misspelt one is not');
   const mt = S.families['map.terrain.mountain'];
   ok(HB.mapTerrainReach(mt, [30, 25], [120, 100], [60, 91], false).ok && !HB.mapTerrainReach(mt, [120, 120], [32, 32], [16, 31], false).ok, 'terrain art is refused when it would reach past the chunk margin');
   const MP = require('./mappack.js');
   const sample = MP.validate(require('path').join(__dirname, '../assets/map/packs/sample'));
-  ok(!sample.errors.length && !sample.warnings.length && sample.ok.length === 9 && ['map.wash.benevolent', 'map.wash.tyrannical', 'map.wash.bloom'].every(id => sample.ok.includes(id)), 'the sample pack validates: 9 ids (6 symbols, 2 watercolour textures, a bloom mask), its ink and reveal masks fit their art' + (sample.errors.length ? ' ' + sample.errors.join('; ') : '') + (sample.warnings.length ? ' ' + sample.warnings.join('; ') : ''));
+  ok(!sample.errors.length && !sample.warnings.length && sample.ok.length === 9 && ['map.wash.benevolent', 'map.wash.tyrannical', 'map.wash.bloom'].every(id => sample.ok.includes(id)), 'the sample pack validates: 9 ids (6 symbols, 2 watercolour textures, a bloom mask)' + (sample.errors.length ? ' ' + sample.errors.join('; ') : '') + (sample.warnings.length ? ' ' + sample.warnings.join('; ') : ''));
   const broken = MP.validate(require('path').join(__dirname, '../assets/map/packs/test-broken'));
   ok(broken.ok.length === 1 && broken.ok[0] === 'map.terrain.tree.pine' && broken.errors.length === 9, 'the broken test pack: only the pine survives, 9 errors are reported');
-  ok(broken.warnings.some(w => /pine.*inkMask is 32×32 but the art file is 28×52/.test(w)) && !broken.errors.some(e => /inkMask/.test(e)), 'a wrong-size ink mask is a warning (the engine derives one), not a refusal');
   ok(broken.errors.some(e => /benevolent.*square and a power of two/.test(e)) && broken.errors.some(e => /tyrannical.*coverage is 32×32, not 64×64/.test(e)), 'a watercolour texture that is not square, or not its declared size, is refused');
   ok(MP.pngSize(require('path').join(__dirname, '../assets/map/packs/sample/terrain/mountain-b@2x.png')).join('x') === '64x54', 'the validator reads PNG sizes');
   // the preview preset: every domain state near home, deterministic, saved like any campaign

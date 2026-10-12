@@ -72,15 +72,6 @@ function validate(dir) {
         else if (v.rect ? (v.rect[0] + v.rect[2] > dim[0] || v.rect[1] + v.rect[3] > dim[1]) : (dim[0] !== size[0] || dim[1] !== size[1])) E(`${where}: ${path.basename(file)} is ${dim.join('×')}, which does not match ${v.rect ? 'rect ' + v.rect.join(',') : 'sourceSize ' + size.join('×')}`);
       }
       for (const key of ['occlusionMask', 'tintMask']) if (typeof v[key] === 'string') { const mf = path.join(dir, v[key]), md = pngSize(mf); if (!md) E(`${where}: ${key} ${v[key]} is missing or not a PNG`); else if (!v.rect && (md[0] !== size[0] || md[1] !== size[1])) W(`${where}: ${key} is ${md.join('×')}, not ${size.join('×')}`); }
-      // ink discovery masks (docs/map-art/INK_AND_WASH.md): the art file's size, pixel for pixel; a bad one falls back to a derived mask
-      const art = pngSize(file);
-      for (const key of ['inkMask', 'revealMask']) if (v[key] !== undefined) {
-        if (typeof v[key] !== 'string') { W(`${where}: ${key} must be a file path`); continue; }
-        const mf = /^assets\//.test(v[key]) ? path.join(root, v[key]) : path.join(dir, v[key]), md = pngSize(mf);
-        if (!md) W(`${where}: ${key} ${v[key]} is missing or not a PNG; the engine derives it from the art`);
-        else if (art && (md[0] !== art[0] || md[1] !== art[1])) W(`${where}: ${key} is ${md.join('×')} but the art file is ${art.join('×')}; the engine derives it from the art`);
-      }
-      if (v.inkEntryPx !== undefined && (!num(v.inkEntryPx, 2) || v.inkEntryPx[0] < 0 || v.inkEntryPx[1] < 0 || v.inkEntryPx[0] > size[0] || v.inkEntryPx[1] > size[1])) W(`${where}: inkEntryPx must be [x, y] inside the frame; ignored`);
       if (v.attach && v.attach.flag && !num(v.attach.flag, 2)) W(`${where}: attach.flag must be [x, y] in source pixels`);
       if (v.labelOffset && !num(v.labelOffset, 2)) W(`${where}: labelOffset must be [x, y] in logical px`);
       if (out.errors.length === before) good++;

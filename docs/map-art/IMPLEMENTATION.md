@@ -1,4 +1,4 @@
-# Map art: implementation summary (0.10.0; numbers re-measured in 0.11.0; ink and watercolour 0.12.0)
+# Map art: implementation summary (0.10.0; numbers re-measured in 0.11.0; watercolour 0.12–0.13)
 
 What was built for [map_update.md](../../map_update.md), what is left hand-coded, and what was actually checked.
 System doc: [docs/systems/art-and-sprites.md](../systems/art-and-sprites.md).
@@ -71,38 +71,34 @@ drawn when the chosen art lacks the state.
   [close, sample](screens/preview-sample-close.jpg), [far view, sample](screens/preview-sample-far.jpg),
   [broken pack](screens/preview-broken.jpg), [iPad-sized viewport, sample](screens/preview-sample-ipad.jpg).
 
-## Ink discovery and watercolour (0.12)
+## Watercolour (0.12; reveal wash 0.13)
 
-Asked for: ink discovery (sketches near known land that leak nothing, an ink drop that pools and drains into the
-features), watercolour influence tied to the real territory, a mask contract for finished art, an isolated preview,
-world anchoring, saves and knowledge kept, an iPad budget and reduced motion. Contract: [INK_AND_WASH.md](INK_AND_WASH.md);
-preview: [INK_PREVIEW.md](INK_PREVIEW.md).
+0.12 painted the territory in watercolour and built an ink-discovery effect (ink drops draining into the symbols)
+with its own mask contract; at the owner's request 0.13 replaced it with a plain **reveal wash**: new
+land is uncovered by blank paper dissolving along a soft, irregular edge that bleeds outward from the dragon, with a
+thin warm wash at the wet edge that dries away. It is a mask over the map, so it works with any symbol art and
+needs no assets. Contract: [WASH.md](WASH.md); preview: [WASH_PREVIEW.md](WASH_PREVIEW.md).
 
 | file | change |
 | --- | --- |
-| `src/art/mapfx.js` (new) | `HB.mapFx` (limits, timings, reduced motion), `HB.mapInk` (feature buffers, ink and reveal masks or derived ones, ink flow order, sketch, compose, pools and rivulets), `HB.mapWash.Layer` (watercolour painted from territory sources, blooms, repaint spread over frames) |
-| `src/views/inkpreview.js` (new) | `?scene=inkpreview`: one mountain, a forest, a village; fly, reset, kind/cruel, grow, village joins, motion, art; pan, zoom, pinch |
-| `src/art/mapassets.js` | `inkMask`, `revealMask`, `inkEntryPx` per variant (size-checked against the art); `map.wash.*` variants (tileable textures, bloom masks); `washData`, `bloomData`, `featureMasks`, `pixels`; `style.wash` holds colour pairs (0.10 packs' single colours still count) |
+| `src/art/mapfx.js` | `HB.mapFx` (limits, reduced motion), `HB.mapWash.Layer` (territory: painted from territory sources, blooms, repaint spread over frames), `HB.mapReveal.Layer` (0.13: the reveal wash, per-cell start times spreading from the dragon, a fixed noise for the dissolving edge, the wet tint) |
+| `src/views/mapview.js` | the territory is drawn by the watercolour layer from `HB.domain.influence`; revealed cells go to the reveal layer (0.13), the fog's paper skips them and its clouds over them clear early, so the edge shows |
+| `src/views/washpreview.js` (0.13) | `?scene=washpreview` (and the old `?scene=inkpreview`): a mountain, a forest, a village under the fog; fly, reset, slow motion, kind/cruel, grow, village joins, motion, art; pan, zoom, pinch |
+| `src/art/mapassets.js` | `map.wash.*` variants (tileable textures, bloom masks); `washData`, `bloomData`, `pixels`; `style.wash` colour pairs; 0.13: big art drawn far smaller goes through halved copies (`mip`) so fine lines do not shimmer |
 | `src/data/mapspec.js` | layer `wash`: `map.wash.benevolent`, `.tyrannical`, `.neutral`, `.bloom` |
-| `src/views/mapview.js` | the territory is drawn by the watercolour layer from `HB.domain.influence` (repainted when the territory changes; blooms from what changed) |
-| `tools/mappack.js`, `tools/test.js` | mask and wash validation; the sample pack has 9 ids, the broken pack 9 errors and a wrong-size ink mask |
-| `tools/mapart-export.mjs`, `tools/inkcheck-page.js` (new), `tools/mapart-page.js` | `--only=ink` (checks, costs, screens); placeholder masks in the sample pack |
+| `tools/mappack.js`, `tools/test.js` | wash validation; the sample pack has 9 ids, the broken pack 9 errors |
+| `tools/mapart-export.mjs`, `tools/washcheck-page.js`, `tools/mapart-page.js` | `--only=wash` (checks, costs, screens); placeholder wash textures in the sample pack |
 
-Not yet: ink discovery on the live map (it still lifts clouds). The renderer takes features and a reveal test, so
-the map can hand it its chunk glyphs and places; that needs the chunk cache to leave out cells still inking, and is
-the next step. No save or generation change: the effects are view-only.
+Removed in 0.13: `HB.mapInk`, the ink preview, `inkMask` / `revealMask` / `inkEntryPx` (packs that still carry them
+load; the fields are ignored) and the sample's ink masks. No save or generation change: the effects are view-only.
 
-Checked in headless Chromium ([ink-checks.json](ink-checks.json), 20 checks, every frame of the preview drawn and
-checked): the knowledge rules on every frame (the village never sketched, nothing drawn before its cell is revealed,
-sketches within 3 cells of known land, nothing undrawn); pools appear and drain; the pack's masks used for the
-mountain and the village, derived for the tree; panning mid-animation moves the pool, the ink and the wash exactly
-with the land (mean difference 0.003 of 255 over 89 000 pixels); zooming keeps them on the same land (within 0.02 cells); flying back adds no ink; a joining
-place blooms from itself; growth spreads from the old edge with no flash; kind reads green-gold, cruel rust; 40
-discoveries at once animate 24; reduced motion has no pools and fades in 0.25 s; no pack works the same; on the live
-map the wash is painted from the real sources and stays on home-region land, an occupied place blooms, the save is
-unchanged; nothing written to localStorage. Costs (software rendering, not an iPad): a busy preview frame median
-about 4 ms, 90th percentile about 6 ms; a feature's preparation about 2 ms; 40 features at once about 1–2 ms a frame;
-a territory repaint about 25 ms spread over 4–5 frames of at most 6 ms.
+Checked in headless Chromium ([wash-checks.json](wash-checks.json), every frame of the preview drawn and checked):
+nothing under the fog is drawn on any frame; the paper over a half-uncovered cell varies pixel to pixel (an irregular
+edge, not a square fade) with a warm tint at it; land farther from the dragon starts later; panning mid-reveal moves the
+wash exactly with the land; the wash dries away completely; reduced motion fades in 0.3 s without spreading or tint;
+on the live map a flight uncovers land through the wash and leaves no fog on revealed land; the territory checks of
+0.12 (blooms, growth, colours, the live territory, saves unchanged). Costs (software rendering, not an iPad): the
+reveal layer about 2 ms a frame on the live map while land is uncovering, at most about 5 ms.
 
 ## Checks actually performed
 
@@ -110,14 +106,14 @@ a territory repaint about 25 ms spread over 4–5 frames of at most 6 ms.
   limit, the validator on both packs, the preview campaign deterministic and saveable).
 - In headless Chromium ([checks.json](checks.json)): the drawing is wrapped; no pack loads nothing; the 1 487 glyph
   calls of four chunks at both levels of detail are identical with no pack, the sample pack and the broken pack;
-  selection hit areas identical; the sample pack loads 9 ids and 18 images with no warnings (0.12: with its masks and
-  watercolour textures); mountain variants at 4× and 2× draw at the same size and anchor; the broken pack draws only
-  its valid pine and warns 13 times; campaign saves
+  selection hit areas identical; the sample pack loads 9 ids and 14 images with no warnings (0.12: with its watercolour
+  textures); mountain variants at 4× and 2× draw at the same size and anchor; the broken pack draws only its valid
+  pine and warns 12 times; campaign saves
   are identical with and without the pack and round-trip; no page errors.
-- Performance ([perf.json](perf.json), headless Chromium, software rendering, 30 fps cap; re-measured in 0.12): map
-  draw median 3.1 ms without a pack and 3.2 ms with it; rebuilding the 9 visible chunks 26 ms without a pack, 18 ms
-  with the sample pack (0.10 measured 47 and 61 ms for 12 chunks); sample pack decoded images 2.3 MB (0.24 MB before
-  its 0.12 masks and seven 256² watercolour textures); chunk cache bound 90 × 440² px ≈ 66 MB (unchanged).
+- Performance ([perf.json](perf.json), headless Chromium, software rendering, 30 fps cap; re-measured in 0.13): map
+  draw median 3.0 ms without a pack and 3.3 ms with it; rebuilding the 9 visible chunks 25 ms without a pack, 20 ms
+  with the sample pack (0.10 measured 47 and 61 ms for 12 chunks); sample pack decoded images 2.1 MB (its seven 256²
+  watercolour textures); chunk cache bound 90 × 440² px ≈ 66 MB (unchanged).
 - Desktop: the playthrough script and screenshots at 1280×720. iPad: only an iPad-sized viewport (1180×820 at 2×,
   touch enabled) in headless Chromium; **no physical iPad was used**. Touch input is unchanged (hit areas do not use
   art bounds), but the owner should look at the sample pack on the iPad.
