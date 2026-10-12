@@ -18,7 +18,8 @@ Rules for logic code. Which system does what: `docs/systems/` (start from the ro
 ## Saves
 - Saves store only mutable state; the world is regenerated from the seed (`src/core/save.js`).
 - A new `state` field: add it to `serialize` and `deserialize` with a default for old saves.
-- A new location field: add it to `LOC_FIELDS`. Changing world generation breaks old saves: bump `GEN_VERSION` and say so.
+- A new location field: add it to `LOC_FIELDS`. Changing world generation: a new version branch in `worldgen.generate`
+  (older saves regenerate their own version), bump `GEN_VERSION`, and say so (see `src/world/CLAUDE.md`).
 
 ## Making consequences legible
 - When a system changes the world in a way the player should understand, log it with a cause:

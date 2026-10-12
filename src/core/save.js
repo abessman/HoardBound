@@ -2,7 +2,7 @@
 (function () {
   const HB = globalThis.HB;
   const PREFIX = 'hoardbound.save.';
-  const GEN_VERSION = 1;
+  const GEN_VERSION = 2; // 2 (0.11): seven large regions. Saves keep the version their world was made with
 
   function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 8192) s += String.fromCharCode.apply(null, u8.subarray(i, i + 8192)); return typeof btoa === 'function' ? btoa(s) : Buffer.from(s, 'binary').toString('base64'); }
   function unb64(str) { const s = typeof atob === 'function' ? atob(str) : Buffer.from(str, 'base64').toString('binary'); const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i); return u; }
@@ -16,7 +16,7 @@
       const genCount = W.genLocationCount || W.locations.length;
       const locs = W.locations.map(L => { const o = { id: L.id }; for (const k of LOC_FIELDS) if (L[k] !== undefined) o[k] = L[k]; if (L.id >= genCount) for (const k of DYN_FIELDS) o[k] = L[k]; return o; });
       const data = {
-        v: 1, ver: HB.VERSION, gen: GEN_VERSION, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
+        v: 1, ver: HB.VERSION, gen: W.gen || 1, seed: state.seed, size: W.w, name: state.name, created: state.created, savedAt: Date.now(),
         dragon: state.dragon, hoard: state.hoard, cargo: state.cargo, lair: state.lair, time: state.time, phase: state.phase === 'encounter' ? 'planning' : state.phase, travel: null,
         chronicle: state.chronicle, entities: state.entities, flags: state.flags, memory: state.memory, counters: state.counters,
         renown: state.renown, reactions: state.reactions, problems: state.problems,
@@ -30,7 +30,8 @@
     },
     deserialize(json) {
       const data = JSON.parse(json);
-      const world = HB.worldgen.generate(data.seed, { size: data.size });
+      if ((data.gen || 1) > GEN_VERSION) throw new Error('This save comes from a newer version of HoardBound.');
+      const world = HB.worldgen.generate(data.seed, { size: data.size, gen: data.gen || 1 });
       // apply mutable fields
       for (const o of data.locations) {
         let L = world.locations[o.id];
@@ -49,7 +50,8 @@
       data.subFactions.forEach((f, i) => { if (world.subregions[i]) world.subregions[i].factionId = f; });
       world.wars = data.wars || [];
       const know = HB.world.newKnowledge(world);
-      know.revealed.set(unb64(data.know.revealed)); know.rumor.set(unb64(data.know.rumor)); know.subSeen.set(unb64(data.know.subSeen)); know.regionSeen.set(unb64(data.know.regionSeen));
+      const put = (arr, b) => { const src = unb64(b); arr.set(src.length > arr.length ? src.subarray(0, arr.length) : src); };
+      put(know.revealed, data.know.revealed); put(know.rumor, data.know.rumor); put(know.subSeen, data.know.subSeen); put(know.regionSeen, data.know.regionSeen);
       for (let i = 0; i < know.revealed.length; i++) if (know.revealed[i]) { const s = world.sub[i]; if (s >= 0) know.subRevealedCount[s]++; const r = world.region[i]; if (r >= 0) know.regionRevealedCount[r]++; }
       const state = {
         version: 1, seed: data.seed, created: data.created, name: data.name, world, know,

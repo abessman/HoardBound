@@ -366,7 +366,7 @@
       const smoke = (sx, sy, ss) => { ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(sx + ss * 0.4, sy - ss * 0.7, sx - ss * 0.1, sy - ss * 1.3); ctx.quadraticCurveTo(sx + ss * 0.3, sy - ss * 1.8, sx + ss * 0.1, sy - ss * 2.2); stroke(ctx, 1, 'rgba(60,44,36,0.7)'); };
       const wallArc = (r, col) => { ctx.beginPath(); ctx.arc(x, y + s * 0.2, r, Math.PI * 1.05, Math.PI * 1.95); stroke(ctx, 1.3, col || INK); };
       if (!dark) {
-        // a refuge of huts → a village with fields → a walled town → a castle and sanctuary
+        // pilgrims' camps → a village with fields → a walled town → a castle and sanctuary
         if (stage >= 2) { P.field(ctx, x - s * 2.6, y + s * 0.8, s * 0.8, rng); P.field(ctx, x + s * 2.4, y + s * 0.9, s * 0.8, rng); }
         if (stage === 1) { tent(x - s * 0.9, y + s * 0.2, s * 0.55); P.house(ctx, x + s * 0.8, y + s * 0.3, s * 0.6, rng, { chimney: true }); }
         if (stage >= 2) { P.house(ctx, x - s * 1.3, y + s * 0.2, s * 0.65, rng); P.house(ctx, x + s * 1.2, y + s * 0.25, s * 0.65, rng, { chimney: true }); P.house(ctx, x, y + s * 0.5, s * 0.6, rng); }

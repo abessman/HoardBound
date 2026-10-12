@@ -108,13 +108,16 @@
 
   // ---------- generation ----------
   HB.worldgen = {
+    GEN: 2,
     generate(seed, opts = {}) {
       const t0 = Date.now();
       const size = opts.size || 200;
+      // generation version: 2 (0.11) makes seven large regions; 1 is kept so older campaigns load their own world
+      const gen = opts.gen || HB.worldgen.GEN;
       const w = size, h = size, N = w * h;
       const rng = new HB.RNG('world:' + seed);
       HB.names.reset();
-      const world = { seed, w, h, version: 1, timings: {} };
+      const world = { seed, w, h, version: 1, gen, timings: {} };
       let tPhase = Date.now();
       const mark = (name) => { const now = Date.now(); world.timings[name] = now - tPhase; tPhase = now; if (opts.verbose) console.log('worldgen:', name, world.timings[name] + 'ms'); };
 
@@ -227,7 +230,8 @@
       // --- regions
       const landIdx = []; for (let i = 0; i < N; i++) if (isLand(terrain[i])) landIdx.push(i);
       const landCount = landIdx.length;
-      const regionCount = HB.clamp(Math.round(landCount / 2100), 6, 16);
+      // seven large regions: your home and six beyond the storms (one Crystal of Life in each); gen 1 had 6–16
+      const regionCount = gen >= 2 ? 7 : HB.clamp(Math.round(landCount / 2100), 6, 16);
       // home seed near the centre on hills if possible
       let homeSeed = -1;
       {
@@ -243,8 +247,33 @@
       }
       const regionSeeds = [homeSeed];
       const groundCost = (i) => HB.TERRAIN_COST[terrain[i]] + (river[i] ? 2 : 0);
-      // farthest-point sampling by ground distance
-      {
+      if (gen >= 2) {
+        // home in the middle, six regions around it of similar size: seeds spread over the mainland (never on small
+        // isles), then relaxed toward the centres of their lands (Lloyd); the home seed stays where the lair is
+        const comp = new Int32Array(N).fill(-1); let mainId = -1, mainN = 0;
+        for (let k = 0, cid = 0; k < landCount; k++) {
+          const s0 = landIdx[k]; if (comp[s0] >= 0) continue;
+          let n = 0; const stack = [s0]; comp[s0] = cid;
+          while (stack.length) { const i = stack.pop(); n++; const x = i % w; for (const j of [x > 0 ? i - 1 : -1, x < w - 1 ? i + 1 : -1, i - w, i + w]) if (j >= 0 && j < N && comp[j] < 0 && isLand(terrain[j])) { comp[j] = cid; stack.push(j); } }
+          if (n > mainN) { mainN = n; mainId = cid; } cid++;
+        }
+        const main = landIdx.filter(i => comp[i] === mainId), mx = main.map(i => i % w), my = main.map(i => (i / w) | 0);
+        const nearestMain = (x, y) => { let b = 0, bd = Infinity; for (let k = 0; k < main.length; k++) { const d = (mx[k] - x) ** 2 + (my[k] - y) ** 2; if (d < bd) { bd = d; b = k; } } return main[b]; };
+        const minD = new Float64Array(main.length).fill(Infinity);
+        const upd = (idx) => { const sx = idx % w, sy = (idx / w) | 0; for (let k = 0; k < main.length; k++) { const d = (mx[k] - sx) ** 2 + (my[k] - sy) ** 2; if (d < minD[k]) minD[k] = d; } };
+        upd(homeSeed);
+        for (let r = 1; r < regionCount; r++) {
+          let b = -1, bd = -1; for (let k = 0; k < main.length; k += 2) { const d = minD[k] * (0.85 + rng.next() * 0.3); if (d > bd) { bd = d; b = k; } }
+          regionSeeds.push(main[b]); upd(main[b]);
+        }
+        for (let it = 0; it < 6; it++) {
+          const sx = new Float64Array(regionCount), sy = new Float64Array(regionCount), sn = new Float64Array(regionCount);
+          const px = regionSeeds.map(i => i % w), py = regionSeeds.map(i => (i / w) | 0);
+          for (let k = 0; k < main.length; k++) { let b = 0, bd = Infinity; for (let r = 0; r < regionCount; r++) { const d = (mx[k] - px[r]) ** 2 + (my[k] - py[r]) ** 2; if (d < bd) { bd = d; b = r; } } sx[b] += mx[k]; sy[b] += my[k]; sn[b]++; }
+          for (let r = 1; r < regionCount; r++) if (sn[r]) regionSeeds[r] = nearestMain(sx[r] / sn[r], sy[r] / sn[r]);
+        }
+      } else {
+        // farthest-point sampling by ground distance (gen 1)
         let field = dijkstra(w, h, [{ idx: homeSeed, id: 0 }], groundCost);
         for (let r = 1; r < regionCount; r++) {
           let best = -1, bestD = -1;
@@ -273,6 +302,13 @@
         const ring = new Array(regions.length).fill(-1); ring[0] = 0; const q = [0];
         while (q.length) { const r = q.shift(); for (const n of regions[r].neighbors) if (ring[n] === -1) { ring[n] = ring[r] + 1; q.push(n); } }
         for (const R of regions) { R.ring = ring[R.id]; R.isle = ring[R.id] === -1; R.tier = R.isle ? 3 : ring[R.id] === 0 ? 0 : ring[R.id] === 1 ? 1 : ring[R.id] <= 3 ? 2 : 3; R.neighbors = [...R.neighbors]; }
+        if (gen >= 2) {
+          // storm walls by distance from home: the two nearest regions open to a young dragon, the next two to an adult,
+          // the farthest two to an ancient one (every region borders few others, so rings would leave most at one tier)
+          const dHome = dijkstra(w, h, [{ idx: homeSeed, id: 0 }], groundCost).dist;
+          const order = regions.filter(R => R.id !== 0).sort((a, b) => dHome[regionSeeds[a.id]] - dHome[regionSeeds[b.id]]);
+          order.forEach((R, k) => { R.tier = 1 + Math.min(2, Math.floor(k / 2)); });
+        }
       }
       world.region = region; world.regions = regions;
       mark('regions');
@@ -352,9 +388,17 @@
         factions.push(f);
         return f;
       };
-      // humans: first kingdom should touch the home region's neighbourhood so the opening has civilisation
-      addFaction('human', pickCapital(S => S.regionId !== 0 ? regions[S.regionId].neighbors.includes(0) || S.regionId === 0 : true, S => lowland(S) * 3 + (S.riverCells > 0 ? 1 : 0) + (S.coastCells > 0 ? 0.6 : 0) - (Math.hypot(S.cx - homeRegion.cx, S.cy - homeRegion.cy) < 12 ? 3 : 0)));
-      for (let k = 1; k < humanCount; k++) addFaction('human', pickCapital(S => lowland(S) > 0.5 && !regions[S.regionId].isle, S => lowland(S) * 3 + (S.riverCells > 0 ? 1 : 0) + (S.coastCells > 0 ? 0.6 : 0) + regions[S.regionId].tier * 0.3));
+      let humansMade = 0;
+      if (gen >= 2) {
+        // your home region is your domain to win: two kingdoms rule in it (away from the lair), so it has villages,
+        // towns and castles to protect, court or conquer; the other kingdoms rule beyond the storms
+        const hx = homeSeed % w, hy = (homeSeed / w) | 0;
+        const inHome = (S) => S.regionId === 0 && Math.hypot(S.cx - hx, S.cy - hy) >= 14 && lowland(S) > 0.35;
+        for (let k = 0; k < 2; k++) if (addFaction('human', pickCapital(inHome, S => lowland(S) * 3 + (S.riverCells > 0 ? 1 : 0) + (S.coastCells > 0 ? 0.6 : 0)))) humansMade++;
+      }
+      // humans: (gen 1) the first kingdom should touch the home region's neighbourhood so the opening has civilisation
+      if (!humansMade) { addFaction('human', pickCapital(S => S.regionId !== 0 ? regions[S.regionId].neighbors.includes(0) || S.regionId === 0 : true, S => lowland(S) * 3 + (S.riverCells > 0 ? 1 : 0) + (S.coastCells > 0 ? 0.6 : 0) - (Math.hypot(S.cx - homeRegion.cx, S.cy - homeRegion.cy) < 12 ? 3 : 0))); humansMade = 1; }
+      for (let k = humansMade; k < humanCount; k++) addFaction('human', pickCapital(S => lowland(S) > 0.5 && !regions[S.regionId].isle && (gen < 2 || S.regionId !== 0), S => lowland(S) * 3 + (S.riverCells > 0 ? 1 : 0) + (S.coastCells > 0 ? 0.6 : 0) + regions[S.regionId].tier * 0.3));
       for (let k = 0; k < 2; k++) addFaction('dwarf', pickCapital(S => mountainy(S) > 0.35, S => mountainy(S) * 4), 'dwarf');
       for (let k = 0; k < 2; k++) addFaction('elf', pickCapital(S => woody(S) > 0.45, S => woody(S) * 4 + regions[S.regionId].tier * 0.5), 'elf');
       for (let k = 0; k < 2; k++) addFaction('goblin', pickCapital(S => swampy(S) > 0.3, S => swampy(S) * 4 + regions[S.regionId].tier * 0.4), 'goblin');

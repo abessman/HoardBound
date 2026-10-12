@@ -52,7 +52,8 @@
       const tax = (L) => ({ amount: Math.max(20, Math.round(L.wealth * 0.08)), since: year - 2, lapsed: false, willing: false, paidTotal: 0 });
       const prey = take(L => L.type === 'farm' || L.type === 'village');
       if (prey) prey.threat = { campId: -1, campName: 'the hills', goblin: false, since: state.time.totalDays, until: state.time.totalDays + 400, raiders: 3 };
-      const burnt = take(L => L.type === 'village') || take(L => L.type !== 'castle'); if (burnt) { burnt.state = 'burned'; burnt.lastRaidYear = year; }
+      // a burned town shows the sample pack's state art
+      const burnt = take(L => L.type === 'town') || take(L => L.type === 'village') || take(L => L.type !== 'castle'); if (burnt) { burnt.state = 'burned'; burnt.lastRaidYear = year; }
       const trib = take(L => L.type !== 'farm'); if (trib) { scare(trib); trib.tribute = tax(trib); }
       const occ = take(L => L.type !== 'farm'); if (occ) { scare(occ); occ.tribute = tax(occ); occ.occupation = { since: year - 2, resistance: 20, years: 2, resisting: false }; }
       const rev = take(L => L.type !== 'farm'); if (rev) { scare(rev); rev.tribute = tax(rev); rev.occupation = { since: year - 4, resistance: 70, years: 4, resisting: true, resistYears: 1 }; }

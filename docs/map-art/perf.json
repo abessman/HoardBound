@@ -3,13 +3,13 @@
  "runs": {
   "none": {
    "chunkRebuild": {
-    "chunks": 12,
-    "ms": 52.6,
-    "msPerChunk": 4.39
+    "chunks": 9,
+    "ms": 30.2,
+    "msPerChunk": 3.36
    },
    "frame": {
-    "drawMedianMs": 2.4,
-    "drawP90Ms": 3.4,
+    "drawMedianMs": 2.9,
+    "drawP90Ms": 4.3,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },
@@ -31,13 +31,13 @@
   },
   "sample": {
    "chunkRebuild": {
-    "chunks": 12,
-    "ms": 50.2,
-    "msPerChunk": 4.18
+    "chunks": 9,
+    "ms": 27,
+    "msPerChunk": 3
    },
    "frame": {
-    "drawMedianMs": 2.4,
-    "drawP90Ms": 3.5,
+    "drawMedianMs": 3.3,
+    "drawP90Ms": 6.2,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },

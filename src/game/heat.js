@@ -75,7 +75,7 @@
       const e = { id: HB.nextId('ent'), kind: 'hunters', name: o.name || `${leader}’s riders`, leader, level: Math.max(1, o.level || 1), factionId: o.factionId === undefined ? -1 : o.factionId, x: from.x, y: from.y, speed: 4 + (o.level || 1) * 0.5, reason: o.reason || 'hunting you', mercenary: !!o.mercenary, sitId: o.sitId || null, since: state.time.totalDays, giveUpDay: state.time.totalDays + (o.days || 60), restUntil: 0, lance: (o.level || 1) >= 2, dead: false };
       state.entities.push(e);
       // a sworn hunter outlives the season: they lead attacks on the sleeping dragon too
-      if (!o.mercenary && HB.history) state.memory.grudges.push({ id: HB.nextId('gr'), name: leader, kind: 'hunter', from: from.name, factionId: e.factionId, year: state.time.year, level: e.level + 1, text: o.reason || 'swore to kill the dragon', active: true, entityId: e.id });
+      if (!o.mercenary && HB.history) { const g = HB.history.grievance(state, { name: leader, kind: 'hunter', from: from.name, locId: from.id, factionId: e.factionId, level: e.level + 1, text: o.reason || 'swore to kill the dragon' }); g.entityId = e.id; }
       return e;
     },
     /** daily movement; sets state.ambush when a party reaches the dragon */
@@ -146,7 +146,7 @@
       state.pursuit = null;
       const f = p.factionId >= 0 ? state.world.factions[p.factionId] : null;
       state.lair.attention = (state.lair.attention || 0) + 4;
-      if (f) { f.learned.lairFound = (f.learned.lairFound || 0) + 1; HB.consequences.react(state, `Riders from ${f.name} followed you home. They know where you sleep.`, `because you flew straight home from ${p.from} with them on your trail`); }
+      if (f) { f.learned.lairFound = (f.learned.lairFound || 0) + 1; HB.consequences.react(state, `Riders from ${f.name} followed you home. They know where you sleep.`, `because you flew straight home from ${p.from} with them on your trail`); if (HB.domain) HB.domain.markFound(state, `riders from ${f.name} followed you home`); }
       HB.game.chronicle(state, `Riders followed the dragon home from ${p.from}.`, 'hunters');
       return `Riders${f ? ' of ' + f.name : ''} followed you home from ${p.from}. They know where you sleep now: thieves and hunters will find the lair more easily.`;
     },

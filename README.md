@@ -22,7 +22,7 @@ Saves live in the browser's localStorage (autosave on every return home and afte
 
 | Where | Mouse / touch | Keyboard | Gamepad |
 | --- | --- | --- | --- |
-| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **G** aims, **C** chronicle, **F** realms, **T** territory, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
+| Map | click/tap a place or caravan to inspect; click/tap empty land to fly there and explore; drag to pan; wheel/pinch to zoom | arrows/WASD pan, +/− zoom, **Q** next target, **Enter** fly, **H** lair, **G** aims, **C** chronicle, **F** reputation, **T** territory, **Esc** menu | left stick pan, right stick zoom, A fly, Y lair, Start menu |
 | Flight | Pause / Speed / Turn back buttons | **P** pause, hold **Shift** fast, hold **Ctrl** slow | RB fast, LB slow |
 | Raid | click a highlighted target or a chip in the bar; click an action | **1–9** actions, **Space** pass, **Q** next target, **W** withdraw, **Shift** fast | A first action, X pass, B withdraw |
 | Panels | click | arrows move focus, Enter select, Esc back | d-pad / stick, A, B |
@@ -39,8 +39,9 @@ Tooltips explain every action, cost and disabled button.
 5. Fly home with what you can carry. Only treasure stored at home powers you.
 6. At the lair: spend gold on upgrades (with cost, balance and stat change shown first), hire or enslave workers, ransom or release captives, demand tribute from the frightened or protection money from the grateful.
 7. Sleep: five years, twenty, fifty, a century. You heal and grow (if the hoard can feed the change); towns grow, lords die, wars move borders, thieves and hunters test the lair. Wake into the same world, changed.
-8. Build a domain (once you are a young dragon): people who trust you build a refuge at the foot of your hill, people you hold by fear are driven into a camp. Protect places and take their oaths, rebuild what burned, or make them pay and occupy them. Your territory shows on the map (**Territory**, T); the settlement grows while you sleep (Lair → Domain).
-9. The great struggle (once you are grown): a kind dragon faces an ancient evil and its three lieutenants; a cruel one hunts the six Crystals of Life. In 0.9 the first lieutenant and the first crystal can be fought.
+8. Build a domain. Your territory (a watercolour wash, **Territory**, T) starts as a little colour around a hatchling's cave and widens with each phase of life and with your hoard, but never leaves your home region. Young: pilgrims or a cult camp around your hill, places in your territory give news and food, and once your lair is found they bring offerings. Adult: the camps become a village; give it gifts and recruit its people; take oaths, a castle's fealty, or occupy. Ancient: a castle or dark tower rises beside your lair (Lair → Domain).
+9. Mind your name (**Reputation**, F): what each realm feels about you, who knows where you sleep, and the ledger of everyone sworn against you. Hunters who survive you come back stronger; some grudges can be ended with weregild.
+10. The great struggle (once you are grown): a kind dragon faces an ancient evil and its three lieutenants; a cruel one hunts the six Crystals of Life, one in each region beyond your home. The first lieutenant and the first crystal can be fought.
 
 For testing: **Menu → Debug tools** (infinite gold, invincibility, endless stamina, safe sleep, instant building, grow a stage, start the great struggle, reveal the map…). To try the later game without playing up to it: `index.html?scene=map&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`). These test starts save to their own slot.
 

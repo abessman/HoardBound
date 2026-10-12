@@ -1,7 +1,7 @@
 # Map art handoff package
 
 Everything an artist (or an image model) needs to draw drop-in replacements for the parchment map's symbols, all
-measured from the game (HoardBound 0.10.0). The brief this answers: [map_update.md](../../map_update.md).
+measured from the game (built in 0.10.0, re-measured in 0.11.0). The brief this answers: [map_update.md](../../map_update.md).
 
 | # | asked for | here |
 | --- | --- | --- |

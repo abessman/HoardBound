@@ -75,17 +75,21 @@
       state.phase = 'planning';
       return `${L.name} hands over ${HB.fmt.int(paid)} gold.`;
     },
-    // ---------- offerings: villages that trust you bring gifts while they prosper and stay safe
+    // ---------- offerings: once you are young and people know where you sleep, places of your home region that trust
+    // you (gratitude) or fear you (appeasement) bring gifts while they prosper and stay safe; more as an adult
     offeringPlaces(state) {
-      const W = state.world, H = W.home;
-      return W.locations.filter(L => ['farm', 'village', 'town'].includes(L.type) && L.state === 'normal' && !L.threat && L.trust >= 30 && L.wealth >= L.wealthMax * 0.4 && !(L.tribute && !L.tribute.lapsed) && Math.hypot(L.x - H.x, L.y - H.y) <= 30);
+      const W = state.world, H = W.home, d = state.dragon, D = HB.domain;
+      if (d.tier < 1 || (D && !D.lairKnown(state))) return [];
+      const reach = 20 + 5 * d.tier, rid = D ? D.homeRegion(state) : -1;
+      return W.locations.filter(L => ['farm', 'village', 'town', 'city', 'monastery'].includes(L.type) && L.state === 'normal' && !L.threat && (L.trust >= 30 || L.fear >= 40) && L.wealth >= L.wealthMax * 0.4 && !(L.tribute && !L.tribute.lapsed) && (rid < 0 || L.regionId === rid) && Math.hypot(L.x - H.x, L.y - H.y) <= reach);
     },
-    seasonOffering(L) { return Math.round(4 + L.wealth * 0.04); },
-    yearOffering(L) { return Math.round(8 + L.wealth * 0.06); },
+    offeringMul(state) { return state.dragon.tier >= 2 ? 1.6 : 1; },
+    seasonOffering(L, state) { return Math.round((4 + L.wealth * 0.04) * (state ? tribute.offeringMul(state) : 1)); },
+    yearOffering(L, state) { return Math.round((8 + L.wealth * 0.06) * (state ? tribute.offeringMul(state) : 1)); },
     /** while awake: offerings pile up at the foot of the hill, collected when you come home */
     accrueOfferings(state, days) {
       if (days >= 300) return;
-      for (const L of tribute.offeringPlaces(state)) L.flags.offering = (L.flags.offering || 0) + tribute.seasonOffering(L) * days / 90;
+      for (const L of tribute.offeringPlaces(state)) L.flags.offering = (L.flags.offering || 0) + tribute.seasonOffering(L, state) * days / 90;
     },
     collectOfferings(state) {
       let total = 0; const names = [];
@@ -98,7 +102,7 @@
     /** what trusting villages might bring over a sleep of `years` (a range: raiders may ruin some of them) */
     offeringEstimate(state, years) {
       const places = tribute.offeringPlaces(state);
-      const full = places.reduce((a, L) => a + tribute.yearOffering(L), 0) * Math.max(0, Math.floor(years));
+      const full = places.reduce((a, L) => a + tribute.yearOffering(L, state), 0) * Math.max(0, Math.floor(years));
       return { places, lo: Math.round(full * 0.5), hi: full };
     },
     /** yearly accrual; returns events. Tribute accumulates as 'due' and is delivered to the lair if the settlement is near and willing, else held until collected. */
@@ -125,7 +129,7 @@
       if (total) ev.push({ text: `Tribute delivered to the lair: ${HB.fmt.int(total)} gold.` });
       // offerings from villages that trust you, while they prosper
       const off = tribute.offeringPlaces(state); let og = 0;
-      for (const L of off) { const g = tribute.yearOffering(L); state.hoard.gold += g; og += g; }
+      for (const L of off) { const g = tribute.yearOffering(L, state); state.hoard.gold += g; og += g; }
       if (og) ev.push({ text: `Offerings from ${HB.fmt.list(off.slice(0, 3).map(L => L.name))}${off.length > 3 ? ' and others' : ''}: ${HB.fmt.int(og)} gold.`, kind: 'loyal' });
       return ev;
     },

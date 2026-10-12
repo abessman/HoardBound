@@ -41,15 +41,22 @@
     else if (HB.debug.gotoGame) HB.debug.gotoGame(name, params);
   };
   /** the map-art preview scene (docs/map-art/REPLACING.md): index.html?scene=mappreview[&mappack=sample][&chunks=1]
-   *  [&cam=x,y,zoom]. Fixed seed and camera, every domain state near home, the dragon circling; saves to the 'test' slot. */
+   *  [&cam=x,y,zoom | &cam=~dx,dy,zoom]. Fixed seed and camera, every domain state near home, the dragon circling; saves to the 'test' slot. */
   HB.debug.mapPreview = function (params) {
     const state = HB.game.newCampaign({ seed: (params && params.get('seed')) || 'ember-quill-42', name: 'Vorthax', breed: 'red' });
     state.flags.test = true;
-    HB.presets.preview(state);
+    const picks = HB.presets.preview(state);
     HB.flow.enterWorld(state, false);
-    const map = HB.flow.map, H = state.world.home, cam = ((params && params.get('cam')) || '').split(',').map(Number);
-    if (cam.length === 3 && cam.every(isFinite)) Object.assign(map.cam, { x: cam[0], y: cam[1], zoom: cam[2] });
-    else Object.assign(map.cam, { x: H.x + 3.5, y: H.y - 2.5, zoom: 1.35 });
+    // &cam=x,y,zoom (cells), or &cam=~dx,dy,zoom relative to the lair
+    const camArg = (params && params.get('cam')) || '', rel = camArg.startsWith('~'), cam = camArg.replace(/^~/, '').split(',').map(Number);
+    const map = HB.flow.map, H = state.world.home;
+    if (cam.length === 3 && cam.every(isFinite)) Object.assign(map.cam, { x: cam[0] + (rel ? H.x + 0.5 : 0), y: cam[1] + (rel ? H.y + 0.5 : 0), zoom: cam[2] });
+    else {
+      // frame the lair and every place the preview set up (the same view every time for a given seed)
+      const pts = [H].concat(Object.values(picks).filter(Boolean)), xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+      const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+      Object.assign(map.cam, { x: (x0 + x1) / 2 + 0.5, y: (y0 + y1) / 2 + 0.5, zoom: HB.clamp(Math.min(HB.W / ((x1 - x0 + 8) * 22), HB.H / ((y1 - y0 + 7) * 22)), 0.9, 1.6) });
+    }
     map.showcase = { x: H.x + 0.5, y: H.y + 0.5, r: 5 }; // the dragon circles home (drawn only; the campaign does not move)
     map.showChunkEdges = !!(params && params.get('chunks'));
     return state;

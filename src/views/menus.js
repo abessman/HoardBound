@@ -66,33 +66,4 @@
   }
   HB.ChronicleScene = ChronicleScene;
 
-  class RealmsScene {
-    constructor(state) { this.state = state; this.opaque = false; this.ui = new HB.ui.UI(); }
-    enter() {
-      const w = 900, x = (HB.W - w) / 2, y0 = 50; this.x = x; this.y = y0; this.w = w; this.h = 620;
-      const W = this.state.world;
-      const known = W.factions.filter(f => f.dragon.known || f.subregions.some(s => this.state.know.subSeen[s]));
-      this.ui.add(new HB.ui.ListBox({ x: x + 30, y: y0 + 60, w: w - 60, h: 480, items: known, itemHeight: 74, emptyText: 'You know of no realms yet. Fly, and the map will tell you who rules the vales.',
-        drawItem: (ctx, f, x, y, w, h) => {
-          const cap = f.capitalId !== null && f.capitalId !== undefined ? W.locations[f.capitalId] : null;
-          HB.text.draw(ctx, `${f.name} — ${f.kind === 'human' ? 'a kingdom of men' : f.kind === 'dwarf' ? 'a dwarven realm' : f.kind === 'elf' ? 'an elven realm' : 'a goblin host'}, ruled by ${f.ruler.title} ${f.ruler.name}${cap ? ` from ${cap.name}` : ''}`, x + 10, y + 20, { size: 14, family: 'sc', maxWidth: w - 20 });
-          HB.text.draw(ctx, HB.preview.moodText(f), x + 10, y + 40, { size: 13, maxWidth: w - 20 });
-          const learned = []; if (f.learned.escorts) learned.push('caravans ride escorted'); if (f.learned.vaults) learned.push('valuables locked in vaults'); if (f.learned.rescue) learned.push('nobles kept close'); if (f.learned.hunters) learned.push(`hunters funded (${f.learned.hunters})`);
-          const wars = (f.atWar || []).map(id => W.factions[id].name);
-          HB.text.draw(ctx, `${learned.length ? 'Learned: ' + learned.join(', ') + '. ' : ''}${wars.length ? 'At war with ' + HB.fmt.list(wars) + '.' : 'At peace.'} ${f.history.length ? f.history[f.history.length - 1].text : ''}`, x + 10, y + 60, { size: 12, italic: true, color: HB.palette.inkSoft, maxWidth: w - 20 });
-        } }));
-      this.ui.add(new HB.ui.Button({ x: x + w / 2 - 80, y: y0 + 560, w: 160, h: 40, label: 'Close', primary: true, onClick: () => HB.scenes.pop(this) }));
-      this.ui.onCancel = () => HB.scenes.pop(this);
-      this.ui.focusFirst();
-    }
-    update(dt) { this.ui.update(dt); }
-    draw(ctx) {
-      ctx.fillStyle = 'rgba(15,8,4,0.5)'; ctx.fillRect(0, 0, HB.W, HB.H);
-      HB.parchment.panel(ctx, this.x, this.y, this.w, this.h, { title: 'Realms', tone: 'light' });
-      const m = this.state.memory;
-      HB.text.draw(ctx, `${m.grudges.length ? 'Grudges: ' + m.grudges.slice(-3).map(g => g.name).join(', ') + '. ' : ''}${m.loyalties.length ? 'Loyal to you: ' + m.loyalties.slice(-3).map(g => g.name).join(', ') + '.' : ''}`, this.x + this.w / 2, this.y + 50, { size: 13, italic: true, align: 'center', color: HB.palette.inkSoft, maxWidth: this.w - 60 });
-      this.ui.draw(ctx);
-    }
-  }
-  HB.RealmsScene = RealmsScene;
 })();

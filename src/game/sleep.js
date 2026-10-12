@@ -224,6 +224,7 @@
     noteTheft(state, worth, namedName, magic) {
       const P = state.problems || (state.problems = { thefts: 0, stolenValue: 0, stolenNamed: [], hunts: 0, breaches: 0, escapes: 0, rescues: 0 });
       P.thefts++; P.stolenValue += Math.round(worth); if (namedName) P.stolenNamed.push(namedName); if (magic) P.magicThefts = (P.magicThefts || 0) + 1;
+      if (HB.domain) HB.domain.markFound(state, 'thieves found your lair and told what they saw');
       if (HB.consequences) HB.consequences.react(state, `Thieves robbed your hoard of ${namedName || HB.fmt.int(worth) + ' gold worth'}.`, `because a hoard worth ${HB.fmt.int(HB.game.hoardValue(state) + worth)} lay behind a door they could pass`);
     },
     stolenDestination(state, f, rng) {
@@ -242,12 +243,14 @@
       const strength = 18 + rng.next() * 25 + f.learned.hunters * 8 + (lead ? lead.level * 6 : 0) + orders.reduce((a, o) => a + o.strength * 6, 0) + state.dragon.tier * 8;
       const party = { f, leaderName, lead, strength, orderName: orders.length ? orders[0].name : null };
       if (state.problems) state.problems.hunts++;
+      if (HB.domain) HB.domain.markFound(state, `hunters from ${f.name} found their way to your lair`);
       const defense = v.defense + sl.mods.defense + v.traps + (HB.history ? HB.history.loyalGuardBonus(state) : 0);
       // phase 1: the entrance
       if (defense >= strength * 0.85) {
         const killed = v.traps > 0 || v.guardStrength > 5;
         log(`${leaderName}${party.orderName ? ' of ' + party.orderName : ''} led hunters from ${f.name} against the lair. ${killed ? 'Traps and guards broke them at the door.' : 'They could not force the entrance and withdrew.'}`, 'hunters');
-        if (lead && killed && rng.chance(0.6)) { lead.active = false; log(`${leaderName} died there. ${lead.text ? 'The oath died with them.' : ''}`, 'hunters'); }
+        if (lead && killed && rng.chance(0.6)) { if (HB.history) HB.history.end(state, lead, 'dead', `died at your door in Year ${state.time.year}`); log(`${leaderName} died there. ${lead.text ? 'The oath died with them.' : ''}`, 'hunters'); }
+        else if (lead && HB.history) HB.history.escalate(state, lead, `led hunters against your lair in Year ${state.time.year} and lived`);
         state.dragon.prestige += 2;
         return null;
       }
@@ -292,7 +295,7 @@
       const win = power * (0.8 + rng.next() * 0.5) > party.strength * (0.8 + rng.next() * 0.5);
       if (win) {
         log(`You fought ${party.leaderName}’s hunters ${how === 'awake' ? 'awake and ready' : how === 'forced' ? 'half-asleep in your own chamber' : 'blind with sleep'} and killed them among the gold.`, 'hunters');
-        if (party.lead) { party.lead.active = false; }
+        if (party.lead && HB.history) HB.history.end(state, party.lead, 'dead', `died in the dragon’s lair in Year ${state.time.year}`);
         d.health = Math.max(1, Math.round(d.health * (how === 'awake' ? 0.7 : 0.5)));
         d.scars++; d.prestige += 5; state.counters.kills += 4;
         HB.factions.adjust(state, party.f, { fear: 10, hostility: 4 }, `hunters killed at the lair`);
@@ -303,7 +306,7 @@
       state.hoard.gold -= loss;
       d.health = Math.max(1, Math.round(d.stats.maxHealth * 0.15)); d.injury = 1; d.scars += 2;
       log(`${party.leaderName}’s hunters wounded you badly and fled with ${HB.fmt.int(loss)} gold before you could finish them.`, 'hunters', true);
-      if (party.lead) { party.lead.level++; party.lead.text = 'wounded the dragon in its own lair'; }
+      if (party.lead && HB.history) HB.history.escalate(state, party.lead, `wounded the dragon in its own lair and got away (Year ${state.time.year})`);
       HB.stats.recompute(state);
       HB.game.chronicle(state, `Wounded by ${party.leaderName}’s hunters in the lair; lost ${HB.fmt.int(loss)} gold.`, 'hunters');
       sl.forced = true;

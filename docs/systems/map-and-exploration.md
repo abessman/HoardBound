@@ -4,7 +4,7 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 
 ## Intent
 - One finite continent plus overseas isles; enormous (default 200×200 leagues); seeded, different each world.
-- Regions (≈12) → subregions (≈40 per region) → cells (leagues). A hatchling uncovers thin corridors; an ancient
+- Seven regions (0.11; older campaigns keep their 6–16) → subregions (≈40–60 per region) → cells (leagues). A hatchling uncovers thin corridors; an ancient
   dragon uncovers provinces. Vision grows with size tier.
 - Unexplored land hides under cloud banks that roll back; cartography inks in behind them. Region borders are
   storm walls, mountain walls or sea, each needing a size tier to cross.
@@ -16,10 +16,14 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   ragged coast; island blobs for isles.
 - Terrain: water, plains, forest, pine forest, hills, mountains, peaks, swamp, desert, snow.
 - Rivers flow downhill from highlands to sea; roads follow least-cost paths between settlements.
-- Regions from ~12 seeds with terrain-weighted distance (mountains and water are barriers), so borders fall on
+- Regions (gen 2): the home seed at the centre and six seeds spread over the mainland, relaxed toward the centres of
+  their lands, then assigned with terrain-weighted distance (mountains and water are barriers), so borders fall on
   natural walls. Subregions from ~40 seeds per region. Each gets a name in its faction's phonology and a
   flavour type (Vale, Moor, Fells, Wood, Marsh, Downs, Reach, Hollow…).
-- Required tier per region = ring distance from the home region, capped at 3 (isles).
+- Required tier per region (gen 2): the two nearest regions open to a young dragon, the next two to an adult, the
+  farthest two to an ancient one; where a closed region borders an open one, storm clouds line the wall. Gen 1:
+  ring distance from home, capped at 3. Two kingdoms rule inside the home region (gen 2), away from the lair, so it
+  has villages, towns and castles to win; the home region is the most your rule can reach ([domain](domain-and-influence.md)).
 - Factions claim subregions by nearest capital with terrain cost. Dwarves favour mountains, elves deep forest,
   goblins swamps and badlands.
 - Locations per subregion scale with land and faction: farms/hamlets, villages, towns, cities, castles,
@@ -57,7 +61,9 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - Fog / knowledge / rumours / gating / sight: `src/world/world.js`.
 - Map rendering (chunk cache, ink glyphs, cloud fog, labels, previews, tap-to-explore, HUD): `src/views/mapview.js`, `src/art/mapart.js`; art packs `src/art/mapassets.js`, contract `src/data/mapspec.js`.
 - Place previews: `src/game/preview.js`.
-- Changing generation breaks old saves: bump `GEN_VERSION` in `src/core/save.js` and say so.
+- Generation versions: `HB.worldgen.GEN` (2 since 0.11) and `GEN_VERSION` in `src/core/save.js`; saves store the
+  version their world was made with and `deserialize` regenerates that version, so older campaigns keep their world.
+  A further change to generation needs a new version branch in `worldgen.generate`.
 
 ## Tests
 - `tools/test.js` sections *world generation* and *travel*; `node tools/worldstats.js [seed] [size] [--ascii]` for a report.

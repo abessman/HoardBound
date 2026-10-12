@@ -38,47 +38,89 @@
       this._domSig = sig; this.mark = HB.domain.markField(this.state); this.overlay = null;
       if (hadMark || this.mark.some(v => v)) { this.chunks.clear(); this.chunkOrder.length = 0; }
     }
+    /** the territory as a watercolour wash: soft bleeding edges, pigment pooled at the rim, paper grain showing
+     *  through, colour from who holds each place (gold-green kind, rust cruel, sepia while undecided). Painted once per
+     *  change at 6 px per cell over the territory's bounds only. */
     buildOverlay() {
       const st = this.state, W = st.world, inf = HB.domain.influence(st);
-      const c = document.createElement('canvas'); c.width = W.w; c.height = W.h;
-      const g = c.getContext('2d'), img = g.createImageData(W.w, W.h), D = img.data;
+      const prev = this.overlayInf;
+      this.overlayInf = inf; this.overlay = null;
+      if (!inf.count) return;
+      const RES = 6, b = inf.bbox, pad = 2;
+      const x0 = Math.max(0, b.x0 - pad), y0 = Math.max(0, b.y0 - pad), x1 = Math.min(W.w - 1, b.x1 + pad), y1 = Math.min(W.h - 1, b.y1 + pad);
+      const cw = (x1 - x0 + 1) * RES, ch = (y1 - y0 + 1) * RES;
+      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
+      const g = c.getContext('2d'), img = g.createImageData(cw, ch), D = img.data;
       const WS = HB.mapAssets ? HB.mapAssets.style.wash : { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] };
-      const kind = WS.kind, cruel = WS.cruel, reach = WS.reach;
-      for (let i = 0; i < W.w * W.h; i++) {
-        if (!HB.isLand(W.terrain[i])) continue;
-        const o = inf.subs.get(W.sub[i]); if (!o) continue;
-        const col = o.c > 0.2 ? kind : o.c < -0.2 ? cruel : reach;
-        const a = col === reach ? 0.09 : o.s >= 3 ? 0.3 : o.s === 2 ? 0.24 : 0.17;
-        D[i * 4] = col[0]; D[i * 4 + 1] = col[1]; D[i * 4 + 2] = col[2]; D[i * 4 + 3] = Math.round(a * 255);
+      const Wd = W.w, rid = inf.region, src = inf.sources.filter(q => q.r > 0);
+      const nz = this._washNoise || (this._washNoise = new HB.Noise2D(new HB.RNG('wash:' + st.seed)));
+      // the land your rule may take (home region, not the sea), as a 0/1 field sampled smoothly
+      const mask = new Float32Array((x1 - x0 + 3) * (y1 - y0 + 3)), mw = x1 - x0 + 3;
+      for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { const i = y * Wd + x; if (x >= 0 && y >= 0 && x < Wd && y < W.h && W.region[i] === rid && HB.isLand(W.terrain[i])) mask[(y - y0 + 1) * mw + (x - x0 + 1)] = 1; }
+      for (let py = 0; py < ch; py++) {
+        const fy = y0 + (py + 0.5) / RES, gy = fy - 0.5 - y0 + 1, iy = Math.floor(gy), ty = gy - iy;
+        for (let px = 0; px < cw; px++) {
+          const fx = x0 + (px + 0.5) / RES, gx = fx - 0.5 - x0 + 1, ix = Math.floor(gx), tx = gx - ix;
+          const m00 = mask[iy * mw + ix] || 0, m10 = mask[iy * mw + ix + 1] || 0, m01 = mask[(iy + 1) * mw + ix] || 0, m11 = mask[(iy + 1) * mw + ix + 1] || 0;
+          const m = (m00 * (1 - tx) + m10 * tx) * (1 - ty) + (m01 * (1 - tx) + m11 * tx) * ty;
+          if (m <= 0.02) continue;
+          // each source's wobbling circle, evaluated per pixel so small washes stay round
+          let v = 0, sw = 0, ss = 0;
+          for (const q of src) {
+            const dx = fx - q.x, dy = fy - q.y, R = q.r * 1.3; if (dx > R || dx < -R || dy > R || dy < -R) continue;
+            const d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), ph = q.ph || [0, 0, 0];
+            const t = 1 - d / Math.max(0.5, q.r * (1 + 0.14 * Math.sin(3 * ang + ph[0]) + 0.08 * Math.sin(5 * ang + ph[1]) + 0.05 * Math.sin(9 * ang + ph[2])));
+            if (t <= 0) continue; if (t > v) v = t; sw += t; ss += q.side * t;
+          }
+          const f = v * Math.min(1, m * 1.6);
+          if (f <= 0) continue;
+          const n1 = nz.at(fx * 0.32, fy * 0.32), n2 = nz.at(fx * 1.5 + 40.3, fy * 1.5 + 17.7);
+          const e = f + n1 * 0.13 + n2 * 0.06 - 0.04; // the edge wanders like wet paint
+          if (e <= 0) continue;
+          const grain = nz.at(fx * 7.1 + 91.1, fy * 7.1 + 3.3), bloom = nz.at(fx * 0.7 + 12.9, fy * 0.7 + 55.1);
+          const side = sw > 0 ? ss / sw : 0;
+          const tgt = side >= 0 ? WS.kind : WS.cruel, k = Math.min(1, Math.abs(side) / 0.6);
+          // pigment pools where the wash dried (a darker rim), and in blotches where it pooled (blooms)
+          const rim = Math.pow(Math.max(0, 1 - e / 0.16), 1.6), pool = Math.max(0, bloom) * 0.5;
+          const dark = 1 - rim * 0.38 - pool * 0.12;
+          let a = (0.15 + 0.15 * Math.min(1, f * 1.5)) * (0.7 + 0.6 * (n1 * 0.5 + 0.5)) * (0.85 + 0.3 * (grain * 0.5 + 0.5)) * (1 + pool) + rim * 0.26;
+          a *= Math.min(1, e / 0.04);
+          const o = (py * cw + px) * 4;
+          D[o] = (WS.reach[0] + (tgt[0] - WS.reach[0]) * k) * dark; D[o + 1] = (WS.reach[1] + (tgt[1] - WS.reach[1]) * k) * dark; D[o + 2] = (WS.reach[2] + (tgt[2] - WS.reach[2]) * k) * dark;
+          D[o + 3] = Math.round(HB.clamp(a, 0, 0.58) * 255);
+        }
       }
       g.putImageData(img, 0, 0);
-      this.overlay = c; this.overlayInf = inf;
+      this.overlay = c; this.overlayRect = { x0, y0, x1: x1 + 1, y1: y1 + 1, res: RES };
+      // it bleeds in when it first appears and when it grows (from where it reached before)
+      const lr = HB.domain.lairRadius(st).r;
+      if (!prev || !this._washShown) this.startWash(0);
+      else if (inf.count > prev.count) this.startWash(Math.max(0, (this._washR || lr) - 1));
+      this._washR = lr; this._washShown = true;
     }
+    startWash(fromCells) { this.washAnim = { t: 0, dur: 1.6, from: fromCells }; }
     drawTerritory(ctx, tl, br) {
       if (!HB.domain || !this.showTerritory) return;
-      if (!this.overlay) this.buildOverlay();
-      if (!this.overlayInf.count) return;
-      const W = this.state.world;
-      const x0 = Math.max(0, Math.floor(tl.x) - 1), y0 = Math.max(0, Math.floor(tl.y) - 1), x1 = Math.min(W.w, Math.ceil(br.x) + 1), y1 = Math.min(W.h, Math.ceil(br.y) + 1);
-      if (x1 <= x0 || y1 <= y0) return;
-      const a = this.worldToScreen(x0, y0), b = this.worldToScreen(x1, y1);
-      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(this.overlay, x0, y0, x1 - x0, y1 - y0, a.x, a.y, b.x - a.x, b.y - a.y); ctx.restore();
-      // a fine dotted edge where your influence ends (not at low zoom: too many cells)
-      if (this.cam.zoom < 0.5) return;
-      const subs = this.overlayInf.subs, z = CELL * this.cam.zoom;
-      const cls = (i) => { if (!HB.isLand(W.terrain[i])) return 0; const o = subs.get(W.sub[i]); return !o ? 0 : o.c > 0.2 ? 1 : o.c < -0.2 ? 2 : 3; };
-      const paths = { 1: new Path2D(), 2: new Path2D(), 3: new Path2D() };
-      let any = false;
-      for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-        const i = y * W.w + x, c = cls(i);
-        if (x + 1 < W.w) { const c2 = cls(i + 1); if (c !== c2 && (c || c2)) { const p = this.worldToScreen(x + 1, y); paths[c || c2].moveTo(p.x, p.y); paths[c || c2].lineTo(p.x, p.y + z); any = true; } }
-        if (y + 1 < W.h) { const c2 = cls(i + W.w); if (c !== c2 && (c || c2)) { const p = this.worldToScreen(x, y + 1); paths[c || c2].moveTo(p.x, p.y); paths[c || c2].lineTo(p.x + z, p.y); any = true; } }
+      const inf = HB.domain.influence(this.state);
+      if (this.overlayInf !== inf || (!this.overlay && inf.count)) this.buildOverlay();
+      if (!this.overlay) return;
+      const R = this.overlayRect, a = this.worldToScreen(R.x0, R.y0), b = this.worldToScreen(R.x1, R.y1);
+      if (b.x < 0 || b.y < 0 || a.x > HB.W || a.y > HB.H) return;
+      let img = this.overlay;
+      const A = this.washAnim;
+      if (A && A.t < A.dur) {
+        // the wash spreads outward from the lair: a soft-edged circle reveals it
+        const W = this.state.world, cx = (W.home.x + 0.5 - R.x0) * R.res, cy = (W.home.y + 0.5 - R.y0) * R.res;
+        const far = Math.hypot(Math.max(cx, img.width - cx), Math.max(cy, img.height - cy));
+        const t = A.t / A.dur, ease = 1 - Math.pow(1 - t, 3), r0 = A.from * R.res, rad = r0 + (far * 1.15 - r0) * ease, soft = Math.max(8, rad * 0.25);
+        const tmp = this._washTmp && this._washTmp.width === img.width && this._washTmp.height === img.height ? this._washTmp : (this._washTmp = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }));
+        const g = tmp.getContext('2d'); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, tmp.width, tmp.height); g.drawImage(img, 0, 0);
+        const gr = g.createRadialGradient(cx, cy, Math.max(0, rad - soft), cx, cy, Math.max(1, rad));
+        gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+        g.globalCompositeOperation = 'destination-in'; g.fillStyle = gr; g.fillRect(0, 0, tmp.width, tmp.height); g.globalCompositeOperation = 'source-over';
+        img = tmp;
       }
-      if (!any) return;
-      ctx.save(); ctx.setLineDash([2, 4]); ctx.lineWidth = 1.3;
-      const ES = HB.mapAssets ? HB.mapAssets.style.edge : { kind: 'rgba(96,110,30,0.55)', cruel: 'rgba(110,36,20,0.55)', reach: 'rgba(90,70,40,0.35)' };
-      for (const [k, col] of [[1, ES.kind], [2, ES.cruel], [3, ES.reach]]) { ctx.strokeStyle = col; ctx.stroke(paths[k]); }
-      ctx.restore();
+      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y); ctx.restore();
     }
     /** pennants showing what each settlement is to you; the settlement at your hill */
     drawDomainMarks(ctx, tl, br) {
@@ -87,9 +129,17 @@
       const s = Math.max(4, Math.min(12, 10 * Math.sqrt(cam.zoom)));
       const h = HB.domain.home(st);
       if (h.stage > 0 && W.home.x >= tl.x - 6 && W.home.x <= br.x + 6 && W.home.y >= tl.y - 4 && W.home.y <= br.y + 4) {
-        const p = this.worldToScreen(W.home.x + 0.5, W.home.y + 0.85);
-        const hx = p.x + s * 4.4, hy = p.y + s * 0.2;
-        ctx.save(); HB.mapart.homeSettlement(ctx, hx, hy, s * 0.85, h.stage, h.path, new HB.RNG(HB.hash32('home' + st.seed))); ctx.restore();
+        const p = this.worldToScreen(W.home.x + 0.5, W.home.y + 0.85), rng = new HB.RNG(HB.hash32('home' + st.seed));
+        let hx = p.x + s * 4.4, hy = p.y + s * 0.2;
+        if (h.stage === 1) {
+          // devoted camps scattered around the hill: one at first, up to three as the years pass
+          const n = 1 + Math.min(2, Math.floor((st.time.year - (h.stageYear || st.time.year)) / 2)), base = (HB.hash32('camps' + st.seed) % 628) / 100;
+          for (let k = 0; k < n; k++) {
+            const ang = base + k * 2.2, cx = p.x + Math.cos(ang) * z * 1.9, cy = p.y + Math.sin(ang) * z * 1.2 + s * 0.3;
+            ctx.save(); HB.mapart.homeSettlement(ctx, cx, cy, s * 0.7, 1, h.path, rng); ctx.restore();
+            if (k === 0) { hx = cx; hy = cy; }
+          }
+        } else { ctx.save(); HB.mapart.homeSettlement(ctx, hx, hy, s * 0.85, h.stage, h.path, rng); ctx.restore(); }
         if (cam.zoom > 0.7) HB.text.draw(ctx, h.name, hx, hy + s * 2.2, { size: HB.clamp(11.5 * Math.sqrt(cam.zoom), 10, 18), italic: true, align: 'center', color: h.path === 'tyrannical' ? '#5a2418' : '#5a4a14', stroke: 'rgba(240,228,200,0.75)', strokeWidth: 2.5 });
       }
       if (cam.zoom < 0.45) return;
@@ -134,11 +184,11 @@
       let x = 14;
       this.btnLair = btn(x, 'Lair', 'lair', () => this.openLair(), { tooltip: 'Return to your cave: hoard, workers, upgrades, captives and sleep. (H)' }); x += bw + 8;
       this.btnChron = btn(x, 'Chronicle', 'chronicle', () => this.openChronicle(), { tooltip: 'The story of this dragon so far. (C)' }); x += bw + 8;
-      this.btnRealms = btn(x, 'Realms', 'factions', () => this.openRealms(), { tooltip: 'Known realms, their mood toward you, and their wars. (F)' }); x += bw + 8;
+      this.btnRealms = btn(x, 'Reputation', 'factions', () => this.openRealms(), { tooltip: 'How the world sees you: your names, each realm’s fear, trust and anger, who knows your lair, and the grudges sworn against you. (F)' }); x += bw + 8;
       this.btnAims = btn(x, 'Aims', 'KeyG', () => this.openAims(), { tooltip: 'Your goal, what you could do next and why, and what you are known for. (G)' }); x += bw + 8;
       this.btnMenu = btn(x, 'Menu', 'menu', () => this.openMenu(), { tooltip: 'Save, load, settings. (Esc)' }); x += bw + 8;
       this.btnHome = btn(x, 'Find me', null, () => this.centerOn(st.dragon.x + 0.5, st.dragon.y + 0.5), { tooltip: 'Centre the map on your dragon.' });
-      this.btnTerritory = ui.add(new HB.ui.Button({ x: HB.W - 280, y: 16, w: 160, h: 30, label: 'Territory: shown', size: 13, hotkey: 'KeyT', hotkeyLabel: 'T', tooltip: 'Show or hide the wash over the lands your rule reaches. Influence is reach, not loyalty: tap a place to see what it is to you. (T)', onClick: () => { this.showTerritory = !this.showTerritory; this.btnTerritory.label = this.showTerritory ? 'Territory: shown' : 'Territory: hidden'; } }));
+      this.btnTerritory = ui.add(new HB.ui.Button({ x: HB.W - 280, y: 16, w: 160, h: 30, label: 'Territory: shown', size: 13, hotkey: 'KeyT', hotkeyLabel: 'T', tooltip: 'Show or hide the wash over your territory. It grows with your size and hoard, and around the places that serve you; it cannot pass the storms around your home region. Territory is reach, not loyalty: tap a place to see what it is to you. (T)', onClick: () => { this.showTerritory = !this.showTerritory; this.btnTerritory.label = this.showTerritory ? 'Territory: shown' : 'Territory: hidden'; if (this.showTerritory) this.startWash(0); } }));
       // the goal panel under the status plaque: always visible, opens the Aims board
       this.goalPanel = ui.add(new HB.ui.Custom({ x: 14, y: 114, w: 330, h: 92, focusable: true, tooltip: 'Your goal and the next step. Open the Aims board for what you could do and why.', render: (ctx, wdg) => this.drawGoalPanel(ctx, wdg), onClick: () => this.openAims() }));
       // context buttons (visibility set per frame)
@@ -163,7 +213,7 @@
     }
     openLair() { if (HB.LairScene) HB.scenes.push(new HB.LairScene(this.state)); else HB.notice('Lair', 'The lair view is not built yet.'); }
     openChronicle() { if (HB.ChronicleScene) HB.scenes.push(new HB.ChronicleScene(this.state)); else HB.notice('Chronicle', this.state.chronicle.map(c => `Year ${c.year}: ${c.text}`).slice(-8).join('\n')); }
-    openRealms() { if (HB.RealmsScene) HB.scenes.push(new HB.RealmsScene(this.state)); else HB.notice('Realms', 'Not built yet.'); }
+    openRealms(tab) { if (HB.ReputationScene) HB.scenes.push(new HB.ReputationScene(this.state, { tab })); }
     showAmbush() {
       const st = this.state, e = HB.hunters.find(st, st.ambush);
       if (!e) { st.ambush = null; return; }
@@ -258,6 +308,7 @@
       if (HB.travel && HB.travel.update) HB.travel.update(st, dt, this);
       if (HB.worldsim && HB.worldsim.tickRealtime) HB.worldsim.tickRealtime(st, dt);
       this.dragonFrameT += dt;
+      if (this.washAnim && this.washAnim.t < this.washAnim.dur) this.washAnim.t += HB.settings.reduceMotion ? this.washAnim.dur : dt;
       if (this.toast && (this.toast.t -= dt) <= 0) this.toast = null;
     }
     get revealAnim() { if (!this._ra) this._ra = new Set(); return this._ra; }
@@ -633,13 +684,14 @@
       for (let y = y0; y <= y1; y += step) for (let x = x0; x <= x1; x += step) {
         const i = y * W.w + x; const a = F[i];
         if (a <= 0.02) continue;
+        const rid = W.region[i];
+        const storm = rid >= 0 && W.regions[rid].tier > dragonTier;
+        // an edge: revealed land next door, or the storm wall itself (fogged land on either side of it)
         let edge = false;
-        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx * step, ny = y + dy * step; if (nx < 0 || ny < 0 || nx >= W.w || ny >= W.h) continue; if (F[ny * W.w + nx] < 0.5) { edge = true; break; } }
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx * step, ny = y + dy * step; if (nx < 0 || ny < 0 || nx >= W.w || ny >= W.h) continue; const ni = ny * W.w + nx; if (F[ni] < 0.5) { edge = true; break; } if (storm && HB.isLand(W.terrain[ni])) { const rn = W.region[ni]; if (rn >= 0 && W.regions[rn].tier <= dragonTier) { edge = true; break; } } }
         const cf = this.cloudField;
         const interior = !edge && ((x * 7 + y * 13) % 5 === 0);
         if (!edge && !interior) continue;
-        const rid = W.region[i];
-        const storm = rid >= 0 && W.regions[rid].tier > dragonTier;
         const p = this.worldToScreen(x + 0.5 + cf[i * 3] * step, y + 0.5 + cf[i * 3 + 1] * step);
         const prng = new HB.RNG(i);
         ctx.globalAlpha = a * (edge ? 0.95 : 0.6);

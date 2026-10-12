@@ -349,9 +349,16 @@ section('situations, heat, hunters, pursuit, offerings');
   const t0 = HB.sleep.threatEstimate(st).thief, a0 = st.lair.attention || 0;
   ok(/followed you home/.test(HB.pursuit.onHome(st) || '') && st.lair.attention > a0 && HB.sleep.threatEstimate(st).thief > t0, 'flying straight home shows them the lair');
 
-  // offerings: villages that trust you bring gifts while they prosper
-  st = fresh('offer'); const OV = st.world.locations.filter(L => (L.type === 'village' || L.type === 'farm') && Math.hypot(L.x - st.world.home.x, L.y - st.world.home.y) < 25)[0];
-  if (OV) { OV.trust = 40; OV.threat = null; OV.wealth = OV.wealthMax; HB.tribute.accrueOfferings(st, 90); const got = HB.tribute.collectOfferings(st); ok(got.total > 0 && got.names.includes(OV.name), 'offerings collected: ' + got.total); const est = HB.tribute.offeringEstimate(st, 20); ok(est.hi > est.lo && est.lo > 0, 'offerings over a sleep shown as a range'); OV.state = 'burned'; ok(!HB.tribute.offeringPlaces(st).includes(OV), 'a burned village brings nothing'); }
+  // offerings: once you are young and your lair is known, villages of your home region that trust you bring gifts
+  st = fresh('offer'); const OV = st.world.locations.filter(L => (L.type === 'village' || L.type === 'farm') && L.regionId === HB.domain.homeRegion(st) && Math.hypot(L.x - st.world.home.x, L.y - st.world.home.y) < 25)[0];
+  if (OV) {
+    OV.trust = 40; OV.threat = null; OV.wealth = OV.wealthMax;
+    ok(!HB.tribute.offeringPlaces(st).length, 'a hatchling whose lair nobody knows gets no offerings');
+    st.dragon.tier = 1; st.dragon.age = 9; HB.stats.recompute(st);
+    ok(!HB.tribute.offeringPlaces(st).length, 'nor a young dragon whose lair is hidden');
+    HB.domain.markFound(st, 'a test found it');
+    ok(st.reactions.some(r => /know where you sleep now/.test(r.text)), 'the lair being found is reported, with its cause');
+    HB.tribute.accrueOfferings(st, 90); const got = HB.tribute.collectOfferings(st); ok(got.total > 0 && got.names.includes(OV.name), 'offerings collected: ' + got.total); const est = HB.tribute.offeringEstimate(st, 20); ok(est.hi > est.lo && est.lo > 0, 'offerings over a sleep shown as a range'); OV.state = 'burned'; ok(!HB.tribute.offeringPlaces(st).includes(OV), 'a burned village brings nothing'); }
   // guarding caravans takes longer to earn a name now
   ok(HB.TITLE_BY_ID.roadwarden.need === 4, 'Warden of the Roads needs four guarded caravans');
   // saves keep stories and pursuit
@@ -365,34 +372,44 @@ section('domain: allegiance, influence, the settlement at your hill');
   const D = HB.domain;
   const fresh = (tag) => HB.game.newCampaign({ seed: seed + '-dom-' + tag, name: 'D', keeper: false });
   const young = (st, align) => { st.dragon.tier = 1; st.dragon.age = 9; st.dragon.alignment = align; HB.stats.recompute(st); };
+  const adult = (st) => { st.dragon.tier = 2; st.dragon.age = 41; HB.stats.recompute(st); };
   const nearPeople = (st, r) => HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, r, L => (L.type === 'village' || L.type === 'farm') && L.state === 'normal').map(o => o.L);
   // a kind domain
   let st = fresh('kind');
-  ok(st.domain && D.home(st).stage === 0 && D.influence(st).count === 0, 'a hatchling has no domain and no influence');
+  const c0 = D.influence(st).count;
+  ok(st.domain && D.home(st).stage === 0 && c0 > 0 && D.lairRadius(st).r <= 3.6, 'a hatchling has no settlement, only a little territory around its lair');
+  st.hoard.gold += 600; HB.stats.recompute(st);
+  ok(D.influence(st).count > c0, 'a growing hoard widens it a little');
   young(st, 20);
-  ok(D.influence(st).count >= 1, 'a young dragon reaches its own vale');
+  ok(D.influence(st).count > c0 && D.lairRadius(st).r >= 4, 'a young dragon reaches farther');
+  ok(!st.world.locations.some(L => L.regionId !== D.homeRegion(st) && D.inInfluence(st, L)), 'the territory never leaves the home region');
   ok(/young/i.test(HB.goals.unlocks(st, 0, 1).join(' ')) || HB.goals.unlocks(st, 0, 1).some(u => /settle/.test(u)), 'growing up promises the domain');
-  const vs = nearPeople(st, 30); const V = vs.find(L => L.type === 'village') || vs[0];
+  const vs = nearPeople(st, 30).filter(L => L.regionId === D.homeRegion(st)); const V = vs.find(L => L.type === 'village' && Math.hypot(L.x - st.world.home.x, L.y - st.world.home.y) <= 9) || vs[0];
   ok(!!V, 'a village or farm near home');
   ok(!D.advance(st, HB.game.rng) && D.nextReqs(st).reqs.some(r => r.key === 'source' && !r.done), 'nobody settles without people who trust you');
   V.trust = 45; V.knowledge.seen = true;
   const t1 = D.advance(st, HB.game.rng);
   ok(t1 && D.home(st).stage === 1 && D.home(st).path === 'benevolent' && D.home(st).name, 'trusting families found a refuge: ' + (t1 || '').slice(0, 60));
-  ok(st.reactions.some(x => /huts/.test(x.text)), 'the founding is reported with a cause');
+  ok(st.reactions.some(x => /camps/.test(x.text)), 'the founding is reported with a cause');
   const def0 = HB.lair.values(st), b0 = HB.lair.buildRate(st);
   ok(b0 > 0.2 && HB.lair.hireOffers(st).some(o => o.from === D.home(st).name && o.willing), 'the refuge speeds building and offers willing hands');
   HB.tribute.protect(st, V);
   ok(D.statusOf(st, V) === 'protected' && D.members(st).some(m => m.L === V), 'protection makes it part of the domain');
   ok(!D.canOath(st, V).ok, 'an oath needs time and trust');
   V.trust = 60; V.flags.protected = st.time.year - 2;
+  ok(!D.canOath(st, V).ok && /grown dragon/.test(D.canOath(st, V).reason || ''), 'a young dragon cannot take oaths yet');
   const reach0 = D.influence(st).count;
-  ok(D.canOath(st, V).ok, 'trusted for years, it can swear');
+  adult(st);
+  ok(D.canOath(st, V).ok, 'trusted for years, it swears to an adult dragon: ' + (D.canOath(st, V).reason || ''));
   D.takeOath(st, V);
   ok(D.statusOf(st, V) === 'allied' && D.influence(st).count >= reach0, 'sworn: allied, influence spreads from it');
   ok(HB.goals.opportunities(st).some(o => o.aim === 'domain'), 'the Aims board offers domain goals');
   // grow a stage: years, members, a guard post
-  const h = D.home(st); h.stageYear = st.time.year - 6; st.lair.upgrades.guardpost = 1;
-  ok(D.advance(st, HB.game.rng) && h.stage === 2, 'with years, a member and a guard post the refuge becomes a village');
+  const h = D.home(st); h.stageYear = st.time.year - 4; st.lair.upgrades.guardpost = 1;
+  ok(D.advance(st, HB.game.rng) && h.stage === 2, 'an adult with years, a member and a guard post: the camps become a village');
+  ok(!D.nextReqs(st).reqs.find(r => r.key === 'tier' && r.label.includes('adult')) || D.nextReqs(st).reqs.find(r => r.key === 'tier').done, 'the town needs an adult dragon (done)');
+  st.dragon.alignment = 20; const fav0 = h.favour || 0; st.hoard.gold += 1000;
+  ok(D.canGift(st, 'small').ok && D.gift(st, 'small') && h.favour === fav0 + 1, 'a gift from the hoard counts as a year of growth');
   ok(HB.lair.values(st).warning > def0.warning && HB.lair.values(st).defense > def0.defense, 'the village warns and guards the lair');
   D.accrue(st, 90); const got = HB.tribute.collectOfferings(st);
   ok(got.names.includes(h.name) && got.total > 0, 'its gifts wait at the foot of the hill: ' + got.total);
@@ -409,10 +426,13 @@ section('domain: allegiance, influence, the settlement at your hill');
 
   // a cruel domain
   st = fresh('cruel'); young(st, -30);
-  const T = nearPeople(st, 30).find(L => L.type === 'village') || nearPeople(st, 30)[0];
+  // a tributary carries its own lobe of your territory, so any village of the home region will do
+  const T = HB.world.locationsNear(st.world, st.world.home.x, st.world.home.y, 40, L => (L.type === 'village' || L.type === 'town') && L.state === 'normal' && L.regionId === D.homeRegion(st)).map(o => o.L)[0];
   T.fear = 90; HB.tribute.demand(st, T); if (!(T.tribute && !T.tribute.lapsed)) { T.tribute = { amount: 30, since: st.time.year, lapsed: false, willing: false, paidTotal: 0 }; }
   ok(D.statusOf(st, T) === 'tributary', 'tribute makes a tributary');
-  ok(D.advance(st, HB.game.rng) && D.home(st).path === 'tyrannical' && D.stageInfo(st).name === 'Coerced Camp', 'fear founds a coerced camp');
+  ok(D.advance(st, HB.game.rng) && D.home(st).path === 'tyrannical' && D.stageInfo(st).name === 'Cult Camps', 'fear founds the camps of a cult');
+  ok(!D.canOccupy(st, T).ok, 'a young dragon cannot occupy yet');
+  adult(st);
   const occ = D.canOccupy(st, T);
   ok(occ.ok, 'a frightened tributary inside your influence can be occupied: ' + (occ.reason || ''));
   const enslaved0 = st.lair.workers.filter(w => w.status === 'enslaved').reduce((a, w) => a + w.count, 0);
@@ -422,7 +442,7 @@ section('domain: allegiance, influence, the settlement at your hill');
   const sum = HB.consequences.summarize(st, T, snap, { kind: 'domain', label: 'Occupy' });
   ok(/occupied/.test(sum.headline) && sum.lines.some(l => /now occupied/.test(l.text)), 'the summary says what it is now');
   const far = st.world.locations.find(L => L.type === 'village' && L.state === 'normal' && !D.inInfluence(st, L));
-  if (far) { far.fear = 95; ok(!D.canOccupy(st, far).ok && /influence/.test(D.canOccupy(st, far).reason || ''), 'beyond your influence nothing can be occupied'); }
+  if (far) { far.fear = 95; ok(!D.canOccupy(st, far).ok && /territory|home region/.test(D.canOccupy(st, far).reason || ''), 'beyond your territory nothing can be occupied'); }
   let rose = false; for (let i = 0; i < 20 && !rose; i++) { D.yearly(st, HB.game.rng); rose = D.statusOf(st, T) === 'resisting'; }
   ok(rose, 'occupation breeds resistance until it revolts');
   D.crush(st, T);
@@ -536,6 +556,61 @@ section('debug tools');
   ok(!st.lastSleep.events.some(e => e.kind === 'thief' || e.kind === 'hunters') && st.phase !== 'dead', 'safe sleep: nobody comes');
   const st2 = HB.save.deserialize(HB.save.serialize(st));
   ok(C.on(st2, 'invincible') && st2.flags.cheated, 'saves keep the toggles');
+}
+
+section('world of seven regions, territory by phase, grudges (0.11)');
+{
+  const D = HB.domain, H = HB.history;
+  const st = HB.game.newCampaign({ seed: seed + '-seven', name: 'S', keeper: false }), W = st.world;
+  ok(W.gen === 2 && W.regions.length === 7, 'the world has seven regions');
+  const tiers = W.regions.map(R => R.tier).sort().join('');
+  ok(tiers === '0112233' && W.regions[D.homeRegion(st)].tier === 0, 'home is open to a hatchling; two regions open at each later phase: ' + tiers);
+  const land = W.regions.map(R => R.landCells), mean = land.reduce((a, b) => a + b, 0) / 7;
+  ok(Math.min(...land) > mean * 0.2, 'no region is a sliver: ' + land.join(' '));
+  // old campaigns keep their own world
+  const j = JSON.parse(HB.save.serialize(st)); j.gen = 1;
+  const old = HB.save.deserialize(JSON.stringify(j));
+  ok(old.world.gen === 1 && old.world.regions.length !== 7, 'a save from before 0.11 loads the world it was made in (' + old.world.regions.length + ' regions)');
+  ok(JSON.parse(HB.save.serialize(old)).gen === 1, 'and saves it as such');
+  // the cruel struggle: one crystal in each of the six other regions
+  const sc = HB.game.newCampaign({ seed: seed + '-seven', name: 'S', keeper: false });
+  HB.endgame.begin(sc, 'crystals', HB.game.rng);
+  const rs = HB.endgame.get(sc).crystals.map(c => sc.world.locations[c.locId]).filter(Boolean).map(L => L.regionId);
+  ok(rs.length === 6 && new Set(rs).size === 6 && !rs.includes(D.homeRegion(sc)), 'one Crystal of Life in each of the six other regions');
+  const ss = HB.game.newCampaign({ seed: seed + '-seven', name: 'S', keeper: false });
+  HB.endgame.begin(ss, 'shadow', HB.game.rng);
+  const sp = HB.endgame.get(ss).lieutenants.map(l => ss.world.locations[l.locId]).concat([ss.world.locations[HB.endgame.get(ss).fortressId]]).filter(Boolean);
+  ok(sp.length === 4 && sp.every(L => L.regionId !== D.homeRegion(ss)), 'the Hollow King and his lieutenants live beyond your home region');
+  // phase 2: places inside your territory answer you
+  st.dragon.tier = 1; st.dragon.age = 9; st.dragon.alignment = 20; HB.stats.recompute(st);
+  const inT = W.locations.filter(L => ['village', 'farm', 'town'].includes(L.type) && L.state === 'normal' && D.inInfluence(st, L));
+  if (inT.length) {
+    const A = inT[0]; A.trust = 35; st.dragon.health = 10;
+    const asks = D.asks(st, A);
+    ok(asks.some(a => a.id === 'news') && asks.some(a => a.id === 'hospitality'), 'a place in your territory offers news and hospitality');
+    D.feast(st, A, true); ok(st.dragon.health > 10 && A.flags.feastYear === st.time.year, 'hospitality heals you, once a year');
+    D.askNews(st, A); ok(D.asks(st, A).find(a => a.id === 'news').disabled, 'news once a year');
+  } else ok(true, 'no place inside a young territory on this seed (skipped)');
+  // phase 3: a castle's fealty
+  st.dragon.tier = 2; st.dragon.age = 41; HB.stats.recompute(st);
+  const C = W.locations.find(L => L.type === 'castle' && !L.capital && L.state === 'normal' && D.inHomeRegion(st, L));
+  if (C) {
+    C.trust = 60; const inside = D.inInfluence(st, C);
+    const fc = D.canFealty(st, C);
+    ok(inside ? fc.ok : /territory/.test(fc.reason || ''), 'a trusting castle swears fealty inside your territory, not outside it');
+    if (fc.ok) { D.fealty(st, C); ok(D.statusOf(st, C) === 'allied', 'a sworn castle is your ally'); }
+  }
+  // the grievance ledger
+  const g = H.grievance(st, { name: 'Edric Ashfoot', kind: 'hunter', from: 'Testford', level: 2, text: 'swore to kill the dragon' });
+  H.escalate(st, g, 'survived'); ok(g.level === 3 && g.epithet === 'the Scarred' && H.title(g) === 'Edric Ashfoot the Scarred', 'a hunter who survives you grows stronger and gets a harder name');
+  ok(H.grievance(st, { name: 'Edric Ashfoot', kind: 'hunter', text: 'again' }) === g && g.level === 4, 'swearing again under the same name strengthens the old grudge');
+  ok(!H.canAmend(st, g).show, 'sworn hunters cannot be bought');
+  const hs = H.grievance(st, { name: 'House Vane', kind: 'house', level: 2, text: 'lost its heir' });
+  st.hoard.gold = 1000; const ca = H.canAmend(st, hs);
+  ok(ca.ok && ca.cost === 300 && H.amend(st, hs) && hs.status === 'forgiven' && !hs.active, 'a house takes weregild and lets the grudge go');
+  H.end(st, g, 'dead', 'fell'); ok(H.statusOf(g) === 'dead' && g.log.length >= 3, 'the ledger keeps what happened to them');
+  const back = HB.save.deserialize(HB.save.serialize(st)).memory.grudges.find(x => x.name === 'Edric Ashfoot');
+  ok(back && back.epithet === g.epithet && back.epithet === 'Dragonfoe' && back.status === 'dead', 'saves keep the ledger');
 }
 
 section('map art: the contract, the packs, the preview');

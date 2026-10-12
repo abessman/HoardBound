@@ -54,6 +54,13 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Spread, convert, subjugate, destroy | Functional | Take oaths, help rebuild, occupy (inside influence), crush or ease resistance, raze; broken promises cost trust everywhere you protect. |
 | Allegiance can weaken | Functional | Resistance grows yearly and ends in revolt and freedom; allies lapse when trust falls; a cruel home revolts; a home turns with your deeds. |
 | Map changes with your rule | Functional | Burned and bare forests, jagged ash-dark mountains, ash near a tyrant; fuller groves and fields near a protector; strongest near the lair. |
+| Territory by life phase (0.11) | Functional | A watercolour wash that bleeds in: a little colour around a hatchling's lair, growing with the hoard; wider at each phase; lobes around the places that serve you; never beyond the home region. |
+| Devoted camps → village → castle (0.11) | Functional | Young: pilgrims' or cult camps around the hill; adult: a village, then a town; ancient: a castle and sanctuary or a dark stronghold. Gifts from the hoard speed it; recruit its people. |
+| Offerings once your lair is found (0.11) | Functional | From young, when hunters, thieves or riders found the lair (or people live by it): places that trust or fear you bring gifts; more as an adult. |
+| Places in your territory answer you (0.11) | Functional | Young: ask for news, accept hospitality or demand a feast. Adult: oaths, castle fealty and occupation, only inside your territory and home region. |
+| Reputation tracker (0.11) | Functional | Reputation (F): your name and titles, benevolence, who speaks of you, who knows your lair, loyalties; each realm's fear, trust, hostility and heat. |
+| Grievance ledger, nemesis-like (0.11) | Functional | Everyone sworn against you with cause, place and story; hunters who survive you grow stronger with epithets and lead hunts on your lair; weregild ends a family's, a betrayed village's or a rebel's grudge. |
+| Castle politics: lordships and feuds you can join | Deferred | Next update ([ideas](ideas/castle-politics.md)). |
 | Sleep advances the domain | Functional | Growth, gifts, unrest, resistance, oaths during sleep; shown in the sleep preview and the awakening. |
 | Endgames (lieutenants, crystals) | Simplified | 0.9.0 prototype: see the next table. |
 
@@ -142,7 +149,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 ## Beyond the brief (from the design conversation)
 
 - Hand-drawn parchment map with cloud fog, storm walls at gated regions, rumours — functional.
-- Enormous world with regions/subregions revealed incrementally; vision grows by tier — functional.
+- Enormous world of seven regions (0.11: your home region and six beyond storm walls that open two at a time as you grow; one Crystal of Life in each) with subregions revealed incrementally; vision grows by tier — functional.
 - Dragon appearance from alignment, artifacts, treasure thresholds and scars — functional (generated art; override hook for real sprites).
 - Faction wars with fronts, marching armies that deplete garrisons, battlefields to loot, mercenary contracts — functional (armies are abstract markers; sieges reduce wealth).
 - Rival dragons raiding the world; duel scene; elder wyrm legend ending — functional but lightly tested (duel balance is rough).

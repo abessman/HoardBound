@@ -29,10 +29,10 @@
         const seen = regions.filter(R => state.know.regionSeen[R.id]).map(R => R.name);
         out.push(`Cross the storm walls into ${seen.length ? HB.fmt.list(seen.slice(0, 2)) + (regions.length > seen.length ? ' and lands beyond' : '') : HB.fmt.plural(regions.length, 'new land') + ' beyond your vale'}`);
       }
-      if (toTier === 1) out.push('Demand tribute from settlements that fear you', 'People begin to settle at the foot of your hill: a refuge if they trust you, a camp if they fear you (your domain)', 'Sleep up to 50 years at a time');
-      if (toTier === 2) out.push('Your settlement can grow into a castle, or a dark stronghold', 'The great struggle begins: a kind dragon faces an ancient evil and its lieutenants; a cruel one hunts the six Crystals of Life');
+      if (toTier === 1) out.push('Demand tribute from settlements that fear you', 'Your territory widens, and people camp around your hill: pilgrims if they trust you, a cult if they fear you (your domain)', 'Sleep up to 50 years at a time');
+      if (toTier === 2) out.push('Bring villages, towns and some castles of your home region into your fold (oaths, fealty, occupation); your camps become a village', 'The great struggle begins: a kind dragon faces an ancient evil and its lieutenants; a cruel one hunts the six Crystals of Life');
       if (toTier === 2) out.push('Land and smash open vaults, gates and wagons', 'Make caravans pay tolls', 'Sleep up to a century');
-      if (toTier === 3) out.push('Fly over the sea to the far isles', 'Sleep up to two centuries');
+      if (toTier === 3) out.push('A castle or a dark tower rises beside your lair', 'Your territory reaches its widest', 'Sleep up to two centuries');
       return out;
     },
     /** the current milestone */

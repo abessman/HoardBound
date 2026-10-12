@@ -4,6 +4,30 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.11.0 — 2026-10-12 · Your territory
+- **Seven large regions.** New worlds have your home region in the middle and six regions around it behind storm
+  walls (two open to a young dragon, two to an adult, two to an ancient one). Two kingdoms rule inside your home
+  region, so it has villages, towns and castles to win. One Crystal of Life lies in each of the six other regions;
+  the Hollow King and his lieutenants live beyond your home. Storm clouds now line a wall where it meets open land.
+  Older campaigns keep the world they were made in.
+- **Territory by life phase**, drawn as a **watercolour wash** that bleeds in from the lair. A hatchling has a little
+  colour around its cave, growing slightly with its hoard; it widens at each phase and around the places that serve
+  you, and never leaves your home region (the rest is for your rivals). Colour: gold-green kind, rust cruel, sepia
+  undecided.
+- **Phase 2 (young):** pilgrims' camps (kind) or cult camps (cruel) gather around your hill; places inside your
+  territory answer you (ask for news; accept hospitality or demand a feast); once your lair is found (hunters,
+  thieves or riders who followed you home), places that trust or fear you bring offerings.
+- **Phase 3 (adult):** the camps become a village (or a fortified settlement), then a town; more offerings; bestow
+  gifts from your hoard (they count as years of growth) and recruit its people. You bring villages, towns and some
+  castles into your fold: oaths, a castle's fealty (new) and occupation now need an adult and your territory.
+- **Phase 4 (ancient):** a castle and sanctuary, or a dark stronghold, rises beside your lair.
+- **Reputation** (was Realms, F): your name, titles and benevolence, who speaks of you, who knows where you sleep,
+  who is loyal; each realm's fear, trust, hostility and heat; and the **grievance ledger**: everyone sworn against
+  you with cause, place and story. Hunters who survive you grow stronger and earn epithets (the Scarred, Dragonfoe,
+  Dragonbane) and lead hunts on your lair; broken promises, crushed risings and razed towns make new enemies;
+  weregild ends a family's, a betrayed village's or a rebel's grudge.
+- Castle politics (lordships, feuds you can join) is planned next: `docs/ideas/castle-politics.md`.
+
 ## 0.10.0 — 2026-10-11 · Swappable map art
 - **Map art packs** (`map_update.md`): every symbol on the parchment map (terrain, places in each state, your
   settlement's stages, pennants, caravans, armies, seals, fog, compass) has a semantic id and can be replaced by a PNG

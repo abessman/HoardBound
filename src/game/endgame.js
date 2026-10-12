@@ -45,16 +45,24 @@
       return text;
     },
     begin(state, path, rng, log) {
-      const E = eg.get(state), D = HB.ENDGAME, year = state.time.year;
+      const E = eg.get(state), D = HB.ENDGAME, year = state.time.year, W = state.world;
+      // worlds of seven regions (gen 2): the struggle lives beyond your home region; one crystal in each of the six others
+      const g2 = (W.gen || 1) >= 2;
       E.path = path; E.began = year; E.announced = false;
       let text;
       if (path === 'shadow') {
         const foe = rng.pick(D.shadow.foe.names);
         E.foe = { name: foe, title: D.shadow.foe.title };
-        const fort = eg.makePlace(state, rng, 'fortress', D.shadow.foe.place, { far: true, maxTier: 2, terrains: ['mountains', 'hills', 'plains'] }, { foe: true });
+        const fort = eg.makePlace(state, rng, 'fortress', D.shadow.foe.place, { far: true, minTier: g2 ? 2 : 0, maxTier: 2, terrains: ['mountains', 'hills', 'plains'] }, { foe: true });
         E.fortressId = fort ? fort.id : null;
-        const where = { warlord: { minD: 22, maxD: 55, maxTier: 2, terrains: ['plains', 'hills'] }, sorcerer: { minD: 45, maxD: 110, maxTier: 2, terrains: ['hills', 'mountains', 'plains'] }, blightmother: { minD: 40, maxD: 110, maxTier: 2, terrains: ['swamp', 'forest'] } };
-        E.lieutenants = D.shadow.lieutenants.map((def, i) => { const name = rng.pick(def.names); const L = eg.makePlace(state, rng, 'stronghold', def.siteName(name), where[def.id], { lieutenant: def.id }); return { id: def.id, name, locId: L ? L.id : null, alive: true, found: i === 0, defeatedYear: null }; });
+        const where = { warlord: { minD: 22, maxD: g2 ? 75 : 55, maxTier: g2 ? 1 : 2, terrains: ['plains', 'hills'] }, sorcerer: { minD: 45, maxD: 110, maxTier: 2, terrains: ['hills', 'mountains', 'plains'] }, blightmother: { minD: 40, maxD: 110, maxTier: 2, terrains: ['swamp', 'forest'] } };
+        const usedR = new Set(fort ? [fort.regionId] : []);
+        E.lieutenants = D.shadow.lieutenants.map((def, i) => {
+          const name = rng.pick(def.names), o = g2 ? Object.assign({ minTier: 1, avoidRegions: usedR }, where[def.id]) : where[def.id];
+          const L = eg.makePlace(state, rng, 'stronghold', def.siteName(name), o, { lieutenant: def.id });
+          if (L) usedR.add(L.regionId);
+          return { id: def.id, name, locId: L ? L.id : null, alive: true, found: i === 0, defeatedYear: null };
+        });
         const first = E.lieutenants[0];
         if (first.locId !== null) eg.reveal(state, state.world.locations[first.locId], true);
         if (fort) eg.reveal(state, fort, false);
@@ -62,8 +70,10 @@
       } else {
         E.god = Object.assign({}, D.crystals.god);
         const used = new Set();
+        // gen 2: the six outer regions from the nearest storm wall to the farthest; crystal i lies near the heart of region i
+        const outer = W.regions.filter(R => R.id !== W.regions[W.region[W.home.y * W.w + W.home.x]].id && R.landCells > 0).sort((a, b) => a.tier - b.tier || Math.hypot(a.cx - W.home.x, a.cy - W.home.y) - Math.hypot(b.cx - W.home.x, b.cy - W.home.y));
         E.crystals = D.crystals.list.map((def, i) => {
-          const o = i === 0 ? { minD: 18, maxD: 55, maxTier: 2 } : def.far ? { minTier: 3, far: true } : { minD: 35, maxD: 150, minTier: 1, maxTier: i < 3 ? 2 : 3 };
+          const o = g2 && outer[i] ? { region: outer[i].id, centre: true } : i === 0 ? { minD: 18, maxD: 55, maxTier: 2 } : def.far ? { minTier: 3, far: true } : { minD: 35, maxD: 150, minTier: 1, maxTier: i < 3 ? 2 : 3 };
           const L = eg.makePlace(state, rng, 'sanctuary', def.siteName.charAt(0).toUpperCase() + def.siteName.slice(1), Object.assign({ terrains: def.terrain, avoidRegions: used }, o), { crystal: def.id });
           if (L) used.add(L.regionId);
           return { id: def.id, locId: L ? L.id : null, found: i === 0, taken: null };
@@ -88,12 +98,13 @@
           const i = rng.int(W.w * W.h), tt = W.terrain[i];
           if (!HB.isLand(tt) || W.locAt[i] >= 0) continue;
           const rid = W.region[i]; if (rid < 0) continue;
+          if (o.region !== undefined && rid !== o.region) continue;
           const tier = W.regions[rid].tier;
           if (tier > (o.maxTier !== undefined ? o.maxTier : 3) || tier < (o.minTier || 0)) continue;
           if (strict && o.avoidRegions && o.avoidRegions.has(rid)) continue;
           if (strict && terrains && !terrains.includes(tt)) continue;
           const x = i % W.w, y = (i / W.w) | 0, d = Math.hypot(x - H.x, y - H.y);
-          if (!o.far && (d < (o.minD || 0) || d > (o.maxD || 999))) continue;
+          if (!o.far && !o.centre && (d < (o.minD || 0) || d > (o.maxD || 999))) continue;
           if (HB.world.locationsNear(W, x, y, 2.5).length) continue;
           cands.push({ i, x, y, d, rid });
         }
@@ -101,6 +112,7 @@
       };
       let cands = pick(true); if (!cands.length) cands = pick(false);
       if (!cands.length) return null;
+      if (o.centre) { const R = W.regions[o.region !== undefined ? o.region : cands[0].rid]; for (const c of cands) c.d = Math.hypot(c.x - R.cx, c.y - R.cy); }
       cands.sort((a, b) => o.far ? b.d - a.d : a.d - b.d);
       const c = cands[o.far ? 0 : Math.min(cands.length - 1, rng.int(Math.min(6, cands.length)))];
       const S = W.subregions[W.sub[c.i]];

@@ -60,11 +60,11 @@
       'map.place.stronghold': P('A lieutenant’s stronghold (sub-ids: map.place.stronghold.warlord, .sorcerer, .blightmother)', 10, { states: ['ruin'] }),
       'map.place.sanctuary': P('A sanctuary of a Crystal of Life (state "ruin": the crystal was taken)', 10, { states: ['ruin'] }),
       // ---- the settlement at the foot of your hill: map.home.<path>.<stage>
-      'map.home.benevolent.1': P('Kind home settlement, stage 1: a refuge', 8.5, { states: [], builder: 'HB.mapart.homeSettlement(ctx, x, y, s, stage, path)' }),
+      'map.home.benevolent.1': P('Kind home settlement, stage 1: one pilgrims\' camp (drawn 1–3 times around the lair)', 8.5, { states: [], builder: 'HB.mapart.homeSettlement(ctx, x, y, s, stage, path)' }),
       'map.home.benevolent.2': P('Kind home settlement, stage 2: a village', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
       'map.home.benevolent.3': P('Kind home settlement, stage 3: a flourishing town', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
       'map.home.benevolent.4': P('Kind home settlement, stage 4: a castle and sanctuary', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
-      'map.home.tyrannical.1': P('Cruel home settlement, stage 1: a coerced camp', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
+      'map.home.tyrannical.1': P('Cruel home settlement, stage 1: one cult camp (drawn 1–3 times around the lair)', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
       'map.home.tyrannical.2': P('Cruel home settlement, stage 2: a fortified settlement', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
       'map.home.tyrannical.3': P('Cruel home settlement, stage 3: a citadel', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),
       'map.home.tyrannical.4': P('Cruel home settlement, stage 4: a dark stronghold', 8.5, { states: [], builder: 'HB.mapart.homeSettlement' }),

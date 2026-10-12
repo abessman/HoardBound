@@ -297,7 +297,7 @@
         } else if (e.kind === 'hunters') {
           if (c.kills > 0 && c.outcome !== 'defeated') {
             e.dead = true; d.prestige += 3;
-            for (const g of state.memory.grudges) if (g.entityId === e.id) g.active = false;
+            for (const g of state.memory.grudges) if (g.entityId === e.id && g.active) HB.history.end(state, g, 'dead', `fell to the dragon in Year ${state.time.year}`);
             R.record(state, 'heroes', { factionId: e.factionId, place: e.name });
             if (f) HB.factions.adjust(state, f, { fear: 6, hostility: 4 }, `killed ${e.name}`);
             HB.consequences.react(state, `${e.name} will hunt no one again.`, 'because you turned and fought');

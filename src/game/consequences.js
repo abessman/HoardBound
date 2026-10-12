@@ -33,7 +33,7 @@
         loc: isLoc ? { id: target.id, wealth: target.wealth, trust: target.trust, fear: target.fear, state: target.state, threat: target.threat ? Object.assign({}, target.threat) : null } : null,
         threats: W.locations.filter(L => L.threat).map(L => L.id),
         titles: R.titles.length, deeds: Object.assign({}, R.deeds),
-        domain: HB.domain ? { status: isLoc ? HB.domain.statusOf(state, target) : null, reach: HB.domain.influence(state).count, members: HB.domain.members(state).map(m => m.L.id + ':' + m.status), stage: HB.domain.home(state).stage } : null,
+        domain: HB.domain ? { status: isLoc ? HB.domain.statusOf(state, target) : null, reach: HB.domain.influence(state).subs.size, members: HB.domain.members(state).map(m => m.L.id + ':' + m.status), stage: HB.domain.home(state).stage } : null,
       };
     },
     /** value of what is carried, and what storing it at home would do */

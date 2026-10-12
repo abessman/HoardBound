@@ -7,21 +7,24 @@
   const SETTLE = ['farm', 'village', 'town', 'city', 'castle', 'mine', 'hold', 'glade', 'monastery'];
   const PEOPLE = ['farm', 'village', 'town', 'city'];
   const OCCUPY = ['village', 'town', 'city', 'castle', 'mine'];
-  // to grow from stage n to n+1 (n >= 1): years at the stage, settlements of your kind, a lair upgrade, and more
+  // to grow from stage n to n+1 (n >= 1): your life phase first (young: camps; adult: a village, then a town;
+  // ancient: the castle or tower), then years at the stage, settlements of your kind, a lair upgrade, and more
   const STAGE_REQ = [null,
-    { years: 5, members: 1, up: 'guardpost' },
-    { years: 10, members: 3, up: 'forge', safe: 10 },
-    { years: 20, members: 5, up: 'entrance', upLv: 2, tier: 2 },
+    { years: 3, members: 1, up: 'guardpost', tier: 2 },
+    { years: 10, members: 3, up: 'forge', safe: 10, tier: 2 },
+    { years: 15, members: 5, up: 'entrance', upLv: 2, tier: 3 },
   ];
   const UP_WHY = {
     benevolent: { guardpost: 'a watch to keep the settlers safe', forge: 'workshops for its smiths', entrance: 'walls that can shelter them' },
     tyrannical: { guardpost: 'overseers to keep the camp in line', forge: 'furnaces for its forced labour', entrance: 'walls to hold them in' },
   };
   let cache = null; // influence, keyed on a signature of the domain
+  // territory radius around the lair in cells, by life phase: [at the start of the phase, with the hoard ready to grow]
+  const REACH = [[1.5, 3.5], [4, 8], [9, 15], [16, 22]];
 
   const dom = HB.domain = {
     SETTLE, PEOPLE,
-    fresh() { return { home: { stage: 0, path: null, character: 0, name: null, founded: null, stageYear: null, unrest: 0, lastRevolt: -99, lastBreach: -99, stored: 0, goldTotal: 0 }, ver: 0 }; },
+    fresh() { return { home: { stage: 0, path: null, character: 0, name: null, founded: null, stageYear: null, unrest: 0, lastRevolt: -99, lastBreach: -99, stored: 0, goldTotal: 0, favour: 0 }, ver: 0, lairFound: null }; },
     get(state) { if (!state.domain) state.domain = dom.fresh(); return state.domain; },
     home(state) { return dom.get(state).home; },
     /** something on the map changed: territory washes and glyphs are redrawn */
@@ -51,34 +54,66 @@
     },
     signature(state) {
       const h = dom.home(state);
-      return `${dom.get(state).ver}|${h.stage}|${h.path}|${state.dragon.tier}|${HB.endgame ? HB.endgame.signature(state) : ''}|` + dom.members(state).map(m => m.L.id + m.status[0]).join(',');
+      const r = dom.lairRadius(state).r, side = Math.round(dom.lairSide(state) * 4);
+      return `${dom.get(state).ver}|${h.stage}|${h.path}|${state.dragon.tier}|${r.toFixed(1)}|${side}|${HB.endgame ? HB.endgame.signature(state) : ''}|` + dom.members(state).map(m => m.L.id + m.status[0]).join(',');
     },
-    // ---------- influence: territorial reach, by subregion, spreading from the lair and the places that serve you
+    // ---------- territory: the land your rule reaches, a field over the cells around the lair (0.11)
+    // A circle that grows with your life phase and, within a phase, with your hoard; the settlement at your hill widens
+    // it a little, and the places that serve you add lobes around themselves. It never leaves your home region: the
+    // other six regions are where your rivals and the great struggle live.
+    lairRadius(state) {
+      const d = state.dragon, T = HB.TIERS, t = d.tier, R = REACH[t] || REACH[REACH.length - 1];
+      const e = HB.stats.hoardEnergy(state), lo = T[t].energy, hi = T[t + 1] ? T[t + 1].energy : T[t].energy * 2;
+      const p = HB.clamp((e - lo) / Math.max(1, hi - lo), 0, 1);
+      return { r: R[0] + (R[1] - R[0]) * p + dom.home(state).stage * 0.8, progress: p, next: R[1] };
+    },
+    homeRegion(state) { const W = state.world; return W.region[W.home.y * W.w + W.home.x]; },
+    /** where the territory's colour comes from at the lair: the home's path, else your leaning (faint while undecided) */
+    lairSide(state) { const h = dom.home(state); return h.stage > 0 ? (h.path === 'tyrannical' ? -1 : 1) : HB.clamp(state.dragon.alignment / 40, -1, 1); },
+    sources(state) {
+      const W = state.world, h = dom.home(state), rid = dom.homeRegion(state), out = [];
+      out.push({ x: W.home.x + 0.5, y: W.home.y + 0.5, r: dom.lairRadius(state).r, side: dom.lairSide(state), name: h.name || 'your lair', lair: true });
+      for (const m of dom.members(state)) if (m.L.regionId === rid) { const S = HB.DOMAIN_STATUSES[m.status]; out.push({ x: m.L.x + 0.5, y: m.L.y + 0.5, r: S.lobe, side: S.side, name: m.L.name, id: m.L.id }); }
+      return out;
+    },
     influence(state) {
       const sig = dom.signature(state);
       if (cache && cache.state === state && cache.sig === sig) return cache.inf;
-      const W = state.world, S = W.subregions, h = dom.home(state);
-      const str = new Map(), side = new Map(), wt = new Map(), from = new Map();
-      const add = (sub, reach, sd, name) => {
-        if (sub < 0 || reach <= 0) return;
-        const q = [[sub, reach]], seen = new Set([sub]);
-        while (q.length) {
-          const [s, r] = q.shift();
-          if (r > (str.get(s) || 0)) { str.set(s, r); from.set(s, name); }
-          side.set(s, (side.get(s) || 0) + sd * r); wt.set(s, (wt.get(s) || 0) + r);
-          if (r > 1) for (const n of S[s].neighbors) if (!seen.has(n)) { seen.add(n); q.push([n, r - 1]); }
+      const W = state.world, N = W.w * W.h, rid = dom.homeRegion(state);
+      const field = new Float32Array(N), sideW = new Float32Array(N), wsum = new Float32Array(N);
+      const src = dom.sources(state), seed = HB.hash32('territory:' + state.seed);
+      let x0 = W.w, y0 = W.h, x1 = -1, y1 = -1;
+      src.forEach((s, k) => {
+        if (s.r <= 0) return;
+        // a wobbling outline (watercolour does not paint circles), fixed per source so it never jitters
+        const ph = s.ph = [(seed >>> (k % 24)) % 628 / 100, (seed * 7 + k * 131) % 628 / 100, (seed * 13 + k * 57) % 628 / 100];
+        const R = s.r * 1.25;
+        for (let y = Math.max(0, Math.floor(s.y - R)); y <= Math.min(W.h - 1, Math.ceil(s.y + R)); y++) for (let x = Math.max(0, Math.floor(s.x - R)); x <= Math.min(W.w - 1, Math.ceil(s.x + R)); x++) {
+          const i = y * W.w + x; if (W.region[i] !== rid || !HB.isLand(W.terrain[i])) continue;
+          const dx = x + 0.5 - s.x, dy = y + 0.5 - s.y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+          const rr = s.r * (1 + 0.14 * Math.sin(3 * a + ph[0]) + 0.08 * Math.sin(5 * a + ph[1]) + 0.05 * Math.sin(9 * a + ph[2]));
+          const v = 1 - d / Math.max(0.5, rr); if (v <= 0) continue;
+          if (v > field[i]) field[i] = v;
+          sideW[i] += s.side * v; wsum[i] += v;
+          if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
         }
-      };
-      if (h.stage > 0 || state.dragon.tier >= 1) add(W.home.subId, h.stage >= 3 ? 3 : h.stage >= 1 ? 2 : 1, h.stage > 0 ? (h.path === 'tyrannical' ? -1 : 1) : 0, h.name || 'your lair');
-      for (const m of dom.members(state)) { const st = HB.DOMAIN_STATUSES[m.status]; add(m.L.subId, st.reach, st.side, m.L.name); }
-      const subs = new Map();
-      for (const [s, r] of str) subs.set(s, { s: r, c: HB.clamp((side.get(s) || 0) / Math.max(1, wt.get(s) || 1), -1, 1), from: from.get(s) });
-      const inf = { subs, count: subs.size };
+      });
+      const side = new Float32Array(N), subs = new Map(); let count = 0;
+      for (let i = 0; i < N; i++) {
+        if (field[i] <= 0) continue;
+        count++; side[i] = wsum[i] ? HB.clamp(sideW[i] / wsum[i], -1, 1) : 0;
+        const sb = W.sub[i]; if (sb < 0) continue;
+        const o = subs.get(sb); if (!o) subs.set(sb, { s: field[i], c: side[i], n: 1 }); else { o.s = Math.max(o.s, field[i]); o.c += (side[i] - o.c) / ++o.n; }
+      }
+      const inf = { field, side, subs, count, sources: src, bbox: count ? { x0, y0, x1, y1 } : null, region: rid };
       cache = { state, sig, inf };
       return inf;
     },
-    reachOf(state, L) { const o = dom.influence(state).subs.get(L.subId); return o ? o.s : 0; },
+    /** how strongly your rule reaches this place: 0 outside, 1 at the edge, 3 near the heart */
+    reachOf(state, L) { const v = dom.influence(state).field[L.y * state.world.w + L.x]; return v <= 0 ? 0 : v > 0.6 ? 3 : v > 0.3 ? 2 : 1; },
     inInfluence(state, L) { return dom.reachOf(state, L) >= 1; },
+    /** is this place in the home region (the only one your rule can take)? */
+    inHomeRegion(state, L) { return L.regionId === dom.homeRegion(state); },
     /** per-cell mark for the map: negative = blighted by tyranny, positive = flourishing; strongest near the lair */
     markField(state) {
       const W = state.world, f = new Int8Array(W.w * W.h), h = dom.home(state);
@@ -98,6 +133,35 @@
       }
       if (HB.endgame) HB.endgame.paintMarks(state, paint);
       return f;
+    },
+    // ---------- does anyone know where you sleep? (offerings come, and so do spears)
+    lairKnown(state) { return !!dom.get(state).lairFound || dom.home(state).stage > 0 || (HB.pursuit ? HB.pursuit.lairFoundCount(state) > 0 : false); },
+    /** your lair was found (hunters, thieves, riders who followed you home): said once, with its cause */
+    markFound(state, how) {
+      const D = dom.get(state); if (D.lairFound) return;
+      D.lairFound = { year: state.time.year, how };
+      if (HB.consequences) HB.consequences.react(state, 'People know where you sleep now. Some will bring offerings to your hill; others will come with spears.', `because ${how}`);
+    },
+    // gifts from your hoard to the settlement at your hill (adult, once it is a village): each counts as years of growth
+    GIFTS: { small: { gold: 100, favour: 1, unrest: 12, trust: 2 }, great: { gold: 500, favour: 3, unrest: 40, trust: 6 } },
+    canGift(state, size) {
+      const h = dom.home(state), G = dom.GIFTS[size], T = STAGE_REQ[h.stage];
+      if (h.stage < 2 || state.dragon.tier < 2) return { ok: false, show: h.stage >= 1, reason: 'Gifts are for a village, not for camps: once you are an adult and the camps have become a village.' };
+      if (state.hoard.gold < G.gold) return { ok: false, show: true, reason: `It costs ${G.gold} gold from the hoard; you have ${HB.fmt.int(state.hoard.gold)}.` };
+      if (T && (h.favour || 0) >= Math.floor(T.years * 0.6) && (h.path === 'benevolent' || h.unrest <= 0)) return { ok: false, show: true, reason: 'They are grateful already: gold alone will not make it grow faster now. Give it years.' };
+      return { ok: true, cost: G.gold };
+    },
+    gift(state, size) {
+      const c = dom.canGift(state, size); if (!c.ok) return c.reason;
+      const h = dom.home(state), G = dom.GIFTS[size], T = STAGE_REQ[h.stage];
+      HB.hoard.spend(state, G.gold);
+      if (T) h.favour = Math.min(Math.floor(T.years * 0.6), (h.favour || 0) + G.favour);
+      let text;
+      if (h.path === 'tyrannical') { const u0 = h.unrest; h.unrest = Math.max(0, h.unrest - G.unrest); text = `You throw ${G.gold} gold to ${h.name}'s overseers for bread and beer. Unrest falls from ${Math.round(u0)} to ${Math.round(h.unrest)}, and the work goes faster.`; }
+      else { for (const m of dom.kindMembers(state, 'benevolent')) m.L.trust = Math.min(100, m.L.trust + G.trust); text = `${G.gold} gold goes down the hill to ${h.name}: a new mill, a roof for the hall, seed for the spring. They will remember, and so will the places that trust you.`; }
+      HB.game.chronicle(state, `Gave ${G.gold} gold from the hoard to ${h.name}.`, 'domain');
+      dom.bump(state);
+      return text;
     },
     // ---------- the settlement at the foot of your hill
     stageInfo(state) { const h = dom.home(state); return h.stage > 0 ? HB.HOME_STAGES[h.path][h.stage] : null; },
@@ -129,8 +193,9 @@
         return { path, target: path === 'undecided' ? null : HB.HOME_STAGES[path][1], reqs };
       }
       if (h.stage >= 4) return { path, target: null, reqs };
-      const T = STAGE_REQ[h.stage], years = year - h.stageYear, kind = dom.kindMembers(state, path).length;
-      reqs.push({ key: 'years', label: `${T.years} years to grow`, cur: Math.max(0, years), need: T.years, done: years >= T.years, hint: 'Settlements grow while you sleep.' });
+      const T = STAGE_REQ[h.stage], years = year - h.stageYear + (h.favour || 0), kind = dom.kindMembers(state, path).length;
+      if (T.tier) reqs.push({ key: 'tier', label: T.tier >= 3 ? 'Be an ancient dragon' : 'Be an adult dragon', done: d.tier >= T.tier, hint: T.tier >= 3 ? 'A castle or a dark tower rises only beside a dragon of legend.' : 'Camps become a village around a grown dragon: it is the third phase of your life.' });
+      reqs.push({ key: 'years', label: `${T.years} years to grow`, cur: Math.max(0, Math.min(T.years, years)), need: T.years, done: years >= T.years, hint: `Settlements grow while you sleep${h.favour ? ` (your gifts count for ${HB.fmt.plural(h.favour, 'year')})` : '; gifts from your hoard speed them'}.` });
       reqs.push({ key: 'members', label: path === 'benevolent' ? `${HB.fmt.plural(T.members, 'settlement')} under your protection` : `${HB.fmt.plural(T.members, 'settlement')} paying you tribute or occupied`, cur: kind, need: T.members, done: kind >= T.members, hint: path === 'benevolent' ? 'Offer protection to places that trust you; take their oaths.' : 'Demand tribute from places that fear you; occupy them.' });
       const lv = HB.lair.level(state, T.up);
       reqs.push({ key: 'lair', label: `${HB.UPGRADE_BY_ID[T.up].name}${T.upLv ? ' level ' + T.upLv : ''} in your lair`, done: lv >= (T.upLv || 1), hint: `It needs ${UP_WHY[path][T.up]}.` });
@@ -138,7 +203,6 @@
         const since = path === 'benevolent' ? year - h.lastBreach : year - h.lastRevolt;
         reqs.push({ key: 'safe', label: path === 'benevolent' ? `No hunters inside the lair for ${T.safe} years` : `No revolt for ${T.safe} years`, done: since >= T.safe, hint: path === 'benevolent' ? 'Settlers do not stay where hunters walk through their village to your door.' : 'Guards and a guard post hold the camp down.' });
       }
-      if (T.tier) reqs.push({ key: 'tier', label: 'Be an adult dragon', done: d.tier >= T.tier, hint: 'A castle is built around a dragon worth building it for.' });
       return { path, target: HB.HOME_STAGES[path][h.stage + 1], reqs };
     },
     /** found the settlement or grow it a stage, if it is ready; returns the text or null */
@@ -150,10 +214,10 @@
         const src = dom.foundingSource(state, nr.path);
         h.stage = 1; h.path = nr.path; h.founded = year; h.stageYear = year; h.character = state.dragon.alignment; h.unrest = 0;
         h.name = h.name || dom.makeName(state, rng);
-        if (nr.path === 'benevolent') { text = `Families from ${src.name} have built huts at the foot of your hill and named the place ${h.name}: ${nr.target.noun}. It is the safest place they know.`; cause = `because they trust you, and you are big enough to keep them safe`; }
-        else { text = `Your overseers have driven ${src.L ? 'people from ' + src.name : src.name} into a stockade below the cave: ${h.name}, ${nr.target.noun}.`; cause = 'because you hold people by fear, and fear needs a fence'; }
+        if (nr.path === 'benevolent') { text = `Pilgrims from ${src.name} have pitched their camps around your hill and call the place ${h.name}. It is the safest place they know.`; cause = `because they trust you, and you are big enough to keep them safe`; }
+        else { text = `A cult has gathered around your hill: ${src.L ? 'frightened people from ' + src.name : src.name} and those who worship your terror, camped in ${h.name}.`; cause = 'because you hold people by fear, and some come to worship it'; }
       } else {
-        h.stage++; h.stageYear = year;
+        h.stage++; h.stageYear = year; h.favour = 0;
         const S = HB.HOME_STAGES[h.path][h.stage];
         text = `${h.name} has grown into ${S.noun}. ${S.text}`;
         cause = `because it had years to grow, ${HB.fmt.plural(dom.kindMembers(state, h.path).length, h.path === 'benevolent' ? 'settlement' : 'subject settlement')} behind it, and what it needed in your lair`;
@@ -260,8 +324,16 @@
       return ev;
     },
     // ---------- deeds that spread or lose your rule (arrival-card choices)
+    /** why a place is outside your reach, or null: past the storms around your home region, or past your territory's edge */
+    outsideReason(state, L) {
+      if (!dom.inHomeRegion(state, L)) return `${L.name} lies beyond your home region. Your rule cannot reach past ${state.world.regions[dom.homeRegion(state)].name}: the lands beyond are your rivals'.`;
+      if (!dom.inInfluence(state, L)) return `${L.name} is outside your territory. It grows with your size and your hoard, and around the places that serve you.`;
+      return null;
+    },
     canOath(state, L) {
       if (dom.statusOf(state, L) !== 'protected') return { ok: false };
+      if (state.dragon.tier < 2) return { ok: false, reason: 'Places swear only to a grown dragon. As an adult (the third phase of your life) you can bring them into your fold.' };
+      const out = dom.outsideReason(state, L); if (out) return { ok: false, reason: out };
       const since = L.flags.protected || state.time.year;
       if (L.trust < 50) return { ok: false, reason: `They are not ready to swear (trust ${Math.round(L.trust)} of 50). Keep the raiders off them, give back what was stolen, guard their caravans.` };
       if (!L.flags.oathOffered && state.time.year - since < 1 && !(L.flags.savedYear >= since)) return { ok: false, reason: 'They swore to your protection only this year. Keep them safe a while.' };
@@ -306,7 +378,8 @@
       const d = state.dragon, s = d.stats, f = L.factionId >= 0 ? state.world.factions[L.factionId] : null, st = dom.statusOf(state, L);
       if (d.tier < 1 || !OCCUPY.includes(L.type) || L.state !== 'normal' || L.occupation || st === 'protected' || st === 'allied') return { ok: false, show: false };
       const show = st === 'tributary' || L.fear >= 30 || dom.leaning(state).id === 'tyrannical';
-      if (!dom.inInfluence(state, L)) return { ok: false, show, reason: 'Beyond your influence. Your rule spreads from your lair, and from the places that serve you, to their neighbours: bring a place nearer to it under your rule first.' };
+      if (d.tier < 2) return { ok: false, show, reason: 'Only a grown dragon can hold a place. As an adult (the third phase of your life) you can bring places into your fold.' };
+      const out = dom.outsideReason(state, L); if (out) return { ok: false, show, reason: out };
       const fear = Math.max(L.fear, f ? f.dragon.fear : 0);
       const lev = fear + s.dominance * 0.8 + (st === 'tributary' ? 25 : 0) + (L.lastRaidYear === state.time.year ? 20 : 0) - L.defense * 0.6;
       if (lev < 30) return { ok: false, show, reason: `They would fight you street by street (fear ${Math.round(fear)}, dominance ${Math.round(s.dominance)} against defences ${L.defense}). Make them pay tribute first, or break their watch in a raid this year.` };
@@ -333,6 +406,7 @@
     crush(state, L) {
       const f = L.factionId >= 0 ? state.world.factions[L.factionId] : null, o = L.occupation;
       o.resistance = 10; o.resisting = false; o.resistYears = 0;
+      if (HB.history && HB.game.rng.chance(0.6)) HB.history.grievance(state, { name: HB.names.person(HB.game.rng, f ? f.culture : 'westron', false), kind: 'rebel', from: L.name, locId: L.id, factionId: L.factionId, level: 2, text: `led the rising in ${L.name} and watched you crush it in Year ${state.time.year}` });
       L.fear = Math.min(100, L.fear + 20); L.wealth = Math.round(L.wealth * 0.85); L.pop = Math.round((L.pop || 0) * 0.95);
       state.dragon.alignment = HB.clamp(state.dragon.alignment - 4, -100, 100);
       if (f) { HB.factions.adjust(state, f, { fear: 4, hostility: 6 }, `crushed the resistance in ${L.name}`); if (HB.heat) HB.heat.add(state, f, 12, `you crushed ${L.name}`); }
@@ -351,6 +425,7 @@
     },
     raze(state, L) {
       const W = state.world, f = L.factionId >= 0 ? W.factions[L.factionId] : null, d = state.dragon;
+      if (HB.history && HB.game.rng.chance(0.5)) HB.history.grievance(state, { name: HB.names.person(HB.game.rng, f ? f.culture : 'westron', false), kind: 'hunter', from: L.name, locId: L.id, factionId: L.factionId, level: 2 + d.tier, text: `crawled out of the ashes of ${L.name} in Year ${state.time.year} and swore to kill the dragon` });
       const lost = L.tribute && !L.tribute.lapsed ? L.tribute.amount : 0;
       const room = Math.max(0, d.stats.capacity - HB.game.cargoWeight(state)) * 100;
       const spoils = Math.round(Math.min(room, L.wealth * 0.5));
@@ -368,9 +443,64 @@
       return `You burn ${L.name} from the gate to the granary. ${spoils ? `${spoils} gold comes out of the cellars and the strongboxes.` : 'You cannot carry anything more.'}${lost ? ` It will never pay you again.` : ''}`;
     },
     /** choices on the arrival card at a settlement */
+    // ---------- a castle's fealty (adult): some lords would rather serve a dragon than their own king
+    canFealty(state, L) {
+      if (L.type !== 'castle' || L.state !== 'normal' || dom.statusOf(state, L)) return { ok: false, show: false };
+      const W = state.world, f = L.factionId >= 0 ? W.factions[L.factionId] : null, trust = Math.max(L.trust, f ? f.dragon.trust * 0.8 : 0);
+      if (trust < 30 && state.dragon.alignment < 20) return { ok: false, show: false };
+      if (state.dragon.tier < 2) return { ok: false, show: true, reason: 'Its lord would not kneel to a young dragon. Come back as an adult.' };
+      const out = dom.outsideReason(state, L); if (out) return { ok: false, show: true, reason: out };
+      if (L.capital) return { ok: false, show: true, reason: `${L.name} is the seat of its realm's ruler; it will never swear to you.` };
+      if (trust < 55) return { ok: false, show: true, reason: `Its lord does not trust you enough (trust ${Math.round(trust)} of 55). Protect the villages around it, keep the roads safe, return what was taken.` };
+      return { ok: true };
+    },
+    fealty(state, L) {
+      const c = dom.canFealty(state, L); if (!c.ok) return c.reason;
+      const W = state.world, f = L.factionId >= 0 ? W.factions[L.factionId] : null, year = state.time.year;
+      L.tribute = { amount: Math.max(30, Math.round(L.wealth * 0.05)), since: year, lapsed: false, willing: true, paidTotal: 0 };
+      L.flags.protected = year; L.flags.allied = year; L.trust = Math.min(100, L.trust + 10);
+      state.dragon.alignment = HB.clamp(state.dragon.alignment + 2, -100, 100);
+      if (f) HB.factions.adjust(state, f, { hostility: 6, trust: -4 }, `${L.name} swore fealty to the dragon instead of its king`);
+      if (HB.renown) HB.renown.record(state, 'allied', { factionId: L.factionId, place: L.name });
+      HB.game.chronicle(state, `The lord of ${L.name} swore fealty to the dragon.`, 'domain', L.id);
+      if (HB.consequences) HB.consequences.react(state, `${L.name} is sworn to you: its knights ride under your sign${f ? `, and ${f.name} counts it a betrayal` : ''}.`, 'because its lord trusts you more than their own king');
+      dom.bump(state); state.phase = 'planning';
+      return `The lord of ${L.name} comes out bareheaded and kneels in the gate. Their banners stay, but a second one is raised beside them: yours.`;
+    },
+    // ---------- what a place inside your territory will do for you (young and older): news, and food
+    asks(state, L) {
+      const out = [], d = state.dragon, W = state.world, year = state.time.year, s = dom.statusOf(state, L);
+      if (d.tier < 1 || !['farm', 'village', 'town', 'city', 'castle', 'monastery', 'mine'].includes(L.type) || L.state !== 'normal' || s === 'resisting' || !dom.inInfluence(state, L)) return out;
+      const f = L.factionId >= 0 ? W.factions[L.factionId] : null, trust = Math.max(L.trust, f ? f.dragon.trust * 0.8 : 0), fear = Math.max(L.fear, f ? f.dragon.fear * 0.8 : 0);
+      if (trust >= 20 || fear >= 30) out.push({ id: 'news', label: 'Ask for news', disabled: L.flags.newsYear === year, disabledReason: 'They told you all they know this year.', desc: L.flags.newsYear === year ? 'They told you all they know this year.' : 'What travellers say of the lands around: places to the map as rumours.', tooltip: 'Places inside your territory answer your questions, out of trust or out of fear.', onChoose: () => dom.askNews(state, L) });
+      const fed = L.flags.feastYear === year, hurt = d.health < d.stats.maxHealth || d.stamina < d.stats.maxStamina;
+      if (trust >= 30 && d.alignment > -10) out.push({ id: 'hospitality', label: 'Accept their hospitality', disabled: fed || !hurt, disabledReason: fed ? 'They fed you this year already.' : 'You are not hungry or hurt.', desc: fed ? 'They fed you this year already.' : 'They bring food and water: health and stamina restored. They are glad to.', onChoose: () => dom.feast(state, L, true) });
+      else if (fear >= 30) out.push({ id: 'feast', label: 'Demand a feast', disabled: fed || !hurt, disabledReason: fed ? 'They have nothing left to give this year.' : 'You are not hungry or hurt.', desc: fed ? 'They have nothing left to give this year.' : 'Their herds and stores: health and stamina restored. Fear grows; so does hatred.', onChoose: () => dom.feast(state, L, false) });
+      return out;
+    },
+    askNews(state, L) {
+      L.flags.newsYear = state.time.year;
+      const before = state.world.locations.filter(P => P.knowledge.seen || P.knowledge.rumored).length;
+      HB.world.rumor(state, L.x, L.y, 12);
+      const after = state.world.locations.filter(P => P.knowledge.seen || P.knowledge.rumored).length;
+      state.phase = 'planning';
+      return `${L.name} tells you what the carters and pilgrims say: roads, fords, who is rich and who is guarded.${after > before ? ` ${HB.fmt.plural(after - before, 'new place')} on your map as rumour.` : ' Nothing you did not know.'}`;
+    },
+    feast(state, L, willing) {
+      const d = state.dragon, f = L.factionId >= 0 ? state.world.factions[L.factionId] : null;
+      L.flags.feastYear = state.time.year;
+      d.health = Math.min(d.stats.maxHealth, d.health + Math.round(d.stats.maxHealth * 0.5)); d.stamina = d.stats.maxStamina;
+      if (willing) { L.trust = Math.min(100, L.trust + 2); L.wealth = Math.max(0, Math.round(L.wealth * 0.98)); }
+      else { L.fear = Math.min(100, L.fear + 5); L.trust = Math.max(0, L.trust - 10); L.wealth = Math.max(0, Math.round(L.wealth * 0.94)); state.dragon.alignment = HB.clamp(d.alignment - 1, -100, 100); if (f) HB.factions.adjust(state, f, { hostility: 1, fear: 1 }, `you took a feast from ${L.name}`); }
+      state.phase = 'planning';
+      return willing ? `They roast a sheep for you in the square and the children watch you eat it. You leave rested.` : `They drive out their best cattle and do not look at you while you eat. You leave rested; they leave hungry.`;
+    },
     choicesFor(state, L) {
       const out = [], s = dom.statusOf(state, L);
       if (!L || L.type === 'lair') return out;
+      const fc = dom.canFealty(state, L);
+      if (fc.show) out.push({ label: 'Accept their fealty', desc: fc.ok ? `${L.name} joins your domain as an ally; its realm will call it a betrayal.` : fc.reason, disabled: !fc.ok, disabledReason: fc.reason, tooltip: 'A sworn castle widens your territory and stands with you. Its king will not forgive it.', onChoose: () => dom.fealty(state, L) });
+      for (const a of dom.asks(state, L)) out.push(a);
       if (s === 'protected') { const c = dom.canOath(state, L); out.push({ label: 'Take their oath', desc: c.ok ? `${L.name} joins your domain as an ally: settlers, watchers and news. You must keep it safe.` : c.reason, disabled: !c.ok, disabledReason: c.reason, tooltip: 'Allies spread your influence to their neighbours, help found and grow the settlement at your lair, and stand with you.', onChoose: () => dom.takeOath(state, L) }); }
       if (L.state === 'burned' && PEOPLE.includes(L.type)) { const c = dom.canRebuild(state, L), cost = dom.rebuildCost(L); out.push({ label: `Help rebuild (${cost} gold)`, desc: c.ok ? 'Paid from what you carry, then from your hoard. Its people will trust you deeply.' : c.reason, disabled: !c.ok, disabledReason: c.reason, tooltip: 'Gold spent here leaves your hoard (and your hoard strength). In return: a living settlement, its trust, and a place that would join your domain.', onChoose: () => dom.rebuild(state, L) }); }
       const oc = dom.canOccupy(state, L);
@@ -396,6 +526,7 @@
         const others = dom.members(state).filter(m => m.status === 'protected' || m.status === 'allied');
         for (const m of others) m.L.trust = Math.max(0, m.L.trust - 15);
         HB.game.chronicle(state, `Raided ${L.name}, which it had sworn to protect.`, 'domain', L.id);
+        if (HB.history) HB.history.grievance(state, { name: `the elders of ${L.name}`, kind: 'betrayed', from: L.name, locId: L.id, factionId: L.factionId, level: 2, text: `trusted your oath to protect them, and you raided them in Year ${state.time.year}` });
         if (HB.consequences) HB.consequences.react(state, `You raided ${L.name}, which you had sworn to protect. It owes you nothing now${others.length ? `, and ${HB.fmt.list(others.slice(0, 3).map(m => m.L.name))}${others.length > 3 ? ' and the rest' : ''} trust you less` : ''}.`, 'because you broke your word');
         dom.bump(state);
       } else if (s === 'occupied' || s === 'resisting') {
@@ -421,7 +552,7 @@
       if (d.tier >= 1 && nr.target) {
         const miss = nr.reqs.filter(r => !r.done);
         out.push({ aim: 'domain', title: h.stage ? `Grow ${h.name} into ${nr.target.noun}` : `Found your domain: ${nr.target.noun}`, desc: miss.length ? `Still needed: ${dom.missingText(nr)}.` : 'Everything is ready: it happens on your next return home or during your next sleep.', yields: nr.target.gives.join('; ') + '.', ref: { kind: 'tab', tab: 'domain' } });
-      } else if (d.tier >= 1 && nr.path === 'undecided') out.push({ aim: 'domain', title: 'Be known as kind or as cruel', desc: nr.reqs.find(r => r.key === 'path').hint, yields: 'People come to live at the foot of your hill: a refuge that grows into a castle, or a camp that grows into a dark stronghold.', ref: { kind: 'tab', tab: 'domain' } });
+      } else if (d.tier >= 1 && nr.path === 'undecided') out.push({ aim: 'domain', title: 'Be known as kind or as cruel', desc: nr.reqs.find(r => r.key === 'path').hint, yields: 'People camp around your hill: pilgrims who grow into a village and then a castle, or a cult that grows into a dark stronghold.', ref: { kind: 'tab', tab: 'domain' } });
       for (const L of known) {
         const s = dom.statusOf(state, L);
         if (s === 'protected' && dom.canOath(state, L).ok) out.push({ aim: 'domain', title: `Take the oath of ${L.name}`, desc: `${L.name} trusts you (${Math.round(L.trust)})${L.flags.oathOffered ? ' and has asked to swear to you' : ''}. ${dist(L)} leagues away.`, yields: 'An ally: your influence spreads to its neighbours; settlers, watchers and news.', ref: { kind: 'loc', id: L.id } });

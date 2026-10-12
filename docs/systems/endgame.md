@@ -22,7 +22,9 @@ rumour foreshadows it (one reaction). On the map a card announces it with the wh
 
 ### A kind dragon: the Hollow King (`state.endgame.path = 'shadow'`)
 - New places (created at a suitable empty cell, positions saved): the **Hollow Throne** (a dark fortress, as far
-  from the lair as an adult can fly) and three **strongholds**. Names come from small pools in `src/data/endgame.js`.
+  from the lair as an adult can fly) and three **strongholds**. In seven-region worlds (0.11) all of them lie beyond
+  your home region, the lieutenants in different regions, the throne in an adult's region. Names come from small
+  pools in `src/data/endgame.js`.
 - **Warlord** (playable): his warbands march on the places that trust you (protected or allied; else the nearest
   village to the lair): an orc host threat about once every 80 days awake, half the years asleep. Hosts are
   tougher outlaws (orc raiders), harder to repel without you, and burn more. His **warcamp** is an animated raid:
@@ -35,8 +37,9 @@ rumour foreshadows it (one reaction). On the map a card announces it with the wh
 - The **fortress** card lists which powers still protect the king; the last battle is not built yet.
 
 ### A cruel dragon: the Crystals of Life (`path = 'crystals'`)
-- Six **sanctuaries** in different realms: the first near enough for an adult, later ones farther, the last on the
-  isles (needs an ancient dragon to cross the sea). Each crystal has a guardian, a benefit to its realm and a loss.
+- Six **sanctuaries**, one near the heart of each of the six regions beyond your home (0.11), from the nearest storm
+  wall to the farthest: two open to a young dragon, two to an adult, two to an ancient one (older worlds: in
+  different realms, the last on the isles). Each crystal has a guardian, a benefit to its realm and a loss.
 - **Greenmarrow** (playable): the grove is an animated raid with warden archers and the Warden of the Grove (a
   ranged boss). The crystal is **warded while the guardian lives** (grab disabled, with the reason); killing the
   guardian breaks the ward. Taking it: every settlement in that region loses a quarter of its maximum wealth for

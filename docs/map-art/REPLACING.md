@@ -51,15 +51,15 @@ fall back to the hand-drawn symbol for that variant.
 ```
 index.html?scene=mappreview&mappack=<pack>
 index.html?scene=mappreview&mappack=<pack>&chunks=1          # dashed lines on chunk edges: check for seams or clipping
-index.html?scene=mappreview&mappack=<pack>&cam=50.5,103.5,2.6  # camera x, y (cells), zoom
+index.html?scene=mappreview&mappack=<pack>&cam=~-3,0,2.6     # camera: ~ = offset from the lair in cells, then zoom
 node tools/screenshot.mjs out.png --wait=2500 --url="index.html?scene=mappreview&mappack=<pack>"
 ```
 
-Fixed seed (`ember-quill-42`) and camera; around the lair: broadleaf and pine forests, hills, mountains, fields
-flourishing under your protection, a crowded valley, a chunk boundary, the fog's edge, places seen through the
-fog, protected villages with pennants, a tributary castle, an occupied town, a castle in revolt, a burned town, a
-village under attack, story seals, labels, caravans and the dragon circling (zoom out for the struggle's first
-lieutenant). It is a test campaign: it saves only to the `test` slot. `node tools/mapart-export.mjs` re-shoots the
+Fixed seed (`ember-quill-42`); the camera frames the lair and the places the preview sets up: forests, hills and
+mountains, fields flourishing under your protection, a chunk boundary, the fog's edge and the storm wall, your
+territory's watercolour wash, protected villages with pennants, one settlement tributary, one occupied and one in
+revolt, a burned town, a place under attack, story seals, labels, caravans and the dragon circling (zoom out for
+the struggle's first lieutenant). It is a test campaign: it saves only to the `test` slot. `node tools/mapart-export.mjs` re-shoots the
 screens and re-runs the checks in [checks.json](checks.json).
 
 ## 6. Refresh

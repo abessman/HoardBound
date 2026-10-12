@@ -1,4 +1,4 @@
-# Map art: implementation summary (0.10.0)
+# Map art: implementation summary (0.10.0; numbers re-measured in 0.11.0)
 
 What was built for [map_update.md](../../map_update.md), what is left hand-coded, and what was actually checked.
 System doc: [docs/systems/art-and-sprites.md](../systems/art-and-sprites.md).
@@ -74,13 +74,14 @@ drawn when the chosen art lacks the state.
 
 - `node tools/test.js` on two seeds (the *map art* section: contract complete, ids the code asks for exist, reach
   limit, the validator on both packs, the preview campaign deterministic and saveable).
-- In headless Chromium ([checks.json](checks.json)): the drawing is wrapped; no pack loads nothing; the 2 028 glyph
+- In headless Chromium ([checks.json](checks.json)): the drawing is wrapped; no pack loads nothing; the 1 487 glyph
   calls of four chunks at both levels of detail are identical with no pack, the sample pack and the broken pack;
   selection hit areas identical; the sample pack loads 6 ids and 7 images with no warnings; mountain variants at 4×
   and 2× draw at the same size and anchor; the broken pack draws only its valid pine and warns 9 times; campaign saves
   are identical with and without the pack and round-trip; no page errors.
-- Performance ([perf.json](perf.json), headless Chromium, software rendering, 30 fps cap): map draw median 2.5 ms
-  both ways; rebuilding the 12 visible chunks 47 ms without a pack, 61 ms with the sample pack; sample pack decoded
+- Performance ([perf.json](perf.json), headless Chromium, software rendering, 30 fps cap): map draw median 2.9 ms
+  without a pack and 3.3 ms with it; rebuilding the 9 visible chunks 30 ms without a pack, 27 ms with the sample pack (the
+  0.11 world and its watercolour wash; 0.10 measured 47 and 61 ms for 12 chunks); sample pack decoded
   images 0.24 MB; chunk cache bound 90 × 440² px ≈ 66 MB (unchanged).
 - Desktop: the playthrough script and screenshots at 1280×720. iPad: only an iPad-sized viewport (1180×820 at 2×,
   touch enabled) in headless Chromium; **no physical iPad was used**. Touch input is unchanged (hit areas do not use

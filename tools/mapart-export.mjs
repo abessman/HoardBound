@@ -84,8 +84,8 @@ try {
   if (want('shots')) {
     const shots = [
       ['preview-none.jpg', '&mappack=none'], ['preview-sample.jpg', '&mappack=sample'], ['preview-sample-chunks.jpg', '&mappack=sample&chunks=1'],
-      ['preview-sample-close.jpg', '&mappack=sample&cam=50.5,102.5,2.6'], ['preview-none-close.jpg', '&mappack=none&cam=50.5,102.5,2.6'],
-      ['preview-sample-far.jpg', '&mappack=sample&cam=50.5,104.5,0.45'], ['preview-broken.jpg', '&mappack=test-broken'],
+      ['preview-sample-close.jpg', '&mappack=sample&cam=~-3,0,2.6'], ['preview-none-close.jpg', '&mappack=none&cam=~-3,0,2.6'],
+      ['preview-sample-far.jpg', '&mappack=sample&cam=~0,1,0.45'], ['preview-broken.jpg', '&mappack=test-broken'],
     ];
     const report = {};
     for (const [file, q] of shots) {

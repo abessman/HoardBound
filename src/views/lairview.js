@@ -104,6 +104,17 @@
       const order = { resisting: 0, occupied: 1, allied: 2, protected: 3, tributary: 4 };
       members.sort((a, b) => order[a.status] - order[b.status] || a.L.name.localeCompare(b.L.name));
       this.domainListY = p.y + p.h - 236;
+      // the settlement at your hill: gifts from the hoard (adult, a village or more) and its people as workers
+      const h = D.home(st), bx = p.x + p.w - 194; let by = p.y + 38; this.domainBtns = false;
+      for (const size of ['small', 'great']) {
+        const c = D.canGift(st, size); if (!c.show) continue;
+        const G = D.GIFTS[size]; this.domainBtns = true;
+        ui.add(new HB.ui.Button({ x: bx, y: by, w: 178, h: 32, label: `${size === 'great' ? 'A great gift' : 'Bestow a gift'}: ${G.gold}g`, size: 13, disabled: !c.ok, disabledReason: c.reason,
+          tooltip: h.path === 'tyrannical' ? `Bread and beer for ${h.name}: unrest falls by ${G.unrest}, and it counts as ${HB.fmt.plural(G.favour, 'year')} of growth.` : `For ${h.name}: it counts as ${HB.fmt.plural(G.favour, 'year')} of growth, and the places that trust you trust you more (+${G.trust}).`,
+          onClick: () => { const t = D.gift(st, size); HB.notice(h.name, t); this.buildUi(); if (HB.save) HB.save.autosave(st); } }));
+        by += 38;
+      }
+      if (h.stage > 0 && HB.lair.hireOffers(st).some(o => o.from === h.name)) { this.domainBtns = true; ui.add(new HB.ui.Button({ x: bx, y: by, w: 178, h: 32, label: 'Recruit workers', size: 13, tooltip: `${h.name}'s people will work for you: see them in the Workers tab.`, onClick: () => { this.tab = 'workers'; this.buildUi(); } })); }
       this.list = ui.add(new HB.ui.ListBox({ x: p.x + 16, y: this.domainListY + 24, w: p.w - 32, h: 196, items: members, itemHeight: 44, emptyText: 'No settlement is yours yet. Protect places that trust you, or make places that fear you pay.',
         onSelect: (m) => { const map = HB.flow && HB.flow.map; HB.scenes.pop(this); if (map) { map.select(m.L); map.centerOn(m.L.x + 0.5, m.L.y + 0.5, Math.max(map.cam.zoom, 1.4)); } },
         drawItem: (ctx, m, x, y, w, h) => {
@@ -119,7 +130,7 @@
     drawDomainTab(ctx) {
       const st = this.state, p = this.panel, Pp = HB.palette, D = HB.domain;
       if (!D) return;
-      const h = D.home(st), S = D.stageInfo(st), nr = D.nextReqs(st), path = D.path(st), x = p.x + 18, w = p.w - 36;
+      const h = D.home(st), S = D.stageInfo(st), nr = D.nextReqs(st), path = D.path(st), x = p.x + 18, w = p.w - 36 - (this.domainBtns ? 196 : 0);
       let y = p.y + 40;
       if (S) {
         HB.text.draw(ctx, `${h.name}: ${S.name}`, x, y + 14, { size: 18, family: 'sc', color: h.path === 'tyrannical' ? '#7a2418' : '#6a5414', maxWidth: w }); y += 22;
@@ -128,7 +139,7 @@
         if (h.path === 'tyrannical') { HB.text.draw(ctx, `Unrest ${Math.round(h.unrest)} of 60: guards and a guard post hold it down.`, x, y + 12, { size: 13, italic: true, color: h.unrest >= 40 ? Pp.bad : Pp.warn }); y += 18; }
       } else {
         HB.text.draw(ctx, 'Nobody lives at the foot of your hill', x, y + 14, { size: 17, family: 'sc' }); y += 22;
-        y += HB.text.paragraph(ctx, 'Once you are a young dragon, people come to live near you: families who trust you build a refuge that can grow into a castle; people you hold by fear are driven into a camp that can grow into a dark stronghold.', x, y, w, { size: 13, italic: true, color: Pp.inkSoft, lineHeight: 16, maxLines: 3 }) + 4;
+        y += HB.text.paragraph(ctx, 'Once you are a young dragon, people camp around your hill: pilgrims if they trust you, a cult if they fear you. As an adult the camps become a village (or a fortified settlement); as an ancient dragon a castle (or a dark tower) rises beside your lair.', x, y, w, { size: 13, italic: true, color: Pp.inkSoft, lineHeight: 16, maxLines: 3 }) + 4;
       }
       y += 6; HB.parchment.rule(ctx, x, y, w, { ornament: false }); y += 10;
       if (nr.target) {
@@ -142,7 +153,8 @@
       else if (nr.reqs.length) { HB.text.draw(ctx, 'To bring people to your hill', x, y + 14, { size: 15, family: 'sc' }); y += 22; for (const r of nr.reqs) { reqMark(ctx, x + 2, y + 2, r.done); HB.text.draw(ctx, r.label, x + 22, y + 13, { size: 13, maxWidth: w - 22 }); y += 17; if (!r.done && r.hint) y += HB.text.paragraph(ctx, r.hint, x + 22, y, w - 22, { size: 12, italic: true, color: Pp.inkSoft, lineHeight: 14, maxLines: 3 }) + 2; } }
       const inf = D.influence(st), members = D.members(st).length;
       const ly = this.domainListY;
-      HB.text.paragraph(ctx, `Your rule: ${path.name.toLowerCase()} (benevolence ${Math.round(st.dragon.alignment)}). ${HB.fmt.cap(HB.fmt.plural(members, 'settlement'))} in your domain; your influence reaches ${HB.fmt.plural(inf.count, 'land')}.`, x, Math.max(y + 4, ly - 34), w, { size: 13, color: Pp.ink, lineHeight: 16, maxLines: 2 });
+      const lr = D.lairRadius(st), region = st.world.regions[D.homeRegion(st)];
+      HB.text.paragraph(ctx, `Your rule: ${path.name.toLowerCase()} (benevolence ${Math.round(st.dragon.alignment)}). ${HB.fmt.cap(HB.fmt.plural(members, 'settlement'))} in your domain. Your territory reaches ${Math.round(lr.r)} leagues from the lair${lr.progress < 1 ? `, more as your hoard grows (up to ${lr.next} in this phase)` : ''}; it cannot pass the storms around ${region.name}.`, x, Math.max(y + 4, ly - 50), p.w - 36, { size: 13, color: Pp.ink, lineHeight: 16, maxLines: 3 });
       HB.text.draw(ctx, 'What is yours', x, ly + 16, { size: 14, family: 'sc' });
     }
     buildSleepTab() {
