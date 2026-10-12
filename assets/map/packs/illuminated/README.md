@@ -1,11 +1,11 @@
-# Illuminated parchment — 0.14.0
+# Illuminated parchment — 0.15.0
 
-A first illustrated map pack based on the owner's parchment concept: craggy sepia mountains, low hills,
-olive woodland and ivory settlements with ochre/rust rooftops. Nine transparent PNGs replace eight symbol families;
-all other symbols, including blighted terrain, continue using the existing procedural art. This is not a full
-replacement for every place, state, home stage or dragon sprite.
+An illustrated parchment map: 39 transparent PNGs, 96 manifest ids and 23 fine native ink details cover
+all declared glyph families and states. Includes mines, carts, sacred sites, endgame strongholds, all eight
+home stages, travelers, armies, dragon map markers, corrupted terrain and damaged buildings.
 
 ## Try it
+- Every symbol and state: `index.html?scene=artcatalog&mappack=illuminated` (no campaign or save).
 - Open `index.html?mappack=illuminated` and continue your campaign.
 - For a disposable showcase: `index.html?scene=mappreview&mappack=illuminated&cam=~0,0,1.9`.
 - For the existing reveal animation: `index.html?scene=washpreview&mappack=illuminated`.
@@ -22,13 +22,20 @@ replacement for every place, state, home stage or dragon sprite.
 ## Assets and integration
 Created with OpenAI's built-in image generation using the owner-approved parchment concept as the style reference.
 The exact prompt set is in [PROMPTS.json](PROMPTS.json). Source padding was trimmed to the visible alpha bounds,
-then proportionally resized into anchored 8× PNG frames. Colours and drawing were not repainted during packaging.
+then proportionally resized into anchored 4× or 8× PNG frames. Colours and drawing were not repainted during packaging.
 `pack.json` is authoritative; `node tools/mappack.js illuminated` validates it and regenerates `pack.js`.
 
 The pack softens roads, coasts and rivers. Existing reveal and territory washes remain independent of its symbols.
 Terrain now renders at 2× above zoom 1.3 with a 64 MiB chunk bitmap budget, preserving world positions and hit areas.
 Switching to Original ink cancels a pending pack load so the new pack cannot reappear afterwards.
 
-The pack is deliberately partial: towns under siege retain crossed swords, destroyed places retain smoke/fading,
-and faction flags still draw over castle artwork. Existing campaigns, world generation and gameplay rules are unchanged.
+State variants share their base images: `treatment` selects cached burned/ruin/deep/spent rendering;
+`decor` adds fine ink rubble, fields, faction banners or camp distinctions. `style.inkFinish` enables
+`src/art/mapink.js` for dynamic marks. These optional fields are interpreted by this game's loader.
+Army flags retain faction colours; rich caravans have coloured cloth. Map dragons use breed tint and life-stage
+size; detailed mutations and scars remain visible in the existing pixel scenes, not this small map glyph.
+Existing campaigns, world generation, hit areas, reveal washes and gameplay rules are unchanged.
+
+The first-pack 0.14.0 backup is `backup/map-first-art-pack-2026-10-12`, commit
+`5db8e32238576b8affd1d9f64ad276560930e23d`. Revert the 0.15 commit to return to that version.
 Physical iPad performance and the owner's art preference still need hands-on review.

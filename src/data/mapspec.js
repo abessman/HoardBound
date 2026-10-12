@@ -78,6 +78,7 @@
       'map.marker.wagon': M('A caravan on the road (state "rich": a rich caravan)', 7, { builder: 'HB.mapart.wagon(ctx, x, y, s, color)', states: ['rich'], anchor: 'centre of the wheels’ ground line' }),
       'map.marker.banner': M('An army (the faction colour is applied through tintMask if given)', 7, { builder: 'HB.mapart.banner(ctx, x, y, s, color)', anchor: 'foot of the pole' }),
       'map.marker.walker': M('A wandering hero (state "hunter": a hunting party or slayer, drawn in red)', 7, { builder: 'HB.mapart.walker(ctx, x, y, s, color)', states: ['hunter'], anchor: 'between the feet' }),
+      'map.marker.dragon': M('The dragon on the parchment map; coloured by breed, sized by life stage', 7, { builder: 'HB.mapart.dragonMarker', states: ['flying', 'resting'], anchor: 'centre of the body', maxK: 7 }),
       'map.marker.seal.story': M('Red seal over a place in a local story (state "locked": a ? over a crag or sealed door)', 7, { builder: 'HB.mapart.seal(ctx, x, y, r, kind)', param: 'r', states: ['locked'], anchor: 'centre of the seal', maxK: 1.3 }),
       'map.marker.seal.shadow': M('Purple seal over a place of the Hollow King', 7.5, { builder: 'HB.mapart.seal(ctx, x, y, r, "shadow")', param: 'r', anchor: 'centre of the seal', maxK: 1.35 }),
       'map.marker.seal.crystal': M('Green seal over a sanctuary of a Crystal of Life', 7.5, { builder: 'HB.mapart.seal(ctx, x, y, r, "crystal")', param: 'r', anchor: 'centre of the seal', maxK: 1.35 }),

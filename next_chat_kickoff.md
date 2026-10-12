@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-12 · **Version 0.14.0** · Branch `claude/laughing-mayer-npu2ei` · The owner plays at hoardbound.netlify.app on an iPad.
+Updated 2026-10-12 · **Version 0.15.0** · Branch `claude/laughing-mayer-npu2ei` · The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
 - Full loop works: explore the parchment map, raid in side-view scenes, store treasure, build the lair, sleep, wake.
@@ -25,15 +25,16 @@ Working decisions by Claude (not confirmed):
 - 0.12's territory watercolour is unchanged (owner earlier: wants uneven pigment, pale interiors, pooled edges, small
   gaps, no blur or aura; not yet revisited).
 
-## 0.14 art update (Codex)
-- Owner authorised graphics plus appropriate code changes, with rollback. Added `illuminated` pack: nine generated
-  PNGs, eight terrain/place families. See `assets/map/packs/illuminated/README.md` and its prompt set.
-- Fine ink mountains and woodland, ivory buildings with rust/ochre roofs; existing washes preserved.
-- 2× close terrain cache (zoom > 1.3) with 64 MiB cap. Original ink selectable; fixed late pack-load rollback race.
-- New settings use the pack; existing preferences are respected. Direct URL: `?mappack=illuminated`.
-- Pre-update backup branch `backup/map-before-illuminated-2026-10-12`, commit `cb0e5f4` (0.13.0).
-- Both headless seeds: 275 passed, 0 failed. Browser playthrough: save/load OK, no runtime errors.
-- Owner needs to review the look and performance on their physical iPad; other symbol families remain procedural.
+## 0.15 art completion (Codex)
+- Owner asked to complete all map symbols after seeing old mines/carts. Illuminated now has 39 PNGs, 96 ids,
+  23 native dynamic ink details, every declared glyph family/state, all home stages and a save-free art catalog.
+- `?scene=artcatalog&mappack=illuminated` shows all symbols; `?mappack=illuminated` selects the art for a visit.
+- Image decodes are shared across damage variants; cached treatments show missing roofs, char and rubble.
+- New map dragon uses breed tint and tier scale. Mutations/scars remain in pixel scenes, not its small map glyph.
+- Existing washes, placements, gameplay, save formats and saved art preferences remain unchanged.
+- Backups: `backup/map-before-illuminated-2026-10-12` (0.13), `backup/map-first-art-pack-2026-10-12` (0.14).
+- Both headless seeds pass 275 checks; browser playthrough, file delivery, art coverage and rollback verified.
+- Owner still needs to review the look and performance on a physical iPad.
 
 ## What the preceding session did
 - 0.12.0 territory watercolour and ink discovery; then a stroke-based ink rebuild that the owner stopped (never pushed);
@@ -43,7 +44,7 @@ Working decisions by Claude (not confirmed):
 1. Owner looks at the live map on the iPad (fly somewhere new) and `?scene=washpreview&slow=1`; tune the wash (tint,
    speed, edge) to taste, or drop the clouds if the owner prefers land washing in from blank paper.
 2. If wanted: the territory watercolour revisited along the owner's notes (uneven fronts, pale interiors, pooled edges).
-3. Review Illuminated parchment on the live map; expand remaining symbol families after owner feedback.
+3. Review Illuminated parchment on the live map; review the completed symbol catalog and tune after owner feedback.
 4. Castle politics (lordships, feuds, help a side or both) after the owner answers the questions in the ideas doc.
 5. Backlog: remaining lieutenants and crystals, seasonal events, raid balance, home-name label collision.
 

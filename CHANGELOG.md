@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.0 — 2026-10-12
+- Complete the Illuminated map: 30 additional illustrations cover mines, caravans, cities, camps, holds,
+  sacred sites, lairs, endgame strongholds, travelers, armies, dragon markers and corrupted terrain.
+- All eight home stages and all declared map symbol states have matching art; damage removes roofs,
+  adds char/rubble, and an emptied sanctuary loses its crystal. Fine ink details retain faction colours.
+- Share image decodes across state variants. Add a touch-friendly, save-free art catalog:
+  `index.html?scene=artcatalog&mappack=illuminated`.
+- Preserve both pre-art (0.13) and first-art-pack (0.14) backup branches; Original ink remains selectable.
+
 Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in `src/core/namespace.js`).
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.

@@ -442,6 +442,11 @@
       HB.text.draw(ctx, '?', x, y - s * 0.6 + s * 0.45, { size: s * 1.4, align: 'center', color: HB.palette.ink });
       ctx.restore();
     },
+    /** Default map dragon: retain the existing pixel sprite when no illustrated marker is selected. */
+    dragonMarker(ctx, x, y, s, o = {}) {
+      const spec = o.spec || { tier: 0, breed: 'red', alignment: 0, mutations: [], scars: 0 };
+      HB.dragonArt.draw(ctx, spec, o.pose || (o.flying ? 'fly' : 'idle'), o.frame || 0, x, y, o.scale || s / 7, o.flipX ? -1 : 1);
+    },
     /** a small faction flag, drawn over art-pack settlement art at its attach.flag point */
     flag(ctx, x, y, s, color) {
       ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - s * 0.8); stroke(ctx, 0.9);
@@ -472,14 +477,15 @@
   simple('field', 'map.terrain.field'); simple('ash', 'map.terrain.ash');
   wrap('blossom', (ctx, x, y, s, key) => ({ ids: ['map.terrain.blossom'], x, y, param: s, key }));
   wrap('wave', (ctx, x, y, len, rng, alpha, key) => ({ ids: ['map.terrain.wave'], x, y, param: len, key }));
-  wrap('cloud', (ctx, x, y, r, rng, o = {}) => ({ ids: o.storm ? ['map.fog.cloud.storm', 'map.fog.cloud'] : ['map.fog.cloud'], x, y, param: r, key: o.key }));
+  wrap('cloud', (ctx, x, y, r, rng, o = {}) => ({ ids: o.storm ? ['map.fog.cloud.storm', 'map.fog.cloud'] : ['map.fog.cloud'], x, y, param: r, key: o.key, cloud: o }));
   wrap('lightning', (ctx, x, y, s, rng, key) => ({ ids: ['map.fog.lightning'], x, y, param: s, key }));
   wrap('homeSettlement', (ctx, x, y, s, stage, path) => ({ ids: [`map.home.${path}.${stage}`], x, y, param: s, key: 'home' }));
-  wrap('pennant', (ctx, x, y, s, color, mark, status) => status ? { ids: [`map.marker.pennant.${status}`], x, y, param: s, key: status } : null);
+  wrap('pennant', (ctx, x, y, s, color, mark, status) => status ? { ids: [`map.marker.pennant.${status}`], x, y, param: s, key: status, tint: color, mark } : null);
   wrap('crossedSwords', (ctx, x, y, s) => ({ ids: ['map.marker.crossedSwords'], x, y, param: s, key: 'swords' }));
-  wrap('wagon', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.wagon.rich', 'map.marker.wagon'] : ['map.marker.wagon'], x, y, param: s, key }));
+  wrap('wagon', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.wagon.rich', 'map.marker.wagon'] : ['map.marker.wagon'], x, y, param: s, key, tint: color }));
   wrap('banner', (ctx, x, y, s, color, key) => ({ ids: ['map.marker.banner'], x, y, param: s, key, tint: color }));
   wrap('walker', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.walker.hunter', 'map.marker.walker'] : ['map.marker.walker'], x, y, param: s, key }));
+  wrap('dragonMarker', (ctx, x, y, s, o = {}) => ({ ids: [o.flying ? 'map.marker.dragon.flying' : 'map.marker.dragon.resting', 'map.marker.dragon'], x, y, param: s, key: o.key, inkTint: o.inkTint, flipX: o.flipX }));
   wrap('compassRose', (ctx, x, y, r) => ({ ids: ['map.decoration.compass'], x, y, param: r, key: 'compass' }));
   wrap('seal', (ctx, x, y, r, kind, key) => ({ ids: kind === 'locked' ? ['map.marker.seal.story.locked', 'map.marker.seal.story'] : [`map.marker.seal.${kind}`], x, y, param: r, key }));
   wrap('threatMark', (ctx, x, y, s, key) => ({ ids: ['map.marker.threat'], x, y, param: s, key }));
@@ -493,9 +499,10 @@
       if (r) {
         const hasState = state && r.id.endsWith('.' + state);
         ctx.save(); if (state === 'ruin' && !hasState) ctx.globalAlpha *= 0.6;
-        const d = m.drawResolved(ctx, r, x, y, s, { key: 'loc' + L.id });
+        const d = m.drawResolved(ctx, r, x, y, s, { key: 'loc' + L.id, tint: opts.flagColor });
         ctx.restore();
-        if (r.v.attach && Array.isArray(r.v.attach.flag) && opts.flagColor) { const fx = d.flip ? 2 * x - (d.dx + r.v.attach.flag[0] * d.sx) : d.dx + r.v.attach.flag[0] * d.sx; P.setup(ctx); P.flag(ctx, fx, d.dy + r.v.attach.flag[1] * d.sy, s, opts.flagColor); }
+        if (r.v.attach && Array.isArray(r.v.attach.flag) && opts.flagColor) { const fx = d.flip ? 2 * x - (d.dx + r.v.attach.flag[0] * d.sx) : d.dx + r.v.attach.flag[0] * d.sx; P.setup(ctx); P.flag(ctx, state ? x + s * 1.5 : fx, state ? y : d.dy + r.v.attach.flag[1] * d.sy, s, opts.flagColor); }
+        if (state === 'burned' && r.v.treatment && HB.mapInk) HB.mapInk.smoke(ctx, x, y, s);
         P.stateOverlay(ctx, L, x, y, s, state === 'burned' && hasState ? 'besieged' : undefined);
         return;
       }

@@ -30,9 +30,13 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
 - Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps, summary). Manifest fields:
   `assets/map/README.md`.
 
-### Illuminated parchment (0.14)
-- Nine generated transparent PNGs replace mountains (two variants), hills, two tree types and four settlement types.
-  `assets/map/packs/illuminated/README.md` records prompts, scope and rollback. Other symbols use the procedural fallback.
+### Illuminated parchment (0.15)
+- 39 transparent illustrations cover every terrain/place/traveler family and all eight home stages (96 manifest ids).
+  `mapink.js` supplies 23 dynamic ink details (flags, fog, seals, compass, terrain accents); washes remain independent.
+- Damage states share image decodes and cache missing roofs, char and rubble; a spent sanctuary loses its crystal.
+  Army flags retain faction colours; dragon map markers use breed tint and tier size (pixel scenes unchanged).
+- Inspect every symbol/state in `?scene=artcatalog&mappack=illuminated`; it creates no campaign and saves nothing.
+  `assets/map/packs/illuminated/README.md` records prompts, scope, metadata and both rollback branches.
 - New settings default to `illuminated`; existing preferences remain. URL `?mappack=illuminated` previews it without
   changing saved preferences. Settings → Map art → Original ink restores the earlier symbols.
 - Close terrain is cached at 2× above zoom 1.3, bounded to 64 MiB of chunk bitmap storage. Anchors do not change.
@@ -68,6 +72,7 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `node tools/mapart-export.mjs --only=wash`.
 
 ## Tests
+- `node tools/illuminated-check.mjs`: full symbol/state coverage, catalog rendering, touch pagination, no save writes, file delivery and rollback.
 - Visual only: `node tools/screenshot.mjs` and `node tools/playthrough.mjs` (look at the shots).
 - *map art* in `tools/test.js`: the contract is complete, every id the drawing asks for exists, the reach limit,
   the validator on the sample and broken packs, the preview campaign. `node tools/mapart-export.mjs --only=check`

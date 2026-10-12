@@ -99,6 +99,7 @@
       }
       const src = /^(assets\/|https?:|data:)/.test(v.src) ? v.src : base + v.src;
       const out = { id, where, src, rect: rect || [0, 0, size[0], size[1]], sw: size[0], sh: size[1], logicalSize: v.logicalSize.slice(), anchor: v.anchorPx.slice(), uniform, allowStretch: !!v.allowStretch, allowFlipX: !!v.allowFlipX,
+        treatment: v.treatment || null, decor: v.decor || null,
         sampling: v.sampling === 'pixel' ? 'pixel' : 'smooth', labelOffset: num(v.labelOffset, 2) ? v.labelOffset : null, attach: v.attach || null, family: spec, ready: false, failed: false, img: null, maskCanvas: null, tintImg: null, tintCache: new Map() };
       MA.loadImage(out, src, (img) => {
         const nw = img.naturalWidth, nh = img.naturalHeight;
@@ -162,7 +163,17 @@
       let lvl = 0, s = shrink; while (s > 2 && lvl < v.mips.length) { s /= 2; lvl++; }
       return lvl ? v.mips[lvl - 1] : v.img;
     },
-    loadImage(owner, src, ok, fail) { const img = new Image(); MA.loading++; img.onload = () => { MA.loading--; ok(img); }; img.onerror = () => { MA.loading--; fail(); }; img.src = src; },
+    loadImage(owner, src, ok, fail) {
+      // States and home stages may share a PNG: decode it once, while retaining per-variant readiness.
+      if (!MA._images) MA._images = new Map();
+      let promise = MA._images.get(src);
+      if (!promise) {
+        promise = new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
+        MA._images.set(src, promise);
+      }
+      MA.loading++;
+      promise.then(img => { MA.loading--; ok(img); }, () => { MA.loading--; MA._images.delete(src); fail(); });
+    },
     /** an image's alpha filled with one colour (occlusion fill in paper colour, or a faction tint) */
     colourise(img, rect, colour, alpha) {
       const c = document.createElement('canvas'); c.width = rect[2]; c.height = rect[3];
@@ -188,20 +199,25 @@
       let sy = v.uniform ? sx : v.logicalSize[1] / v.sh * k;
       if (v.allowStretch && o.paramY !== undefined && fam.refY) sy = v.logicalSize[1] / v.sh * (o.paramY / fam.refY);
       const dx = x - v.anchor[0] * sx, dy = y - v.anchor[1] * sy, dw = v.sw * sx, dh = v.sh * sy;
-      const flip = v.allowFlipX && (HB.hash32('flip:' + o.key) & 1);
+      const flip = o.flipX !== undefined ? !!o.flipX : v.allowFlipX && (HB.hash32('flip:' + o.key) & 1);
       ctx.save();
       ctx.imageSmoothingEnabled = v.sampling !== 'pixel';
       if (flip) { ctx.translate(2 * x, 0); ctx.scale(-1, 1); }
       if (v.maskCanvas) ctx.drawImage(v.maskCanvas, dx, dy, dw, dh);
       // drawn far smaller than its source (big art in a map chunk): through halved copies, so fine lines do not shimmer
       const tf = ctx.getTransform ? ctx.getTransform() : null, shrink = v.sw / Math.abs(dw * (tf ? Math.hypot(tf.a, tf.b) : 1));
-      if (shrink > 2.5 && v.sampling !== 'pixel') { const m = MA.mip(v, shrink); ctx.drawImage(m, 0, 0, m.width, m.height, dx, dy, dw, dh); }
+      if (HB.mapInk && (v.treatment || o.inkTint)) {
+        const img = HB.mapInk.treat(v, o.inkTint);
+        ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
+      }
+      else if (shrink > 2.5 && v.sampling !== 'pixel') { const m = MA.mip(v, shrink); ctx.drawImage(m, 0, 0, m.width, m.height, dx, dy, dw, dh); }
       else ctx.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, dx, dy, dw, dh);
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
+      if (HB.mapInk && v.decor) HB.mapInk.decorate(ctx, v.decor, x, y, param, o);
       ctx.restore();
       return { id: r.id, v, sx, sy, dx, dy, dw, dh, flip };
     },
-    draw(ctx, ids, x, y, param, o = {}) { const r = MA.resolve(ids, o.key); return r ? MA.drawResolved(ctx, r, x, y, param, o) : null; },
+    draw(ctx, ids, x, y, param, o = {}) { const r = MA.resolve(ids, o.key); return r ? MA.drawResolved(ctx, r, x, y, param, o) : HB.mapInk && HB.mapInk.draw(ctx, ids, x, y, param, o); },
     // ---------- places: the id chain for a location, most specific first
     placeIds(L) {
       const sub = L.type === 'camp' ? L.camp : L.type === 'stronghold' ? L.lieutenant : L.type === 'city' && L.tier >= 4 ? 'great' : null;

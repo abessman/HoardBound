@@ -601,7 +601,9 @@
       // shadow
       ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.ellipse(p.x + 6 * scale, p.y + (flying ? 16 : 8) * scale, 10 * scale * (1 + d.tier * 0.5), 4 * scale * (1 + d.tier * 0.5), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       const bobY = flying ? Math.sin(this.dragonFrameT * 6) * 2 : 0;
-      HB.dragonArt.draw(ctx, spec, pose, frame, p.x, p.y - (flying ? 10 : 2) * scale + bobY, scale, facing);
+      const pal = HB.dragonArt.breedPalette(spec.breed, spec.alignment || 0);
+      HB.mapart.dragonMarker(ctx, p.x, p.y - (flying ? 10 : 2) * scale + bobY,
+        7 * scale * (1 + d.tier * .6), { flying, pose, frame, scale, spec, key: 'player-dragon', flipX: facing < 0, inkTint: pal.base });
     }
     drawFog(ctx, tl, br) {
       const st = this.state, W = st.world, F = this.fogAlpha, cam = this.cam, z = CELL * cam.zoom, RW = this.revealWash;

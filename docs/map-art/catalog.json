@@ -1,6 +1,6 @@
 {
  "generated": "node tools/mapart-export.mjs",
- "game": "0.13.0",
+ "game": "0.14.0",
  "spec": {
   "schemaVersion": 1,
   "cell": 22,
@@ -6597,6 +6597,219 @@
    },
    "label": null,
    "fallback": "procedural: HB.mapart.walker(ctx, x, y, s, color)"
+  },
+  {
+   "id": "map.marker.dragon",
+   "family": "map.marker.dragon",
+   "state": null,
+   "sub": false,
+   "purpose": "The dragon on the parchment map; coloured by breed, sized by life stage",
+   "builder": "HB.mapart.dragonMarker",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 7,
+   "lod1K": null,
+   "familyStates": [
+    "flying",
+    "resting"
+   ],
+   "anchor": "centre of the body",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -13,
+     -8,
+     12,
+     8
+    ],
+    "typicalSize": [
+     25,
+     16
+    ],
+    "reach": 13
+   },
+   "recommended": {
+    "logicalSize": [
+     27,
+     18
+    ],
+    "anchorLogical": [
+     14,
+     9
+    ],
+    "sourceSizeAt4x": [
+     108,
+     72
+    ],
+    "anchorPxAt4x": [
+     56,
+     36
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     27,
+     18
+    ],
+    "zoom2_5": [
+     34.7,
+     23.1
+    ],
+    "maxZoom3_2": [
+     34.7,
+     23.1
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.dragonMarker"
+  },
+  {
+   "id": "map.marker.dragon.flying",
+   "family": "map.marker.dragon",
+   "state": "flying",
+   "sub": false,
+   "purpose": "The dragon on the parchment map; coloured by breed, sized by life stage",
+   "builder": "HB.mapart.dragonMarker",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 7,
+   "lod1K": null,
+   "familyStates": [
+    "flying",
+    "resting"
+   ],
+   "anchor": "centre of the body",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -13,
+     -12,
+     12,
+     7
+    ],
+    "typicalSize": [
+     25,
+     19
+    ],
+    "reach": 13
+   },
+   "recommended": {
+    "logicalSize": [
+     27,
+     21
+    ],
+    "anchorLogical": [
+     14,
+     13
+    ],
+    "sourceSizeAt4x": [
+     108,
+     84
+    ],
+    "anchorPxAt4x": [
+     56,
+     52
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     27,
+     21
+    ],
+    "zoom2_5": [
+     34.7,
+     27
+    ],
+    "maxZoom3_2": [
+     34.7,
+     27
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.dragonMarker"
+  },
+  {
+   "id": "map.marker.dragon.resting",
+   "family": "map.marker.dragon",
+   "state": "resting",
+   "sub": false,
+   "purpose": "The dragon on the parchment map; coloured by breed, sized by life stage",
+   "builder": "HB.mapart.dragonMarker",
+   "layer": "markers",
+   "sampling": "smooth",
+   "param": "s",
+   "ref": 7,
+   "refY": null,
+   "maxK": 7,
+   "lod1K": null,
+   "familyStates": [
+    "flying",
+    "resting"
+   ],
+   "anchor": "centre of the body",
+   "proceduralVariation": "fixed shape",
+   "call": null,
+   "measured": {
+    "boundsFromAnchor": [
+     -13,
+     -8,
+     12,
+     8
+    ],
+    "typicalSize": [
+     25,
+     16
+    ],
+    "reach": 13
+   },
+   "recommended": {
+    "logicalSize": [
+     27,
+     18
+    ],
+    "anchorLogical": [
+     14,
+     9
+    ],
+    "sourceSizeAt4x": [
+     108,
+     72
+    ],
+    "anchorPxAt4x": [
+     56,
+     36
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "s = clamp(7·√zoom, 3, 9)",
+    "zoom1": [
+     27,
+     18
+    ],
+    "zoom2_5": [
+     34.7,
+     23.1
+    ],
+    "maxZoom3_2": [
+     34.7,
+     23.1
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.dragonMarker"
   },
   {
    "id": "map.marker.seal.story",

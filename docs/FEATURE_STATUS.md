@@ -84,7 +84,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Handoff package for an artist | Functional | `docs/map-art/`: measured catalog, contact sheets, art spec, replacement steps, implementation summary; `sample` and `test-broken` packs; validator and exporter. |
 | Map preview scene | Functional | `?scene=mappreview` (fixed seed and camera, every domain state, `&chunks=1`). |
 | Roads, rivers, coasts and washes as art | Simplified | Stay procedural so they join; restylable via a pack's `style` (0.12: the territory wash also takes textures and bloom masks from a pack). Parchment, labels and selection are not in packs. |
-| Illustrated map artwork | Partial | 0.14: Illuminated parchment replaces eight terrain/place families with nine PNGs; original art selectable; other symbols retain procedural fallback. Close terrain uses a 2× cache bounded to 64 MiB. |
+| Illustrated map artwork | Functional | 0.15: 39 illustrations, 96 manifest ids and 23 dynamic ink details cover all declared glyph families/states, including mines, carts, home stages and damage. Save-free art catalog; original art selectable. Physical iPad review pending. |
 
 ## Watercolour (0.12.0; reveal wash 0.13.0)
 

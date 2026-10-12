@@ -37,6 +37,7 @@
       if (preset && HB.presets) HB.presets.apply(state, preset); // e.g. ?scene=map&preset=adult-kind
       HB.flow.enterWorld(state, false);
     }
+    else if (name === 'artcatalog') HB.scenes.replace(new HB.ArtCatalogScene());
     else if (name === 'mappreview') HB.debug.mapPreview(params);
     else if ((name === 'washpreview' || name === 'inkpreview') && HB.WashPreviewScene) HB.scenes.replace(new HB.WashPreviewScene(params)); // docs/map-art/WASH_PREVIEW.md
     else if (HB.debug.gotoGame) HB.debug.gotoGame(name, params);

@@ -58,6 +58,9 @@
   add('map.marker.banner', 'entity', (g, x, y, k) => { P.setup(g); P.banner(g, x, y, 7 * k, FLAG); }, { random: false });
   add('map.marker.walker', 'entity', (g, x, y, k) => { P.setup(g); P.walker(g, x, y, 7 * k); }, { random: false });
   add('map.marker.walker.hunter', 'entity', (g, x, y, k) => { P.setup(g); P.walker(g, x, y, 7 * k, '#7a2418'); }, { random: false, state: 'hunter' });
+  add('map.marker.dragon', 'entity', (g, x, y, k) => P.dragonMarker(g, x, y, 7 * k), { random: false });
+  add('map.marker.dragon.flying', 'entity', (g, x, y, k) => P.dragonMarker(g, x, y, 7 * k, { flying: true }), { random: false, state: 'flying' });
+  add('map.marker.dragon.resting', 'entity', (g, x, y, k) => P.dragonMarker(g, x, y, 7 * k), { random: false, state: 'resting' });
   add('map.marker.seal.story', 'seal', (g, x, y, k) => P.seal(g, x, y, 7 * k, 'story'), { random: false });
   add('map.marker.seal.story.locked', 'seal', (g, x, y, k) => P.seal(g, x, y, 7 * k, 'locked'), { random: false, state: 'locked' });
   add('map.marker.seal.shadow', 'seal2', (g, x, y, k) => P.seal(g, x, y, 7.5 * k, 'shadow'), { random: false });
