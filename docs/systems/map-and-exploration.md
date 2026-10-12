@@ -55,6 +55,9 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   each glyph draws with its own seed and stable key, so swapping its art never moves another glyph.
 - Every symbol can be replaced by PNG art from a map art pack, with procedural fallback: see
   [art-and-sprites](art-and-sprites.md) and `docs/map-art/README.md`. Preview: `?scene=mappreview`.
+- Ink discovery (0.12, preview only): terrain near known land as a faint sketch (places never), an ink pool that
+  drains into what a step reveals. Built in `src/art/mapfx.js` and tried at `?scene=inkpreview`; the map still lifts
+  clouds. Wiring it in means drawing just-revealed cells' glyphs through `HB.mapInk` until drawn, then into the chunk.
 
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).

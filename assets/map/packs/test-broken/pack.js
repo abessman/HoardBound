@@ -2,7 +2,7 @@
 HB.mapAssets && HB.mapAssets.definePack({
   "schemaVersion": 1,
   "name": "test-broken",
-  "comment": "Deliberate mistakes for the fallback check (docs/map-art/REPLACING.md). Only map.terrain.tree.pine is valid; everything else must warn and fall back to the hand-drawn glyph.",
+  "comment": "Deliberate mistakes for the fallback check (docs/map-art/REPLACING.md). Only map.terrain.tree.pine is valid (its inkMask is the wrong size and falls back to a derived mask); everything else must warn and fall back to the hand-drawn glyph or the procedural wash.",
   "assets": [
     {
       "id": "map.terrain.tree.pine",
@@ -21,7 +21,8 @@ HB.mapAssets && HB.mapAssets.definePack({
           "anchorPx": [
             14,
             50
-          ]
+          ],
+          "inkMask": "small-32.png"
         }
       ]
     },
@@ -170,6 +171,32 @@ HB.mapAssets && HB.mapAssets.definePack({
           "anchorPx": [
             16,
             30
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.wash.benevolent",
+      "variants": [
+        {
+          "id": "not-square",
+          "coverage": "pine-ok@4x.png",
+          "size": [
+            28,
+            52
+          ]
+        }
+      ]
+    },
+    {
+      "id": "map.wash.tyrannical",
+      "variants": [
+        {
+          "id": "wrong-size",
+          "coverage": "small-32.png",
+          "size": [
+            64,
+            64
           ]
         }
       ]

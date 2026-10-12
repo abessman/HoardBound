@@ -31,6 +31,20 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
 - Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps, summary). Manifest fields:
   `assets/map/README.md`.
 
+### Ink discovery and watercolour (0.12)
+- `src/art/mapfx.js`. **Ink** (`HB.mapInk`): a feature (one symbol, in world cells) is drawn once into a work buffer
+  (2 px per logical px, ≤ 160 px); its ink mask is the pack's `inkMask` or derived from the art's dark lines, its
+  order the pack's `revealMask` or a flow through the line work from the side facing the pool. States: hidden →
+  sketch (first strokes, faint; terrain within 3 cells of known land only, never places) → revealing → drawn. A
+  discovery step drops one pool; rivulets carry the ink to each feature; wet ink runs ahead, colour dries 0.35 s
+  behind. ≤ 24 features animate, ≤ 4 pools. Runs in the preview (`?scene=inkpreview`) only so far.
+- **Watercolour** (`HB.mapWash.Layer`): painted from territory sources over a land mask, per-pixel wobbling circles,
+  two colours per path mixed by a hue mask, coverage and pooling (pack textures, world-anchored, or noise); a
+  changed source (new, grown, recoloured) blooms in its bloom order. Repaints are spread over frames (≤ 6 ms each).
+  The live map's territory uses it (see [domain-and-influence](domain-and-influence.md)).
+- Reduced motion (Settings, `?reducedmotion=1`, `HB.mapFx.reducedOverride`): no pools or spreading; fades.
+- Contract for artists: `docs/map-art/INK_AND_WASH.md`; preview steps: `docs/map-art/INK_PREVIEW.md`.
+
 ### Replacing generated art
 Sprites are registered by id in `HB.sprites`. Drop a PNG sheet and a JSON atlas (`{ "id": {x,y,w,h,
 ax,ay} }`, `ax`/`ay` the anchor pixel) into `assets/sprites/` and list them in `assets/sprites/manifest.json`; matching ids
@@ -42,19 +56,24 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 - Map art: `src/data/mapspec.js` (contract), `src/art/mapassets.js` (loader, resolver), the wrappers at the end of
   `src/art/mapart.js`; `tools/mappack.js` (validator), `tools/mapart-export.mjs` + `tools/mapart-page.js` (handoff
   exporter); preview `?scene=mappreview` (`HB.debug.mapPreview` in `src/main.js`, `HB.presets.preview`).
+- Ink and watercolour: `src/art/mapfx.js`, `src/views/inkpreview.js`; checks `tools/inkcheck-page.js` driven by
+  `node tools/mapart-export.mjs --only=ink`.
 
 ## Tests
 - Visual only: `node tools/screenshot.mjs` and `node tools/playthrough.mjs` (look at the shots).
 - *map art* in `tools/test.js`: the contract is complete, every id the drawing asks for exists, the reach limit,
   the validator on the sample and broken packs, the preview campaign. `node tools/mapart-export.mjs --only=check`
-  proves in Chromium that placements, hit areas and saves are identical with and without a pack.
+  proves in Chromium that placements, hit areas and saves are identical with and without a pack. `--only=ink` steps
+  the ink preview frame by frame: knowledge rules every frame, world anchoring, masks used, budget, reduced motion,
+  the live map's wash following real territory, saves untouched (`docs/map-art/ink-checks.json`).
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
 - Map terrain is cached at 22 px per cell and scaled with the map, so terrain art is no sharper than 1× (as the ink).
 - Still hand-coded on the map: parchment, roads, rivers, coasts, washes (restylable via a pack's `style`), labels,
   selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
-- The sample pack's art is deliberate test art, not a style proposal.
+- The sample pack's art is deliberate test art, not a style proposal; so are its masks.
+- Live-map ink discovery is not wired yet: the chunk cache would have to leave out cells still inking.
 
 ## Related
 [map-and-exploration](map-and-exploration.md) · [raids-and-encounters](raids-and-encounters.md)

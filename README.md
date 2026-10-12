@@ -83,7 +83,7 @@ CHANGELOG.md          version history (the version shows on the title screen)
 
 All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/sprites/` (see `assets/sprites/README.md`); matching ids override generated sprites. Dragon layers are keyed `dragon.<tier>.<part>.<pose>`. Details: `docs/systems/art-and-sprites.md`.
 
-The parchment map's symbols are replaced by **map art packs** in `assets/map/packs/<name>/` (PNGs + a manifest; anything missing stays hand-drawn), chosen in Settings → Map art or with `?mappack=<name>`. The artist's handoff (measured catalog, contact sheets, art spec, steps): `docs/map-art/README.md`. Preview: `index.html?scene=mappreview&mappack=sample`; validate a pack with `node tools/mappack.js <name>`.
+The parchment map's symbols are replaced by **map art packs** in `assets/map/packs/<name>/` (PNGs + a manifest; anything missing stays hand-drawn), chosen in Settings → Map art or with `?mappack=<name>`. The artist's handoff (measured catalog, contact sheets, art spec, steps): `docs/map-art/README.md`. Preview: `index.html?scene=mappreview&mappack=sample`; validate a pack with `node tools/mappack.js <name>`. Ink discovery and the territory's watercolour take optional masks too (`docs/map-art/INK_AND_WASH.md`); try them in `index.html?scene=inkpreview&mappack=sample` (`docs/map-art/INK_PREVIEW.md`).
 
 ### Continuing development
 

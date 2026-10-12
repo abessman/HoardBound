@@ -21,7 +21,7 @@
         'Legend: a slain sleeping dragon ends the campaign. Mythic: being slain becomes a century of forced slumber and a plundered lair instead.');
       row('Tutorial hints', S.hints, v => { S.hints = v; S.save(); }, null, 'Short guidance during the first expeditions.');
       row('Default travel speed', S.travelSpeed, v => { S.travelSpeed = v; S.save(); }, [{ label: 'Slow', value: 0.6 }, { label: 'Normal', value: 1 }, { label: 'Brisk', value: 1.6 }], 'How fast map flights play by default. You can always change speed during a flight.');
-      row('Reduce motion', S.reduceMotion, v => { S.reduceMotion = v; S.save(); }, null, 'Shortens transitions and flashes.');
+      row('Reduce motion', S.reduceMotion, v => { S.reduceMotion = v; S.save(); }, null, 'Shortens transitions and flashes; on the map, ink and watercolour fade in instead of flowing.');
       const packs = [{ label: 'Hand-drawn', value: 'none' }].concat((HB.MAP_PACKS || []).map(p => ({ label: p.label || p.name, value: p.name })));
       if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Artwork for the world map. Packs live in assets/map/packs/; anything a pack lacks is drawn by hand as before.');
       y += 10;

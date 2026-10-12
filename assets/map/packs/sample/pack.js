@@ -2,7 +2,7 @@
 HB.mapAssets && HB.mapAssets.definePack({
   "schemaVersion": 1,
   "name": "sample",
-  "comment": "Test art proving partial replacement: two mountain variants at different resolutions (one with an occlusion mask), a broadleaf tree, a village, a castle with a flag point, a burned town (a state variant) and a pixel-art wagon. Everything else stays hand-drawn.",
+  "comment": "Test art proving partial replacement: two mountain variants at different resolutions (one with an occlusion mask), a broadleaf tree, a village, a castle with a flag point, a burned town (a state variant) and a pixel-art wagon. Mountain a and the village carry ink and reveal-order masks; kind and cruel watercolour textures and a bloom order mask. Everything else stays hand-drawn.",
   "assets": {
     "map.terrain.mountain": {
       "variants": [
@@ -28,6 +28,8 @@ HB.mapAssets && HB.mapAssets.definePack({
             100
           ],
           "occlusionMask": "terrain/mountain-a-mask@4x.png",
+          "inkMask": "terrain/mountain-a-ink@4x.png",
+          "revealMask": "terrain/mountain-a-order@4x.png",
           "layer": "terrain",
           "sampling": "smooth",
           "allowFlipX": true
@@ -110,6 +112,8 @@ HB.mapAssets && HB.mapAssets.definePack({
             104,
             72
           ],
+          "inkMask": "places/village-ink@4x.png",
+          "revealMask": "places/village-order@4x.png",
           "layer": "places",
           "sampling": "smooth",
           "labelOffset": [
@@ -207,6 +211,50 @@ HB.mapAssets && HB.mapAssets.definePack({
           "layer": "markers",
           "sampling": "pixel",
           "allowFlipX": false
+        }
+      ]
+    },
+    "map.wash.benevolent": {
+      "variants": [
+        {
+          "id": "a",
+          "coverage": "wash/kind-coverage.png",
+          "pooling": "wash/kind-pooling.png",
+          "hue": "wash/kind-hue.png",
+          "size": [
+            256,
+            256
+          ],
+          "cellsPerTile": 8
+        }
+      ]
+    },
+    "map.wash.tyrannical": {
+      "variants": [
+        {
+          "id": "a",
+          "coverage": "wash/cruel-coverage.png",
+          "pooling": "wash/cruel-pooling.png",
+          "hue": "wash/cruel-hue.png",
+          "size": [
+            256,
+            256
+          ],
+          "cellsPerTile": 8
+        }
+      ]
+    },
+    "map.wash.bloom": {
+      "variants": [
+        {
+          "id": "a",
+          "src": "wash/bloom-a.png",
+          "sourceSize": [
+            256,
+            256
+          ],
+          "span": 2.5,
+          "allowFlipX": true
         }
       ]
     }

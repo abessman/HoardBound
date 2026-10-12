@@ -4,6 +4,24 @@ Versions are shown on the title screen and in the in-game menu (`HB.VERSION` in 
 While pre-1.0: **minor** (0.x.0) for a feature update, **patch** (0.x.y) for fixes and tweaks. Every pushed update
 bumps the version and adds an entry here.
 
+## 0.12.0 — 2026-10-12 · Ink and watercolour
+- **Your territory is painted in watercolour.** Translucent, uneven washes on the parchment: green with gold blooms
+  where your rule is kind, rust with charcoal edges where it is cruel, sepia while undecided. When the territory
+  changes, the change blooms: a place that swears to you or is occupied spreads colour from itself, a new phase or a
+  richer hoard spreads it outward from the old edge, turning kind or cruel recolours it from each source. Labels and
+  symbols stay on top; the wash stays on your home region's land.
+- **Ink discovery, in a preview for now** (`index.html?scene=inkpreview&mappack=sample`): land beside what you know
+  shows as a faint sketch (never settlements); when it is revealed, a sepia-black ink drop pools there and drains
+  along rivulets into the mountain, the trees and the village, running through their line work before the colours
+  dry in. Revealed features stay drawn. The live map still lifts its clouds; it gets the ink next.
+- **For artists:** the exact files a map art pack can add for both, with sizes, alignment, channels and fallbacks:
+  `docs/map-art/INK_AND_WASH.md` (ink silhouette masks, reveal-order masks, tileable watercolour textures, bloom
+  masks); preview steps in `docs/map-art/INK_PREVIEW.md`. The sample pack has placeholder masks of every kind, and
+  `node tools/mappack.js` checks them.
+- **Reduced motion** (Settings) now also covers the map: ink and watercolour fade in instead of flowing.
+- Budget for the iPad: at most 24 symbols ink at once, at most 4 pools; a territory repaint is spread over several
+  frames. Measured in `docs/map-art/ink-checks.json`.
+
 ## 0.11.0 — 2026-10-12 · Your territory
 - **Seven large regions.** New worlds have your home region in the middle and six regions around it behind storm
   walls (two open to a young dragon, two to an adult, two to an ancient one). Two kingdoms rule inside your home

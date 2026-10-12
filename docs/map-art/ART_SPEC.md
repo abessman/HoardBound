@@ -24,13 +24,15 @@ burned forests and jagged mountains. Both stay on the parchment.
 | parchment (the map's paper; textured, flecks `#c8b07c` and `#f2e5c4`) | `#e3d1a6` |
 | water ink: rivers, marsh strokes | `rgba(48,78,118,0.78)` |
 | sea wash (alpha 0.07–0.22 by depth) | `#698caa` |
-| territory washes (alpha 0.17–0.3): kind, cruel | `#8a963a`, `#7a3820` |
+| territory watercolour (alpha ≤ 0.45), two colours per path mixed by the hue mask: kind, cruel, neutral | `#6e8c3a` + `#c4a03a`, `#b03010` + `#2c2420`, `#806846` + `#604a30` |
+| discovery ink (wet, runs ahead of the colours), discovery sketch (alpha 0.5) | `#24160c`, `#4c3e2e` |
 | pennants: protected, allied, tributary, occupied | `#9c7a1c`, `#b8902a`, `#8a4a2a`, `#5a2418` |
 | seals: story and threat, shadow, crystal | `#8f2b1f`, `#3a1e48`, `#3f6d3a` |
 | fog cloud, storm cloud | `#efe6cc`, `#b9ad8e` |
 
 Keep colour inside the symbol modest: the washes, pennants and seals carry the political colour and must stay
-readable on top of your art.
+readable on top of your art. Ink and watercolour masks carry no colour at all (the engine tints them):
+[INK_AND_WASH.md](INK_AND_WASH.md).
 
 ## Ink thickness
 
@@ -73,5 +75,6 @@ there.
 ## Filenames
 
 Lower case, hyphens, the scale as a suffix: `mountain-a@4x.png`, `village-burned@4x.png`, `pennant-allied@4x.png`.
-Group by layer in sub-folders (`terrain/`, `places/`, `markers/`, `fog/`). Filenames are free; the manifest's semantic
-id is what the game uses.
+Group by layer in sub-folders (`terrain/`, `places/`, `markers/`, `fog/`, `wash/`). Masks take the art's name with a
+suffix: `mountain-a-ink@4x.png`, `mountain-a-order@4x.png`. Filenames are free; the manifest's semantic id is what the
+game uses.

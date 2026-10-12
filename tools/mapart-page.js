@@ -210,6 +210,48 @@
       const px = (c, a, b, w = 1, h = 1) => { x.fillStyle = c; x.fillRect(a, b, w, h); };
       px('#f4ead0', 2, 0, 8, 4); px('#7a5230', 1, 4, 10, 2); px('#2b1a0e', 2, 6, 2, 2); px('#2b1a0e', 8, 6, 2, 2); px('#2b1a0e', 0, 3, 1, 1); px('#c9a25a', 4, 1, 4, 1);
     }));
+    // ---- ink discovery masks (docs/map-art/INK_AND_WASH.md), pixel-aligned with the art above
+    // ink: alpha = the line work; order: luminance = when each pixel appears (0 first), alpha 0 = engine decides
+    const stroke = (x, pts, w) => { x.beginPath(); pts.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.lineWidth = w; x.stroke(); };
+    const MT = [[6, 102], [44, 30], [58, 44], [78, 8], [122, 102]];
+    put('terrain/mountain-a-ink@4x.png', art(128, 108, (x) => {
+      x.strokeStyle = '#000'; x.lineCap = 'round'; x.lineJoin = 'round'; stroke(x, MT, 6);
+      for (let i = 0; i < 7; i++) stroke(x, [[84 + i * 5, 24 + i * 11], [74 + i * 4, 100]], 4);
+      stroke(x, [[78, 8], [90, 32], [80, 28], [70, 36], [68, 26], [78, 8]], 4);
+    }));
+    // order: the outline from the lower left up over both peaks (0 → 110), the snow (110–130), hatching (130–180), the fill (225)
+    put('terrain/mountain-a-order@4x.png', art(128, 108, (x) => {
+      x.fillStyle = 'rgb(225,225,225)'; x.beginPath(); MT.forEach(([a, b], i) => i ? x.lineTo(a, b) : x.moveTo(a, b)); x.closePath(); x.fill();
+      x.lineCap = 'round'; x.lineJoin = 'round';
+      for (let k = 0; k < 7; k++) { const g = 130 + k * 7; x.strokeStyle = `rgb(${g},${g},${g})`; stroke(x, [[84 + k * 5, 24 + k * 11], [74 + k * 4, 100]], 6); }
+      x.strokeStyle = 'rgb(118,118,118)'; stroke(x, [[78, 8], [90, 32], [80, 28], [70, 36], [68, 26], [78, 8]], 6);
+      // the outline as short segments, each a little lighter than the last
+      const seg = []; for (let i = 0; i < MT.length - 1; i++) for (let s = 0; s < 10; s++) { const t0 = s / 10, t1 = (s + 1) / 10, [a0, b0] = MT[i], [a1, b1] = MT[i + 1]; seg.push([[a0 + (a1 - a0) * t0, b0 + (b1 - b0) * t0], [a0 + (a1 - a0) * t1, b0 + (b1 - b0) * t1]]); }
+      seg.forEach((sg, k) => { const g = Math.round(k / seg.length * 110); x.strokeStyle = `rgb(${g},${g},${g})`; stroke(x, sg, 8); });
+    }));
+    // village: ink = walls and roofs outlined; order = the front house first, then the others, windows and doors, fills last
+    const houseLines = (x, cx, by, w, h) => { x.strokeRect(cx - w / 2, by - h, w, h); x.beginPath(); x.moveTo(cx - w / 2 - 4, by - h); x.lineTo(cx, by - h - w * 0.55); x.lineTo(cx + w / 2 + 4, by - h); x.stroke(); x.fillRect(cx - 3, by - 12, 6, 12); };
+    put('places/village-ink@4x.png', art(120, 92, (x) => { x.strokeStyle = '#000'; x.fillStyle = '#000'; x.lineWidth = 4; houseLines(x, 60, 56, 30, 20); houseLines(x, 28, 86, 34, 24); houseLines(x, 90, 88, 32, 22); }));
+    put('places/village-order@4x.png', art(120, 92, (x) => {
+      const H = [[28, 86, 34, 24, 0], [90, 88, 32, 22, 45], [60, 56, 30, 20, 90]];
+      for (const [cx, by, w, h, o] of H) { const f = 200 + o / 4; x.fillStyle = `rgb(${f},${f},${f})`; x.beginPath(); x.moveTo(cx - w / 2, by); x.lineTo(cx - w / 2, by - h); x.lineTo(cx - w / 2 - 4, by - h); x.lineTo(cx, by - h - w * 0.55); x.lineTo(cx + w / 2 + 4, by - h); x.lineTo(cx + w / 2, by - h); x.lineTo(cx + w / 2, by); x.closePath(); x.fill(); }
+      for (const [cx, by, w, h, o] of H) { const g = o; x.strokeStyle = `rgb(${g},${g},${g})`; x.fillStyle = `rgb(${g + 60},${g + 60},${g + 60})`; x.lineWidth = 6; houseLines(x, cx, by, w, h); }
+    }));
+    // ---- watercolour masks: 256 px, seamless (built from waves with whole periods across the tile and a periodic grain)
+    const tile = (fn) => { const n = 256, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), img = g.createImageData(n, n); for (let y = 0; y < n; y++) for (let xx = 0; xx < n; xx++) { const v = Math.max(0, Math.min(255, Math.round(fn(xx / n, y / n) * 255))), o = (y * n + xx) * 4; img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = 255; } g.putImageData(img, 0, 0); return c; };
+    const P2 = Math.PI * 2, wave = (u, v, a, b, ph) => Math.sin(P2 * (a * u + b * v) + ph);
+    const grain = (u, v) => { const x = Math.floor(u * 128) % 128, y = Math.floor(v * 128) % 128; let h = Math.imul(x, 374761393) + Math.imul(y, 668265263); h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+    const flow = (u, v, s) => 0.5 + 0.18 * wave(u, v, 2, 1, s) + 0.14 * wave(u, v, -1, 3, s * 2) + 0.09 * wave(u, v, 5, -2, s * 3) + 0.06 * wave(u, v, 7, 6, s);
+    for (const [name, s] of [['kind', 1.1], ['cruel', 2.7]]) {
+      put(`wash/${name}-coverage.png`, tile((u, v) => flow(u, v, s) * 0.85 + grain(u, v) * 0.25));
+      // pooling: thin wandering veins where the flow crosses two levels (pigment collecting along drying lines)
+      put(`wash/${name}-pooling.png`, tile((u, v) => { const f = flow(u, v, s + 1.7); return Math.max(0, 1 - Math.abs(f - 0.5) * 9, 0.8 - Math.abs(f - 0.68) * 10) * (0.75 + grain(u, v) * 0.25); }));
+      put(`wash/${name}-hue.png`, tile((u, v) => Math.max(0, Math.min(1, (flow(u, v, s + 4) - 0.45) * 2.2))));
+    }
+    // a bloom order mask: wets from the centre outward, with fingers (whole cycles around), outside the edge alpha 0
+    put('wash/bloom-a.png', (() => { const n = 256, c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'), img = g.createImageData(n, n);
+      for (let y = 0; y < n; y++) for (let xx = 0; xx < n; xx++) { const dx = (xx + 0.5) / n - 0.5, dy = (y + 0.5) / n - 0.5, d = Math.hypot(dx, dy) * 2, a = Math.atan2(dy, dx); const edge = 0.84 + 0.1 * Math.sin(5 * a + 0.7) + 0.05 * Math.sin(11 * a + 2.1); const o = (y * n + xx) * 4, v = Math.min(255, Math.round(d / edge * 255)); img.data[o] = img.data[o + 1] = img.data[o + 2] = v; img.data[o + 3] = d <= edge ? 255 : 0; }
+      g.putImageData(img, 0, 0); return c; })());
     // a test pack of deliberate mistakes (assets/map/packs/test-broken): only the pine is valid
     out['__broken/pine-ok@4x.png'] = art(28, 52, (x) => { x.beginPath(); x.moveTo(14, 2); x.lineTo(26, 42); x.lineTo(2, 42); x.closePath(); x.fillStyle = '#2e6a4a'; x.fill(); x.strokeStyle = '#123'; x.lineWidth = 3; x.stroke(); x.fillStyle = '#5a3a1e'; x.fillRect(12, 42, 4, 8); }).toDataURL('image/png');
     out['__broken/small-32.png'] = art(32, 32, (x) => { x.fillStyle = '#f0f'; x.fillRect(0, 0, 32, 32); }).toDataURL('image/png');
@@ -217,7 +259,7 @@
   }
   /** palette swatches for the art spec */
   function palette() {
-    const sw = [['#2b1a0e', 'ink (outlines, text)'], ['rgba(43,26,14,0.65)', 'soft ink (details, hatching)'], ['#f0e3c3', 'glyph fill / occlusion paper'], ['#d9c89d', 'dark glyph fill (walls, shade)'], ['#e3d1a6', 'parchment base'], ['#c8b07c', 'parchment fleck dark'], ['#f2e5c4', 'parchment fleck light'], ['rgba(48,78,118,0.78)', 'water ink (rivers, marsh)'], ['#698caa', 'sea wash (alpha 0.07–0.22)'], ['#8a963a', 'kind territory wash (alpha 0.17–0.3)'], ['#7a3820', 'cruel territory wash (alpha 0.17–0.3)'], ['#9c7a1c', 'pennant: protected'], ['#b8902a', 'pennant: allied'], ['#8a4a2a', 'pennant: tributary'], ['#5a2418', 'pennant: occupied'], ['#8f2b1f', 'story seal, threat'], ['#3a1e48', 'shadow seal'], ['#3f6d3a', 'crystal seal'], ['#efe6cc', 'fog cloud'], ['#b9ad8e', 'storm cloud']];
+    const sw = [['#2b1a0e', 'ink (outlines, text)'], ['rgba(43,26,14,0.65)', 'soft ink (details, hatching)'], ['#f0e3c3', 'glyph fill / occlusion paper'], ['#d9c89d', 'dark glyph fill (walls, shade)'], ['#e3d1a6', 'parchment base'], ['#c8b07c', 'parchment fleck dark'], ['#f2e5c4', 'parchment fleck light'], ['rgba(48,78,118,0.78)', 'water ink (rivers, marsh)'], ['#698caa', 'sea wash (alpha 0.07–0.22)'], ['#6e8c3a', 'kind watercolour (alpha ≤ 0.45)'], ['#c4a03a', 'kind watercolour, gold blooms'], ['#b03010', 'cruel watercolour, rust'], ['#2c2420', 'cruel watercolour, charcoal edges'], ['#806846', 'neutral watercolour'], ['#24160c', 'discovery ink (wet)'], ['#4c3e2e', 'discovery sketch (alpha 0.5)'], ['#9c7a1c', 'pennant: protected'], ['#b8902a', 'pennant: allied'], ['#8a4a2a', 'pennant: tributary'], ['#5a2418', 'pennant: occupied'], ['#8f2b1f', 'story seal, threat'], ['#3a1e48', 'shadow seal'], ['#3f6d3a', 'crystal seal'], ['#efe6cc', 'fog cloud'], ['#b9ad8e', 'storm cloud']];
     const w = 760, h = 40 + Math.ceil(sw.length / 2) * 34;
     const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); paper(x, w, h);
     HB.text.draw(x, 'Map palette (sampled from src/art/mapart.js, parchment.js, data/domain.js)', 14, 24, { size: 15, family: 'sc', color: '#2b1a0e' });

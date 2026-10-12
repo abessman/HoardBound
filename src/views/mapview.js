@@ -26,7 +26,7 @@
       this.pendingReveal = [];
       this.dragonFrameT = 0;
       // the dragon's domain: washes over its territory and changed glyphs near its rule (rebuilt when the domain changes)
-      this.showTerritory = true; this._domSig = null; this.mark = null; this.overlay = null;
+      this.showTerritory = true; this._domSig = null; this.mark = null;
       this.syncDomain();
     }
     /** rebuild the territory overlay and glyph marks if the domain changed (chunks re-render with the new glyphs) */
@@ -35,92 +35,22 @@
       const sig = HB.domain.signature(this.state);
       if (sig === this._domSig) return;
       const hadMark = !!this.mark && this.mark.some(v => v);
-      this._domSig = sig; this.mark = HB.domain.markField(this.state); this.overlay = null;
+      this._domSig = sig; this.mark = HB.domain.markField(this.state);
       if (hadMark || this.mark.some(v => v)) { this.chunks.clear(); this.chunkOrder.length = 0; }
     }
-    /** the territory as a watercolour wash: soft bleeding edges, pigment pooled at the rim, paper grain showing
-     *  through, colour from who holds each place (gold-green kind, rust cruel, sepia while undecided). Painted once per
-     *  change at 6 px per cell over the territory's bounds only. */
-    buildOverlay() {
-      const st = this.state, W = st.world, inf = HB.domain.influence(st);
-      const prev = this.overlayInf;
-      this.overlayInf = inf; this.overlay = null;
-      if (!inf.count) return;
-      const RES = 6, b = inf.bbox, pad = 2;
-      const x0 = Math.max(0, b.x0 - pad), y0 = Math.max(0, b.y0 - pad), x1 = Math.min(W.w - 1, b.x1 + pad), y1 = Math.min(W.h - 1, b.y1 + pad);
-      const cw = (x1 - x0 + 1) * RES, ch = (y1 - y0 + 1) * RES;
-      const c = document.createElement('canvas'); c.width = cw; c.height = ch;
-      const g = c.getContext('2d'), img = g.createImageData(cw, ch), D = img.data;
-      const WS = HB.mapAssets ? HB.mapAssets.style.wash : { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] };
-      const Wd = W.w, rid = inf.region, src = inf.sources.filter(q => q.r > 0);
-      const nz = this._washNoise || (this._washNoise = new HB.Noise2D(new HB.RNG('wash:' + st.seed)));
-      // the land your rule may take (home region, not the sea), as a 0/1 field sampled smoothly
-      const mask = new Float32Array((x1 - x0 + 3) * (y1 - y0 + 3)), mw = x1 - x0 + 3;
-      for (let y = y0 - 1; y <= y1 + 1; y++) for (let x = x0 - 1; x <= x1 + 1; x++) { const i = y * Wd + x; if (x >= 0 && y >= 0 && x < Wd && y < W.h && W.region[i] === rid && HB.isLand(W.terrain[i])) mask[(y - y0 + 1) * mw + (x - x0 + 1)] = 1; }
-      for (let py = 0; py < ch; py++) {
-        const fy = y0 + (py + 0.5) / RES, gy = fy - 0.5 - y0 + 1, iy = Math.floor(gy), ty = gy - iy;
-        for (let px = 0; px < cw; px++) {
-          const fx = x0 + (px + 0.5) / RES, gx = fx - 0.5 - x0 + 1, ix = Math.floor(gx), tx = gx - ix;
-          const m00 = mask[iy * mw + ix] || 0, m10 = mask[iy * mw + ix + 1] || 0, m01 = mask[(iy + 1) * mw + ix] || 0, m11 = mask[(iy + 1) * mw + ix + 1] || 0;
-          const m = (m00 * (1 - tx) + m10 * tx) * (1 - ty) + (m01 * (1 - tx) + m11 * tx) * ty;
-          if (m <= 0.02) continue;
-          // each source's wobbling circle, evaluated per pixel so small washes stay round
-          let v = 0, sw = 0, ss = 0;
-          for (const q of src) {
-            const dx = fx - q.x, dy = fy - q.y, R = q.r * 1.3; if (dx > R || dx < -R || dy > R || dy < -R) continue;
-            const d = Math.hypot(dx, dy), ang = Math.atan2(dy, dx), ph = q.ph || [0, 0, 0];
-            const t = 1 - d / Math.max(0.5, q.r * (1 + 0.14 * Math.sin(3 * ang + ph[0]) + 0.08 * Math.sin(5 * ang + ph[1]) + 0.05 * Math.sin(9 * ang + ph[2])));
-            if (t <= 0) continue; if (t > v) v = t; sw += t; ss += q.side * t;
-          }
-          const f = v * Math.min(1, m * 1.6);
-          if (f <= 0) continue;
-          const n1 = nz.at(fx * 0.32, fy * 0.32), n2 = nz.at(fx * 1.5 + 40.3, fy * 1.5 + 17.7);
-          const e = f + n1 * 0.13 + n2 * 0.06 - 0.04; // the edge wanders like wet paint
-          if (e <= 0) continue;
-          const grain = nz.at(fx * 7.1 + 91.1, fy * 7.1 + 3.3), bloom = nz.at(fx * 0.7 + 12.9, fy * 0.7 + 55.1);
-          const side = sw > 0 ? ss / sw : 0;
-          const tgt = side >= 0 ? WS.kind : WS.cruel, k = Math.min(1, Math.abs(side) / 0.6);
-          // pigment pools where the wash dried (a darker rim), and in blotches where it pooled (blooms)
-          const rim = Math.pow(Math.max(0, 1 - e / 0.16), 1.6), pool = Math.max(0, bloom) * 0.5;
-          const dark = 1 - rim * 0.38 - pool * 0.12;
-          let a = (0.15 + 0.15 * Math.min(1, f * 1.5)) * (0.7 + 0.6 * (n1 * 0.5 + 0.5)) * (0.85 + 0.3 * (grain * 0.5 + 0.5)) * (1 + pool) + rim * 0.26;
-          a *= Math.min(1, e / 0.04);
-          const o = (py * cw + px) * 4;
-          D[o] = (WS.reach[0] + (tgt[0] - WS.reach[0]) * k) * dark; D[o + 1] = (WS.reach[1] + (tgt[1] - WS.reach[1]) * k) * dark; D[o + 2] = (WS.reach[2] + (tgt[2] - WS.reach[2]) * k) * dark;
-          D[o + 3] = Math.round(HB.clamp(a, 0, 0.58) * 255);
-        }
+    /** the territory as watercolour blooms (HB.mapWash, src/art/mapfx.js): green and gold where your rule is kind,
+     *  rust and charcoal where it is cruel; painted from the real territory (HB.domain.influence) over the land of your
+     *  home region. When the territory changes, the new or grown part blooms out from the place that changed. */
+    drawTerritory(ctx) {
+      if (!HB.domain || !this.showTerritory || !HB.mapWash) return;
+      const st = this.state, W = st.world, inf = HB.domain.influence(st), rev = HB.mapAssets ? HB.mapAssets.revision : 0;
+      if (!this.wash) this.wash = new HB.mapWash.Layer({ res: 6, seed: st.seed });
+      if (this.washInf !== inf || this.washRev !== rev || this.washReplay) {
+        const rid = inf.region, first = !this.washInf || this.washReplay;
+        this.wash.update(inf.count ? inf.sources : [], { now: this.t, w: W.w, h: W.h, bloomIn: first, mask: (x, y) => { const i = y * W.w + x; return W.region[i] === rid && HB.isLand(W.terrain[i]); } });
+        this.washInf = inf; this.washRev = rev; this.washReplay = false;
       }
-      g.putImageData(img, 0, 0);
-      this.overlay = c; this.overlayRect = { x0, y0, x1: x1 + 1, y1: y1 + 1, res: RES };
-      // it bleeds in when it first appears and when it grows (from where it reached before)
-      const lr = HB.domain.lairRadius(st).r;
-      if (!prev || !this._washShown) this.startWash(0);
-      else if (inf.count > prev.count) this.startWash(Math.max(0, (this._washR || lr) - 1));
-      this._washR = lr; this._washShown = true;
-    }
-    startWash(fromCells) { this.washAnim = { t: 0, dur: 1.6, from: fromCells }; }
-    drawTerritory(ctx, tl, br) {
-      if (!HB.domain || !this.showTerritory) return;
-      const inf = HB.domain.influence(this.state);
-      if (this.overlayInf !== inf || (!this.overlay && inf.count)) this.buildOverlay();
-      if (!this.overlay) return;
-      const R = this.overlayRect, a = this.worldToScreen(R.x0, R.y0), b = this.worldToScreen(R.x1, R.y1);
-      if (b.x < 0 || b.y < 0 || a.x > HB.W || a.y > HB.H) return;
-      let img = this.overlay;
-      const A = this.washAnim;
-      if (A && A.t < A.dur) {
-        // the wash spreads outward from the lair: a soft-edged circle reveals it
-        const W = this.state.world, cx = (W.home.x + 0.5 - R.x0) * R.res, cy = (W.home.y + 0.5 - R.y0) * R.res;
-        const far = Math.hypot(Math.max(cx, img.width - cx), Math.max(cy, img.height - cy));
-        const t = A.t / A.dur, ease = 1 - Math.pow(1 - t, 3), r0 = A.from * R.res, rad = r0 + (far * 1.15 - r0) * ease, soft = Math.max(8, rad * 0.25);
-        const tmp = this._washTmp && this._washTmp.width === img.width && this._washTmp.height === img.height ? this._washTmp : (this._washTmp = Object.assign(document.createElement('canvas'), { width: img.width, height: img.height }));
-        const g = tmp.getContext('2d'); g.globalCompositeOperation = 'source-over'; g.clearRect(0, 0, tmp.width, tmp.height); g.drawImage(img, 0, 0);
-        const gr = g.createRadialGradient(cx, cy, Math.max(0, rad - soft), cx, cy, Math.max(1, rad));
-        gr.addColorStop(0, 'rgba(0,0,0,1)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
-        g.globalCompositeOperation = 'destination-in'; g.fillStyle = gr; g.fillRect(0, 0, tmp.width, tmp.height); g.globalCompositeOperation = 'source-over';
-        img = tmp;
-      }
-      ctx.save(); ctx.imageSmoothingEnabled = true; ctx.drawImage(img, a.x, a.y, b.x - a.x, b.y - a.y); ctx.restore();
+      this.wash.draw(ctx, (x, y) => this.worldToScreen(x, y), this.t);
     }
     /** pennants showing what each settlement is to you; the settlement at your hill */
     drawDomainMarks(ctx, tl, br) {
@@ -159,12 +89,12 @@
     /** a small key under the territory toggle */
     drawTerritoryKey(ctx) {
       if (!HB.domain || !this.btnTerritory || !this.btnTerritory.visible || !this.showTerritory || this.selected) return;
-      const inf = this.overlayInf || HB.domain.influence(this.state);
+      const inf = this.washInf || HB.domain.influence(this.state);
       const rows = [];
       let kind = false, cruel = false, reach = false;
       for (const o of inf.subs.values()) { if (o.c > 0.2) kind = true; else if (o.c < -0.2) cruel = true; else reach = true; }
-      const WS = HB.mapAssets ? HB.mapAssets.style.wash : { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] }, rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
-      if (kind) rows.push([rgba(WS.kind, 0.6), 'Ruled kindly']); if (cruel) rows.push([rgba(WS.cruel, 0.55), 'Ruled by fear']); if (reach) rows.push([rgba(WS.reach, 0.4), 'Within your reach']);
+      const C = HB.mapWash ? HB.mapWash.colours() : { benevolent: [[110, 140, 58]], tyrannical: [[176, 48, 16]], neutral: [[128, 104, 70]] }, rgba = (c, a) => `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+      if (kind) rows.push([rgba(C.benevolent[0], 0.6), 'Ruled kindly']); if (cruel) rows.push([rgba(C.tyrannical[0], 0.55), 'Ruled by fear']); if (reach) rows.push([rgba(C.neutral[0], 0.4), 'Within your reach']);
       if (!rows.length) return;
       const b = this.btnTerritory, x = b.x, y = b.y + b.h + 4, w = b.w, hh = 8 + rows.length * 18;
       HB.parchment.panel(ctx, x, y, w, hh, { shadow: false, stains: false, vignette: 0.05, flourish: 0 });
@@ -188,7 +118,7 @@
       this.btnAims = btn(x, 'Aims', 'KeyG', () => this.openAims(), { tooltip: 'Your goal, what you could do next and why, and what you are known for. (G)' }); x += bw + 8;
       this.btnMenu = btn(x, 'Menu', 'menu', () => this.openMenu(), { tooltip: 'Save, load, settings. (Esc)' }); x += bw + 8;
       this.btnHome = btn(x, 'Find me', null, () => this.centerOn(st.dragon.x + 0.5, st.dragon.y + 0.5), { tooltip: 'Centre the map on your dragon.' });
-      this.btnTerritory = ui.add(new HB.ui.Button({ x: HB.W - 280, y: 16, w: 160, h: 30, label: 'Territory: shown', size: 13, hotkey: 'KeyT', hotkeyLabel: 'T', tooltip: 'Show or hide the wash over your territory. It grows with your size and hoard, and around the places that serve you; it cannot pass the storms around your home region. Territory is reach, not loyalty: tap a place to see what it is to you. (T)', onClick: () => { this.showTerritory = !this.showTerritory; this.btnTerritory.label = this.showTerritory ? 'Territory: shown' : 'Territory: hidden'; if (this.showTerritory) this.startWash(0); } }));
+      this.btnTerritory = ui.add(new HB.ui.Button({ x: HB.W - 280, y: 16, w: 160, h: 30, label: 'Territory: shown', size: 13, hotkey: 'KeyT', hotkeyLabel: 'T', tooltip: 'Show or hide the wash over your territory. It grows with your size and hoard, and around the places that serve you; it cannot pass the storms around your home region. Territory is reach, not loyalty: tap a place to see what it is to you. (T)', onClick: () => { this.showTerritory = !this.showTerritory; this.btnTerritory.label = this.showTerritory ? 'Territory: shown' : 'Territory: hidden'; if (this.showTerritory) this.washReplay = true; } }));
       // the goal panel under the status plaque: always visible, opens the Aims board
       this.goalPanel = ui.add(new HB.ui.Custom({ x: 14, y: 114, w: 330, h: 92, focusable: true, tooltip: 'Your goal and the next step. Open the Aims board for what you could do and why.', render: (ctx, wdg) => this.drawGoalPanel(ctx, wdg), onClick: () => this.openAims() }));
       // context buttons (visibility set per frame)
@@ -308,7 +238,6 @@
       if (HB.travel && HB.travel.update) HB.travel.update(st, dt, this);
       if (HB.worldsim && HB.worldsim.tickRealtime) HB.worldsim.tickRealtime(st, dt);
       this.dragonFrameT += dt;
-      if (this.washAnim && this.washAnim.t < this.washAnim.dur) this.washAnim.t += HB.settings.reduceMotion ? this.washAnim.dur : dt;
       if (this.toast && (this.toast.t -= dt) <= 0) this.toast = null;
     }
     get revealAnim() { if (!this._ra) this._ra = new Set(); return this._ra; }
@@ -531,8 +460,8 @@
       const m = MARGIN;
       HB.parchment.fill(ctx, 0, 0, HB.W, HB.H);
       // an art pack finished loading an image (or changed): chunks drawn with the old art (or its fallback) are redrawn,
-      // a few per frame, showing the old ones meanwhile (no blank flash); the territory overlay takes the pack's colours
-      if (HB.mapAssets && this._artRev !== HB.mapAssets.revision) { this._artRev = HB.mapAssets.revision; this.overlay = null; }
+      // a few per frame, showing the old ones meanwhile (no blank flash); the wash rebuilds itself on a new revision
+      if (HB.mapAssets && this._artRev !== HB.mapAssets.revision) this._artRev = HB.mapAssets.revision;
       // visible cell range
       const tl = this.screenToWorld(0, 0), br = this.screenToWorld(HB.W, HB.H);
       const cx0 = Math.max(0, Math.floor(tl.x / CHUNK)), cx1 = Math.min(Math.ceil(W.w / CHUNK) - 1, Math.floor(br.x / CHUNK));
@@ -555,7 +484,7 @@
       this.drawWorldEdge(ctx);
       // the dragon's territory: a light wash, under the ink
       if (this.frame % 20 === 0) this.syncDomain();
-      this.drawTerritory(ctx, tl, br);
+      this.drawTerritory(ctx);
       // locations
       this.drawLocations(ctx, tl, br);
       this.drawDomainMarks(ctx, tl, br);

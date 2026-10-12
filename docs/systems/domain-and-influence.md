@@ -90,9 +90,12 @@ bring offerings while they prosper (`tribute.offeringPlaces`); ×1.6 from adult.
   Crushing a rising (60%) and razing (50%) also make sworn enemies ([realms-and-memory](realms-and-memory.md)).
 
 ### On screen
-- Map: a watercolour wash (`mapview.buildOverlay`: per-pixel wobbling circles at 6 px per cell, a wandering noisy
-  edge, pigment pooled at the rim, blooms and paper grain), bleeding outward from the lair when it appears, is
-  toggled on or grows; toggle `Territory` (T) and a small key;
+- Map: a watercolour wash (0.12: `HB.mapWash.Layer` in `src/art/mapfx.js`, drawn by `mapview.drawTerritory` from
+  `influence(state).sources` over home-region land; per-pixel wobbling circles at 6 px per cell, a wandering noisy
+  edge, two colours per path: kind green with gold blooms, cruel rust with charcoal edges, neutral sepia; textures
+  from the art pack's `map.wash.*` or noise). Repainted when the territory signature changes; what changed blooms:
+  a new member from itself, a wider circle outward from the old edge, a recolour from each source; land lost fades
+  out under the new painting. Toggle `Territory` (T) and a small key;
   pennants beside members (gold with a sun = protected or allied, rust = tributary, black with a red eye =
   occupied, crossed swords = in revolt); the home settlement drawn beside the lair with its name.
 - Glyphs (`HB.domain.markField`, chunks re-render when the domain changes): under tyranny bare and burned trees,

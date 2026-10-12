@@ -47,6 +47,7 @@ function validate(dir) {
     let good = 0;
     vs.forEach((v, i) => {
       const where = `${id} variant ${v && v.id !== undefined ? v.id : i}`, before = out.errors.length;
+      if (fam.spec.layer === 'wash') { washVariant(dir, fam, v, where, E, W); if (out.errors.length === before) good++; return; }
       if (!v || typeof v.src !== 'string') { E(`${where}: missing "src"`); return; }
       if (v.rect && !num(v.rect, 4)) { E(`${where}: "rect" must be [x, y, width, height]`); return; }
       const size = v.rect ? [v.rect[2], v.rect[3]] : v.sourceSize;
@@ -71,6 +72,15 @@ function validate(dir) {
         else if (v.rect ? (v.rect[0] + v.rect[2] > dim[0] || v.rect[1] + v.rect[3] > dim[1]) : (dim[0] !== size[0] || dim[1] !== size[1])) E(`${where}: ${path.basename(file)} is ${dim.join('×')}, which does not match ${v.rect ? 'rect ' + v.rect.join(',') : 'sourceSize ' + size.join('×')}`);
       }
       for (const key of ['occlusionMask', 'tintMask']) if (typeof v[key] === 'string') { const mf = path.join(dir, v[key]), md = pngSize(mf); if (!md) E(`${where}: ${key} ${v[key]} is missing or not a PNG`); else if (!v.rect && (md[0] !== size[0] || md[1] !== size[1])) W(`${where}: ${key} is ${md.join('×')}, not ${size.join('×')}`); }
+      // ink discovery masks (docs/map-art/INK_AND_WASH.md): the art file's size, pixel for pixel; a bad one falls back to a derived mask
+      const art = pngSize(file);
+      for (const key of ['inkMask', 'revealMask']) if (v[key] !== undefined) {
+        if (typeof v[key] !== 'string') { W(`${where}: ${key} must be a file path`); continue; }
+        const mf = /^assets\//.test(v[key]) ? path.join(root, v[key]) : path.join(dir, v[key]), md = pngSize(mf);
+        if (!md) W(`${where}: ${key} ${v[key]} is missing or not a PNG; the engine derives it from the art`);
+        else if (art && (md[0] !== art[0] || md[1] !== art[1])) W(`${where}: ${key} is ${md.join('×')} but the art file is ${art.join('×')}; the engine derives it from the art`);
+      }
+      if (v.inkEntryPx !== undefined && (!num(v.inkEntryPx, 2) || v.inkEntryPx[0] < 0 || v.inkEntryPx[1] < 0 || v.inkEntryPx[0] > size[0] || v.inkEntryPx[1] > size[1])) W(`${where}: inkEntryPx must be [x, y] inside the frame; ignored`);
       if (v.attach && v.attach.flag && !num(v.attach.flag, 2)) W(`${where}: attach.flag must be [x, y] in source pixels`);
       if (v.labelOffset && !num(v.labelOffset, 2)) W(`${where}: labelOffset must be [x, y] in logical px`);
       if (out.errors.length === before) good++;
@@ -78,6 +88,30 @@ function validate(dir) {
     if (good) out.ok.push(id);
   }
   return out;
+}
+/** a watercolour variant: tileable coverage/pooling/hue textures (map.wash.<path>) or a bloom order mask (map.wash.bloom) */
+function washVariant(dir, fam, v, where, E, W) {
+  const file = (f) => /^assets\//.test(f) ? path.join(root, f) : path.join(dir, f);
+  if (!v || typeof v !== 'object') { E(`${where}: not an object`); return; }
+  if (fam.spec.kind === 'bloom') {
+    if (typeof v.src !== 'string' || !num(v.sourceSize, 2)) { E(`${where}: a bloom mask needs "src" and "sourceSize"`); return; }
+    if (v.sourceSize[0] !== v.sourceSize[1]) { E(`${where}: a bloom mask must be square (sourceSize ${v.sourceSize.join('×')})`); return; }
+    if (![256, 512].includes(v.sourceSize[0])) W(`${where}: bloom masks are meant to be 256 or 512 px`);
+    if (v.span !== undefined && !(v.span > 0)) W(`${where}: "span" must be a number > 0; 2.5 is used`);
+    const d = pngSize(file(v.src));
+    if (!d) E(`${where}: ${v.src} is missing or not a PNG`);
+    else if (d[0] !== v.sourceSize[0] || d[1] !== v.sourceSize[1]) E(`${where}: ${v.src} is ${d.join('×')}, not ${v.sourceSize.join('×')}`);
+    return;
+  }
+  if (typeof v.coverage !== 'string') { E(`${where}: a wash needs "coverage"`); return; }
+  if (!num(v.size, 2) || v.size[0] !== v.size[1] || v.size[0] <= 0 || (v.size[0] & (v.size[0] - 1))) { E(`${where}: "size" must be square and a power of two (256, 512, 1024)`); return; }
+  if (v.cellsPerTile !== undefined && !(v.cellsPerTile > 0)) W(`${where}: "cellsPerTile" must be a number > 0; 8 is used`);
+  for (const key of ['coverage', 'pooling', 'hue']) if (v[key] !== undefined) {
+    if (typeof v[key] !== 'string') { E(`${where}: ${key} must be a file path`); continue; }
+    const d = pngSize(file(v[key]));
+    if (!d) (key === 'coverage' ? E : W)(`${where}: ${key} ${v[key]} is missing or not a PNG`);
+    else if (d[0] !== v.size[0] || d[1] !== v.size[1]) E(`${where}: ${key} is ${d.join('×')}, not ${v.size.join('×')} (all files of a variant share its "size")`);
+  }
 }
 /** pack.json → pack.js (a classic script the game can load from file://) */
 function writePackJs(dir) {

@@ -14,7 +14,10 @@
   `?scene=dragons` is the dragon sheet; `?scene=map&seed=…` jumps into a world.
 - `node tools/worldstats.js [seed] [size] [--ascii]`: world generation report.
 - Map art: `node tools/mappack.js <pack>` validates a pack and writes pack.js; `node tools/mapart-export.mjs
-  [--only=catalog,sheets,sample,shots,check,perf]` rewrites `docs/map-art/` (re-run after changing map glyphs).
+  [--only=catalog,sheets,sample,shots,check,perf,ink]` rewrites `docs/map-art/` (re-run after changing map glyphs).
   Preview scene: `?scene=mappreview[&mappack=sample][&chunks=1][&cam=x,y,zoom or ~dx,dy,zoom from the lair]`.
+  Ink and wash: `?scene=inkpreview[&mappack=sample][&reducedmotion=1][&auto=1]`; `--only=ink` steps it frame by frame
+  through `tools/inkcheck-page.js`. Timing drawing into an offscreen canvas: read one pixel per frame, or the browser
+  batches the drawing and its cost lands on some later call.
 - `node tools/docscheck.js`: doc size budgets, broken relative links, the six sections in every system doc.
 - Slow runs: each new world takes 1–2 s to generate; running several seeds can exceed two minutes.

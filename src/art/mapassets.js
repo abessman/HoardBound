@@ -20,8 +20,8 @@
     river: { color: 'rgba(48,78,118,0.78)', baseWidth: 0.8, perWidth: 0.6 },
     coast: { color: '#2b1a0e', width: 1.5 },
     water: { color: [105, 140, 170], alpha: 0.07, alphaPerDepth: 0.03 },
-    wash: { kind: [138, 150, 58], cruel: [122, 56, 32], reach: [128, 104, 70] },
-    edge: { kind: 'rgba(96,110,30,0.55)', cruel: 'rgba(110,36,20,0.55)', reach: 'rgba(90,70,40,0.35)' },
+    // watercolour territory: each path's two colours (the wash's hue mask mixes them; docs/map-art/INK_AND_WASH.md)
+    wash: { benevolent: [[110, 140, 58], [196, 160, 58]], tyrannical: [[176, 48, 16], [44, 36, 32]], neutral: [[128, 104, 70], [96, 74, 48]] },
   };
   const merge = (a, b) => { const o = Array.isArray(a) ? a.slice() : Object.assign({}, a); for (const k in b || {}) o[k] = (a && typeof a[k] === 'object' && !Array.isArray(a[k]) && b[k] && typeof b[k] === 'object' && !Array.isArray(b[k])) ? merge(a[k], b[k]) : b[k]; return o; };
 
@@ -33,7 +33,7 @@
     /** choose a pack ('none' = procedural). Resolves true once its manifest is read (images keep loading after) */
     use(name) {
       name = name || 'none';
-      MA.entries.clear(); MA.pack = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
+      MA.entries.clear(); MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
       if (name === 'none') return Promise.resolve(false);
       if (!/^[\w-]+$/.test(name)) { MA.warn(`bad pack name "${name}"`); return Promise.resolve(false); }
       MA._pending = name;
@@ -58,6 +58,7 @@
       if (!pack || pack.schemaVersion !== 1) MA.warn(`pack "${name}": schemaVersion should be 1 (got ${pack && pack.schemaVersion}); reading it anyway`);
       MA.pack = { name, schemaVersion: pack && pack.schemaVersion };
       if (pack && pack.style) MA.style = merge(DEFAULT_STYLE, pack.style);
+      MA.packStyle = (pack && pack.style) || null; // 0.10 packs may set wash.kind / cruel / reach (one colour each)
       const base = `assets/map/packs/${name}/`;
       const list = Array.isArray(pack && pack.assets) ? pack.assets.map(a => [a && a.id, a]) : Object.entries((pack && pack.assets) || {});
       for (const [id, def] of list) {
@@ -65,7 +66,7 @@
         if (MA.entries.has(id)) { MA.warn(`duplicate id ${id}: the first one is used`); continue; }
         const fam = HB.mapSpecFamily ? HB.mapSpecFamily(id) : null;
         if (!fam) { MA.warn(`unknown id ${id} (not in src/data/mapspec.js); ignored`); continue; }
-        const variants = ((def && def.variants) || []).map((v, i) => MA.variant(id, fam, v, i, base)).filter(Boolean);
+        const variants = ((def && def.variants) || []).map((v, i) => fam.spec.layer === 'wash' ? MA.washVariant(id, fam, v, i, base) : MA.variant(id, fam, v, i, base)).filter(Boolean);
         if (!variants.length) { MA.warn(`${id}: no usable variants; procedural art is used`); continue; }
         MA.entries.set(id, { id, family: fam.id, spec: fam.spec, variants });
       }
@@ -99,10 +100,70 @@
       MA.loadImage(out, src, (img) => {
         const nw = img.naturalWidth, nh = img.naturalHeight;
         if (rect ? (rect[0] + rect[2] > nw || rect[1] + rect[3] > nh) : (nw !== size[0] || nh !== size[1])) { out.failed = true; MA.warn(`${where}: ${src} is ${nw}×${nh}, which does not match ${rect ? 'the rect ' + rect.join(',') : 'sourceSize ' + size.join('×')}; refused`); MA.bump(); return; }
-        out.img = img; out.ready = true; MA.bump();
+        out.img = img; out.ready = true; MA.featureMasks(out); MA.bump();
       }, () => { out.failed = true; MA.warn(`${where}: could not load ${src}`); MA.bump(); });
       if (typeof v.occlusionMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.occlusionMask) ? v.occlusionMask : base + v.occlusionMask, (m) => { out.maskCanvas = MA.colourise(m, out.rect, PAPER, 1); MA.bump(); }, () => MA.warn(`${where}: could not load occlusionMask`));
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
+      // ink discovery masks (docs/map-art/INK_AND_WASH.md): same size as the art file, checked once both have loaded
+      out.inkEntry = num(v.inkEntryPx, 2) ? v.inkEntryPx.slice() : null;
+      for (const key of ['inkMask', 'revealMask']) if (typeof v[key] === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v[key]) ? v[key] : base + v[key], (m) => { out[key] = m; MA.featureMasks(out); MA.bump(); }, () => MA.warn(`${where}: could not load ${key}; the engine derives it from the art`));
+      return out;
+    },
+    /** a watercolour variant (map.wash.*): tileable world-anchored masks, or a bloom order mask */
+    washVariant(id, fam, v, i, base) {
+      const where = `${id} variant ${v && v.id !== undefined ? v.id : i}`, num = (a, n) => Array.isArray(a) && a.length === n && a.every(x => typeof x === 'number' && isFinite(x) && x > 0);
+      const path = (f) => /^(assets\/|https?:|data:)/.test(f) ? f : base + f;
+      if (fam.spec.kind === 'bloom') {
+        if (!v || typeof v.src !== 'string' || !num(v.sourceSize, 2)) { MA.warn(`${where}: a bloom mask needs "src" and "sourceSize"`); return null; }
+        if (v.sourceSize[0] !== v.sourceSize[1]) { MA.warn(`${where}: a bloom mask must be square; refused`); return null; }
+        const out = { id, where, bloom: true, n: v.sourceSize[0], span: v.span > 0 ? v.span : 2.5, allowFlipX: !!v.allowFlipX, ready: false, failed: false, img: null, data: null };
+        MA.loadImage(out, path(v.src), (img) => { if (img.naturalWidth !== out.n || img.naturalHeight !== out.n) { out.failed = true; MA.warn(`${where}: ${v.src} is ${img.naturalWidth}×${img.naturalHeight}, not ${out.n}×${out.n}; refused`); } else { out.img = img; out.ready = true; } MA.bump(); }, () => { out.failed = true; MA.warn(`${where}: could not load ${v.src}`); MA.bump(); });
+        return out;
+      }
+      if (!v || typeof v.coverage !== 'string') { MA.warn(`${where}: a wash needs "coverage"`); return null; }
+      if (!num(v.size, 2) || v.size[0] !== v.size[1] || (v.size[0] & (v.size[0] - 1))) { MA.warn(`${where}: "size" must be square and a power of two (256, 512, 1024); refused`); return null; }
+      const out = { id, where, wash: true, n: v.size[0], cellsPerTile: v.cellsPerTile > 0 ? v.cellsPerTile : 8, imgs: {}, pending: 0, ready: false, failed: false, data: null };
+      for (const key of ['coverage', 'pooling', 'hue']) {
+        if (typeof v[key] !== 'string') continue;
+        out.pending++;
+        MA.loadImage(out, path(v[key]), (img) => {
+          if (img.naturalWidth !== out.n || img.naturalHeight !== out.n) { MA.warn(`${where}: ${key} is ${img.naturalWidth}×${img.naturalHeight}, not ${out.n}×${out.n}; refused`); out.failed = true; }
+          else out.imgs[key] = img;
+          if (--out.pending === 0 && !out.failed && out.imgs.coverage) out.ready = true; MA.bump();
+        }, () => { MA.warn(`${where}: could not load ${key}`); if (key === 'coverage') out.failed = true; if (--out.pending === 0 && !out.failed && out.imgs.coverage) out.ready = true; MA.bump(); });
+      }
+      return out;
+    },
+    /** greyscale/alpha channels of an image as typed arrays (decoded once per image) */
+    pixels(img, w, h) {
+      if (img._px && img._px.w === w && img._px.h === h) return img._px;
+      const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d', { willReadFrequently: true });
+      g.drawImage(img, 0, 0, w, h); const d = g.getImageData(0, 0, w, h).data, lum = new Uint8Array(w * h), alpha = new Uint8Array(w * h); let opaque = true;
+      for (let i = 0; i < w * h; i++) { lum[i] = (d[i * 4] + d[i * 4 + 1] + d[i * 4 + 2]) / 3; alpha[i] = d[i * 4 + 3]; if (alpha[i] < 255) opaque = false; }
+      return (img._px = { w, h, lum, alpha, opaque });
+    },
+    /** the textures of a path's wash (benevolent | tyrannical | neutral), or null: { n, cellsPerTile, cov, pool, hue } */
+    washData(path) {
+      const e = MA.entries.get('map.wash.' + path); if (!e) return null;
+      const v = e.variants.find(x => x.ready); if (!v) return null;
+      if (!v.data) { const px = (k) => v.imgs[k] ? MA.pixels(v.imgs[k], v.n, v.n).lum : null; v.data = { n: v.n, cellsPerTile: v.cellsPerTile, cov: px('coverage'), pool: px('pooling'), hue: px('hue') }; }
+      return v.data;
+    },
+    /** a bloom order mask for a source, or null: { n, span, flip, ord (luminance), alpha } */
+    bloomData(key) {
+      const e = MA.entries.get('map.wash.bloom'); if (!e) return null;
+      const ok = e.variants.filter(x => x.ready); if (!ok.length) return null;
+      const v = ok[HB.hash32('bloom:' + key) % ok.length], px = MA.pixels(v.img, v.n, v.n);
+      return { n: v.n, span: v.span, flip: v.allowFlipX && (HB.hash32('bflip:' + key) & 1), ord: px.lum, alpha: px.alpha };
+    },
+    /** a resolved variant's ink masks, checked against the art's size: { ink, order, entry } (missing ones null) */
+    featureMasks(v) {
+      const out = { ink: null, order: null, entry: v.inkEntry };
+      for (const [key, slot] of [['inkMask', 'ink'], ['revealMask', 'order']]) {
+        const m = v[key]; if (!m || !v.img) continue;
+        if (m.naturalWidth !== v.img.naturalWidth || m.naturalHeight !== v.img.naturalHeight) { if (!v['_warned' + key]) { v['_warned' + key] = true; MA.warn(`${v.where}: ${key} is ${m.naturalWidth}×${m.naturalHeight} but the art is ${v.img.naturalWidth}×${v.img.naturalHeight}; the engine derives it instead`); } continue; }
+        out[slot] = m;
+      }
       return out;
     },
     loadImage(owner, src, ok, fail) { const img = new Image(); MA.loading++; img.onload = () => { MA.loading--; ok(img); }; img.onerror = () => { MA.loading--; fail(); }; img.src = src; },
@@ -163,6 +224,7 @@
       let bytes = 0, images = 0; const seen = new Set();
       for (const e of MA.entries.values()) for (const v of e.variants) if (v.img && !seen.has(v.img.src)) { seen.add(v.img.src); images++; bytes += v.img.naturalWidth * v.img.naturalHeight * 4; }
       const drawing = [...MA.entries.values()].filter(e => e.variants.some(v => v.ready)).map(e => e.id);
+      for (const e of MA.entries.values()) for (const v of e.variants) { for (const k of ['inkMask', 'revealMask']) if (v[k] && !seen.has(v[k].src)) { seen.add(v[k].src); images++; bytes += v[k].naturalWidth * v[k].naturalHeight * 4; } if (v.imgs) for (const k in v.imgs) if (!seen.has(v.imgs[k].src)) { seen.add(v.imgs[k].src); images++; bytes += v.n * v.n * 4; } if (v.bloom && v.img && !seen.has(v.img.src)) { seen.add(v.img.src); images++; bytes += v.n * v.n * 4; } }
       return { pack: MA.packName, ids: MA.entries.size, drawing, images, decodedBytes: bytes, loading: MA.loading, warnings: MA.warnings.slice() };
     },
   };

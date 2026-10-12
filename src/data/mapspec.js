@@ -13,6 +13,7 @@
   const C = 22; // map pixels per world cell at zoom 1 (HB.MAP_CELL)
   const T = (purpose, builder, o) => Object.assign({ layer: 'terrain', sampling: 'smooth', anchor: 'centre of the base, on the ground line', builder, purpose, states: [] }, o);
   const P = (purpose, ref, o) => Object.assign({ layer: 'places', sampling: 'smooth', param: 's', ref, maxK: 1.2, anchor: 'centre of the base (the ground under the symbol)', builder: 'HB.mapart.settlement(ctx, L, x, y, s)', purpose, states: ['burned', 'ruin'] }, o);
+  const WASH = (purpose, o) => Object.assign({ layer: 'wash', kind: 'texture', sampling: 'smooth', anchor: 'world-anchored: texel (0, 0) on cell (0, 0)', builder: 'HB.mapWash (procedural noise)', purpose, states: [] }, o);
   const M = (purpose, ref, o) => Object.assign({ layer: 'markers', sampling: 'smooth', param: 's', ref, maxK: 1.3, anchor: 'centre of the base', purpose, states: [] }, o);
 
   HB.MAP_SPEC = {
@@ -85,6 +86,11 @@
       // ---- fog and decoration
       'map.fog.cloud': M('A cloud puff of the fog (state "storm": over lands behind a storm wall)', 16.5, { layer: 'fog', param: 'r', builder: 'HB.mapart.cloud(ctx, x, y, r, rng, opts)', states: ['storm'], anchor: 'centre of the puff', maxK: 3.7 }),
       'map.fog.lightning': M('Lightning in a storm wall', 8.25, { layer: 'fog', builder: 'HB.mapart.lightning(ctx, x, y, s, rng)', anchor: 'top of the bolt', maxK: 3.6 }),
+      // ---- watercolour influence (0.12; contract: docs/map-art/INK_AND_WASH.md). Not glyphs: masks the wash reads
+      'map.wash.benevolent': WASH('Watercolour masks for kind territory (coverage, pooling, hue; tileable)'),
+      'map.wash.tyrannical': WASH('Watercolour masks for cruel territory (coverage, pooling, hue; tileable)'),
+      'map.wash.neutral': WASH('Watercolour masks for territory that is neither kind nor cruel'),
+      'map.wash.bloom': WASH('Bloom order masks: the order a bloom spreads from its source', { kind: 'bloom', anchor: 'centre on the source; edge = span × radius' }),
       'map.decoration.compass': M('The compass rose (top right of the screen)', 34, { layer: 'ui', param: 'r', builder: 'HB.mapart.compassRose(ctx, x, y, r)', anchor: 'centre', maxK: 1 }),
     },
   };

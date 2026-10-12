@@ -4,12 +4,12 @@
   "none": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 30.2,
-    "msPerChunk": 3.36
+    "ms": 25.8,
+    "msPerChunk": 2.88
    },
    "frame": {
-    "drawMedianMs": 2.9,
-    "drawP90Ms": 4.3,
+    "drawMedianMs": 3.1,
+    "drawP90Ms": 4.7,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },
@@ -32,12 +32,12 @@
   "sample": {
    "chunkRebuild": {
     "chunks": 9,
-    "ms": 27,
-    "msPerChunk": 3
+    "ms": 18,
+    "msPerChunk": 2
    },
    "frame": {
-    "drawMedianMs": 3.3,
-    "drawP90Ms": 6.2,
+    "drawMedianMs": 3.2,
+    "drawP90Ms": 4.3,
     "frameIntervalMedianMs": 33.3,
     "fps": 30
    },
@@ -50,17 +50,20 @@
    },
    "pack": {
     "pack": "sample",
-    "ids": 6,
+    "ids": 9,
     "drawing": [
      "map.terrain.mountain",
      "map.terrain.tree.round",
      "map.place.village",
      "map.place.castle",
      "map.place.town.burned",
-     "map.marker.wagon"
+     "map.marker.wagon",
+     "map.wash.benevolent",
+     "map.wash.tyrannical",
+     "map.wash.bloom"
     ],
-    "images": 7,
-    "decodedBytes": 239664,
+    "images": 18,
+    "decodedBytes": 2273584,
     "loading": 0
    }
   }
