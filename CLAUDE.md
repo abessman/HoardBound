@@ -17,6 +17,7 @@ through decades while the world changes and remembers. Played on desktop and iPa
 | What is functional / simplified / deferred | `docs/FEATURE_STATUS.md` |
 | Version history | `CHANGELOG.md` |
 | Ideas not built yet | `docs/ideas/` |
+| Drawing the game's pixel art (the owner's editor, `editor/`) | `docs/pixel-editor.md` |
 | Original brief (intent; DESIGN.md wins) | `docs/BRIEF.md` |
 | How to play, controls | `README.md` |
 
@@ -28,7 +29,7 @@ Folder rules load by themselves when you work there: `src/game/CLAUDE.md` (logic
 - Plain JavaScript, classic `<script>` tags, one global namespace `HB`. No framework, no bundler, no npm deps, no
   backend. Must work from `file://`, a static server, and Netlify.
 - Everything renders into one `<canvas>` at 1280×720 with the in-canvas UI toolkit (`src/core/ui.js`). No HTML
-  widgets (keeps a Steam/console port possible). Keyboard, mouse, touch and gamepad all go through `src/core/input.js`.
+  widgets (keeps a Steam/console port possible); dev tools outside the game (`editor/`) may use plain HTML. Keyboard, mouse, touch and gamepad all go through `src/core/input.js`.
 - **Load order matters.** A new file goes into `index.html` in the right place, and if it is game logic also into
   `LOGIC_FILES` in `tools/headless.js`.
 

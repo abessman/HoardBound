@@ -6,7 +6,8 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
 - Appearance is earned: size from age, palette and horns from tyranny or benevolence, mutations from artifacts
   and treasure, scars from defeats (Binding-of-Isaac-style mutations).
 - Tone: Tolkien gravitas with lighter Zelda/Pokémon readability.
-- Pixel scene art remains generated. The owner authorised a parchment map illustration pass in 0.14.
+- Pixel scene art is generated until the owner redraws it in the pixel editor (0.16, below). The owner authorised a
+  parchment map illustration pass in 0.14.
 
 ## How it works
 - Pixel scenes render to 320×180 offscreen buffers and scale 4× with nearest-neighbour.
@@ -63,6 +64,20 @@ ax,ay} }`, `ax`/`ay` the anchor pixel) into `assets/sprites/` and list them in `
 override generated sprites at load. Dragon layers are keyed `dragon.<tier>.<part>.<pose>` and can be
 overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README.md`.
 
+### Pixel editor (0.16)
+- `editor/index.html` (a dev tool, ordinary HTML; not part of the game): the owner draws the dragon frame by frame,
+  the raid sprites and map symbols, and commits them to `assets/pixelart/` through the GitHub API (Git Data API, one
+  commit per save; a fine-grained token kept in the browser). Guide: [pixel-editor](../pixel-editor.md).
+- One readable file per sprite (`<id>.js`: `HB.pixelArt.add({ id, kind, w, h, anchor, palette, frames: [{ rows }] })`,
+  `.` clear, `0-9a-zA-Z` palette index) plus `index.js`; classic scripts, so `file://` works. `src/art/pixelart.js`
+  loads them at boot (after the PNG atlas) and puts them into `HB.sprites.overrides`:
+  `sprite` → the id (frame 0; raidview stands sprites bottom-centre, anchors unused); `dragon` → `dragon.<tier>.<pose>.<k>`
+  per frame, one drawing for every breed and alignment, placed by its anchor (body centre); `map` → the `pixel` map
+  art pack (`HB.pixelArt.mapPack()`, built in memory by `HB.mapAssets.use('pixel')`; frames are variants, pixel
+  sampling, `logicalSize = size × scale`).
+- `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
+  "in game" buttons use it. `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
+
 ## Code
 - `src/art/` (palette, pixel helpers + sprite registry, sprites, dragon, mapart, parchment, illustrations).
 - Map art: `src/data/mapspec.js` (contract), `src/art/mapassets.js` (loader, resolver), the wrappers at the end of
@@ -70,6 +85,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   exporter); preview `?scene=mappreview` (`HB.debug.mapPreview` in `src/main.js`, `HB.presets.preview`).
 - Watercolour: `src/art/mapfx.js`, `src/views/washpreview.js`; checks `tools/washcheck-page.js` driven by
   `node tools/mapart-export.mjs --only=wash`.
+- Pixel editor: `editor/` (index.html, editor.css, editor.js; uses the art files and `tools/mapart-page.js` recipes to
+  draw map symbols as tracing guides), `src/art/pixelart.js` (game-side loader), `assets/pixelart/` (the art).
 
 ## Tests
 - `node tools/illuminated-check.mjs`: full symbol/state coverage, catalog rendering, touch pagination, no save writes, file delivery and rollback.
@@ -80,6 +97,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   the watercolour preview frame by frame: nothing under the fog drawn, an irregular dissolving edge, spreading from the
   dragon, world anchoring, drying away, reduced motion; the live map's reveal and territory; saves untouched
   (`docs/map-art/wash-checks.json`).
+- Pixel editor: browser-checked by hand (draw, shapes, select/copy/paste, frames, undo, preview, sample map, a mocked
+  GitHub save and sync, drafts shown in `?scene=dragons` and `?scene=mappreview&mappack=pixel`). No automated test yet.
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
@@ -88,6 +107,9 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
 - The sample pack's art is deliberate test art, not a style proposal; so are its watercolour textures.
 - The reveal wash is drawn cell by cell (no dissolve) in the far views (zoom below 0.8), where cells are a few px.
+- Drawn dragon art ignores breed colours, alignment tints, mutations and scars (one drawing serves all); hurt shows the
+  drawn hurt frames. Raid sprites have one frame in the game (no walk cycle yet). Editor saves: last save wins.
+- Editor map symbols are their own pack (`pixel`): choosing it shows undrawn symbols in the original ink, not Illuminated.
 
 ## Related
 [map-and-exploration](map-and-exploration.md) · [raids-and-encounters](raids-and-encounters.md)

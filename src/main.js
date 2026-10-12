@@ -15,6 +15,8 @@
     HB.debugMode = params.has('debug');
     await HB.text.load();
     if (location.protocol !== 'file:') await HB.sprites.loadOverrides();
+    // pixel art made with the editor (assets/pixelart/, editor/index.html); also works from file://
+    if (HB.pixelArt) await HB.pixelArt.load();
     // map art: ?mappack=<name> for this visit (none = hand-drawn), else the Settings choice; images load in the background
     if (HB.mapAssets) HB.mapAssets.use(params.get('mappack') || HB.settings.mapPack || 'none');
     if (HB.audio) HB.audio.init();

@@ -643,5 +643,41 @@ section('map art: the contract, the packs, the preview');
   ok(HB.domain.statusOf(c, c.world.locations[ra.resisting.id]) === 'resisting' && c.world.locations[ra.burned.id].state === 'burned', 'the preview campaign saves and loads');
 }
 
+section('pixel art files (assets/pixelart, made with editor/index.html)');
+{
+  const fs = require('fs'), path = require('path'), dir = path.join(__dirname, '../assets/pixelart');
+  const AL = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', POSES = ['idle', 'fly', 'grab', 'hurt', 'land', 'bite', 'roar', 'sleep', 'breathe'];
+  const fileOf = (id) => id.replace(/[^\w.-]/g, '~') + '.js';
+  // the same reading the game does (src/art/pixelart.js): run the file with a stand-in HB.pixelArt
+  const read = (text) => { const got = { files: null, defs: [] }; new Function('HB', text)({ pixelArt: { index: (l) => { got.files = l; }, add: (d) => got.defs.push(d) } }); return got; };
+  /** problems with one sprite definition ([] when it is fine) */
+  const problems = (def, file) => {
+    const p = [], n = (v) => typeof v === 'number' && isFinite(v);
+    if (!def || typeof def.id !== 'string') return ['no id'];
+    if (file && fileOf(def.id) !== file) p.push(`id ${def.id} belongs in ${fileOf(def.id)}`);
+    if (!['sprite', 'dragon', 'map'].includes(def.kind)) p.push(`kind ${def.kind}`);
+    if (def.kind === 'dragon' && !new RegExp(`^dragon\\.[0-3]\\.(${POSES.join('|')})$`).test(def.id)) p.push('dragon ids are dragon.<0-3>.<pose>');
+    if (def.kind === 'map') { const f = HB.mapSpecFamily(def.id); if (!f) p.push('not a map spec id'); else if (f.spec.layer === 'terrain' && !HB.mapTerrainReach(f.spec, [def.w * (def.scale || 1), def.h * (def.scale || 1)], [def.w, def.h], def.anchor, false).ok) p.push('terrain reaches past the chunk margin'); }
+    if (!(Number.isInteger(def.w) && Number.isInteger(def.h) && def.w >= 1 && def.h >= 1 && def.w <= 256 && def.h <= 256)) p.push('w and h are whole numbers 1–256');
+    if (!(Array.isArray(def.anchor) && def.anchor.length === 2 && def.anchor.every(n) && def.anchor[0] >= 0 && def.anchor[1] >= 0 && def.anchor[0] <= def.w && def.anchor[1] <= def.h)) p.push('anchor is [x, y] inside the canvas');
+    if (!(Array.isArray(def.palette) && def.palette.length <= AL.length && def.palette.every(c => /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(c)))) p.push('palette is up to 62 #rrggbb colours');
+    if (!(Array.isArray(def.frames) && def.frames.length >= 1)) p.push('at least one frame');
+    else def.frames.forEach((f, k) => { const rows = f && f.rows; if (!Array.isArray(rows) || rows.length !== def.h) p.push(`frame ${k + 1}: ${def.h} rows`); else rows.forEach((r, y) => { if (typeof r !== 'string' || r.length !== def.w) p.push(`frame ${k + 1} row ${y}: ${def.w} characters`); else for (const ch of r) if (ch !== '.' && !(AL.indexOf(ch) >= 0 && AL.indexOf(ch) < def.palette.length)) { p.push(`frame ${k + 1} row ${y}: '${ch}' is not a palette index`); break; } }); });
+    return p;
+  };
+  const good = { id: 'map.place.village', kind: 'map', w: 3, h: 2, anchor: [1, 2], palette: ['#2b1a0e', '#c04040'], frames: [{ rows: ['.0.', '010'] }], scale: 1 };
+  ok(!problems(good).length, 'a well-formed sprite passes the file check');
+  ok(problems(Object.assign({}, good, { frames: [{ rows: ['.0.', '012'] }] })).some(e => /not a palette index/.test(e)) && problems(Object.assign({}, good, { id: 'dragon.4.fly', kind: 'dragon' })).length && problems(Object.assign({}, good, { w: 4 })).some(e => /4 characters/.test(e)), 'a bad palette index, dragon id or row width is caught');
+  const idx = read(fs.readFileSync(path.join(dir, 'index.js'), 'utf8'));
+  ok(Array.isArray(idx.files) && idx.files.every(f => fs.existsSync(path.join(dir, f))), 'assets/pixelart/index.js lists files that exist');
+  const extra = fs.readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'index.js' && !(idx.files || []).includes(f));
+  ok(!extra.length, 'every sprite file is listed in index.js' + (extra.length ? ': ' + extra.join(', ') : ''));
+  for (const f of idx.files || []) {
+    let got; try { got = read(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (e) { ok(false, `${f} runs: ${e.message}`); continue; }
+    const p = got.defs.length === 1 ? problems(got.defs[0], f) : ['one HB.pixelArt.add(...) per file'];
+    ok(!p.length, `${f} is a valid sprite` + (p.length ? ': ' + p.slice(0, 4).join('; ') : ''));
+  }
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

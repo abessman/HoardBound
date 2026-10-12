@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>HoardBound pixel editor</title>
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<!-- A development tool for drawing the game's pixel art (not part of the game, so ordinary HTML is fine here).
+     Guide: docs/pixel-editor.md. Art is saved to assets/pixelart/ in the GitHub repo. -->
+<header id="top">
+  <strong>HoardBound · Pixel editor</strong>
+  <span id="status" class="muted"></span>
+  <span class="grow"></span>
+  <button id="btn-save" class="primary" title="Commit every changed sprite to the GitHub repo (assets/pixelart/)">Save to GitHub</button>
+  <button id="btn-download" title="Download the current sprite's file (to commit by hand)">Download</button>
+  <button id="btn-png" title="Download the current sprite's frames as one PNG strip">PNG</button>
+  <button id="btn-settings" title="Your GitHub access token and the repository">GitHub…</button>
+  <a class="btn" href="../index.html" target="_blank" rel="noopener">Game ↗</a>
+</header>
+<main>
+  <aside id="browser">
+    <input id="search" type="search" placeholder="Search sprites…" autocomplete="off">
+    <label class="row small"><input type="checkbox" id="only-mine"> only the ones I've drawn</label>
+    <div id="list"></div>
+  </aside>
+  <section id="work">
+    <div id="info">
+      <div id="title"></div>
+      <div id="note" class="muted small"></div>
+      <div class="row small" id="size-row">
+        <label>W <input id="in-w" type="number" min="1" max="256"></label>
+        <label>H <input id="in-h" type="number" min="1" max="256"></label>
+        <button id="btn-resize" title="Change the canvas size (keeps the drawing anchored at the top left)">Resize</button>
+        <span class="sep"></span>
+        <button data-shift="-1,0" title="Shift every frame one pixel left">←</button>
+        <button data-shift="1,0" title="Shift every frame one pixel right">→</button>
+        <button data-shift="0,-1" title="Shift every frame one pixel up">↑</button>
+        <button data-shift="0,1" title="Shift every frame one pixel down">↓</button>
+        <span class="sep"></span>
+        <label id="scale-wrap" title="Map symbols: logical map pixels per pixel (1 = one pixel per map pixel at zoom 1)">Scale <select id="in-scale"><option>0.5</option><option selected>1</option><option>1.5</option><option>2</option></select></label>
+        <button id="btn-revert" title="Throw away this sprite's unsaved changes">Revert</button>
+        <button id="btn-delete-art" title="Remove your art for this sprite (the game's own art comes back after you save)">Delete art</button>
+      </div>
+    </div>
+    <div id="frames-bar">
+      <div id="frames"></div>
+      <div class="row small" id="frame-buttons">
+        <button id="fr-add" title="Add a blank frame after this one">+ Blank</button>
+        <button id="fr-dup" title="Duplicate this frame">Duplicate</button>
+        <button id="fr-del" title="Delete this frame">Delete</button>
+        <button id="fr-left" title="Move this frame left">◀</button>
+        <button id="fr-right" title="Move this frame right">▶</button>
+        <span class="sep"></span>
+        <button id="fr-copy" title="Copy the whole frame">Copy frame</button>
+        <button id="fr-paste" title="Replace this frame with the copied one">Paste frame</button>
+        <button id="fr-ref" title="Replace this frame with the game's current drawing of it">From game art</button>
+      </div>
+    </div>
+    <div id="edit-bar" class="row wrap small">
+      <button id="btn-undo" title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
+      <button id="btn-redo" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
+      <span class="sep"></span>
+      <button id="btn-copy" title="Copy the selection (Ctrl/Cmd+C)">Copy</button>
+      <button id="btn-cut" title="Cut the selection (Ctrl/Cmd+X)">Cut</button>
+      <button id="btn-paste" title="Paste (Ctrl/Cmd+V): drag it into place, then tap outside or press Enter">Paste</button>
+      <button id="btn-del" title="Delete the selection (Delete)">Delete</button>
+      <button id="btn-flip" title="Flip the selection (or the frame) left-right">Flip ↔</button>
+      <button id="btn-flipv" title="Flip the selection (or the frame) upside down">Flip ↕</button>
+      <button id="btn-clear" title="Clear this frame">Clear</button>
+      <span class="sep"></span>
+      <label><input type="checkbox" id="chk-onion" checked> onion skin</label>
+      <label title="The game's current drawing, faintly behind yours, to trace or size against"><input type="checkbox" id="chk-ref"> game art behind</label>
+      <label><input type="checkbox" id="chk-grid" checked> grid</label>
+      <span class="grow"></span>
+      <button id="zoom-out" title="Zoom out (or pinch)">−</button><button id="zoom-fit" title="Fit">Fit</button><button id="zoom-in" title="Zoom in (or pinch)">+</button>
+    </div>
+    <div id="stage"><canvas id="canvas"></canvas></div>
+  </section>
+  <aside id="side">
+    <div class="panel">
+      <div class="tools" id="tools">
+        <button data-tool="pencil" title="Pencil (B)">✏️<span>Pencil</span></button>
+        <button data-tool="eraser" title="Eraser (E)">🧽<span>Eraser</span></button>
+        <button data-tool="fill" title="Fill (G)">🪣<span>Fill</span></button>
+        <button data-tool="picker" title="Eyedropper (I): pick a colour from the art">💧<span>Pick</span></button>
+        <button data-tool="select" title="Select a box (M): drag; drag inside it to move">⬚<span>Select</span></button>
+        <button data-tool="move" title="Move (V) the selection or pasted pixels">✥<span>Move</span></button>
+        <button data-tool="line" title="Line (L): drag">╱<span>Line</span></button>
+        <button data-tool="rect" title="Rectangle (R): drag">▭<span>Rect</span></button>
+        <button data-tool="rectf" title="Filled rectangle (Shift+R): drag">▬<span>Box</span></button>
+        <button data-tool="ellipse" title="Ellipse (O): drag">◯<span>Ellipse</span></button>
+        <button data-tool="ellipsef" title="Filled ellipse (Shift+O): drag">⬤<span>Disc</span></button>
+        <button data-tool="anchor" title="Anchor: tap where the sprite stands (or the dragon's body centre)">⊕<span>Anchor</span></button>
+      </div>
+      <div class="row small"><label>Brush <select id="in-brush"><option>1</option><option>2</option><option>3</option></select></label>
+        <label><input type="checkbox" id="chk-mirror"> mirror</label></div>
+    </div>
+    <div class="panel">
+      <div class="row">
+        <div id="cur-swatch" title="Current colour"></div>
+        <input type="color" id="in-color" title="Choose any colour">
+        <button id="btn-recolor" class="small" title="Change the selected swatch to the chosen colour everywhere in this sprite">Recolour swatch</button>
+      </div>
+      <div class="small muted">This sprite's colours</div>
+      <div id="palette" class="swatches"></div>
+      <details id="gamepal-wrap" open><summary class="small muted">Game colours</summary><div id="gamepal" class="swatches"></div></details>
+    </div>
+    <div class="panel" id="preview-panel">
+      <div class="row small">
+        <button id="btn-play" class="primary">▶ Play</button>
+        <label>fps <input id="in-fps" type="number" min="0.5" max="30" step="0.5"></label>
+        <select id="in-pscale"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4" selected>4×</option></select>
+        <select id="in-bg"><option value="raid">raid</option><option value="parchment">parchment</option><option value="dark">dark</option><option value="checker">checker</option></select>
+      </div>
+      <canvas id="preview" width="300" height="200"></canvas>
+      <div class="row small wrap">
+        <button id="btn-samplemap" title="Your map symbols on a small sample map">Sample map</button>
+        <button id="btn-game-map" title="Open the game's map preview with your unsaved art (this browser)">Map in game ↗</button>
+        <button id="btn-game-dragon" title="Open the game's dragon sheet with your unsaved art (this browser)">Dragons in game ↗</button>
+      </div>
+    </div>
+  </aside>
+</main>
+<dialog id="dlg-settings">
+  <form method="dialog">
+    <h3>Save to GitHub</h3>
+    <p class="small">The editor commits your art straight to the repository, so it is versioned and the site redeploys with
+      it. It needs a <b>fine-grained personal access token</b> (GitHub → Settings → Developer settings → Fine-grained tokens):
+      repository access <i>only this repository</i>, permission <i>Contents: Read and write</i>. The token is kept in this
+      browser only (localStorage) and sent only to api.github.com.</p>
+    <label class="col">Token <input id="gh-token" type="password" autocomplete="off" placeholder="github_pat_…"></label>
+    <label class="col">Repository <input id="gh-repo" placeholder="owner/name"></label>
+    <label class="col">Branch <input id="gh-branch" placeholder="(the repository's default branch)"></label>
+    <div class="row"><button value="cancel">Cancel</button><span class="grow"></span><button id="gh-forget" value="forget">Forget token</button><button id="gh-ok" value="ok" class="primary">Keep</button></div>
+  </form>
+</dialog>
+<div id="toast"></div>
+<script src="../src/core/namespace.js"></script>
+<script src="../src/core/rng.js"></script>
+<script src="../src/core/math.js"></script>
+<script src="../src/core/noise.js"></script>
+<script src="../src/art/palette.js"></script>
+<script src="../src/core/text.js"></script>
+<script src="../src/art/pixel.js"></script>
+<script src="../src/art/pixelart.js"></script>
+<script src="../src/art/parchment.js"></script>
+<script src="../src/art/sprites.js"></script>
+<script src="../src/art/dragon.js"></script>
+<script src="../src/data/mapspec.js"></script>
+<script src="../src/art/mapassets.js"></script>
+<script src="../src/art/mapart.js"></script>
+<script src="../tools/mapart-page.js"></script>
+<script src="editor.js"></script>
+</body>
+</html>

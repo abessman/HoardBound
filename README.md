@@ -58,7 +58,8 @@ src/views/            title, newgame, settings, generating, intro, cardview, rai
                       aimsview, menus, mapview
 src/data/             names, treasures (loot + artifacts), events (travel/roost), encounters (decision cards), upgrades/workers,
                       domain, endgame, mapspec (the map-art contract)
-assets/               fonts, sprites/ (pixel sprite overrides), map/ (map art packs)
+assets/               fonts, pixelart/ (art from the pixel editor), sprites/ (PNG sprite overrides), map/ (map art packs)
+editor/               the pixel editor (a dev tool, ordinary HTML): draw the game's pixel art, save it to GitHub
 tools/                screenshot.mjs, playthrough.mjs (Playwright), headless.js, test.js, cyclebot.js, worldstats.js,
                       docscheck.js (Node)
 docs/                 systems/ (one doc per part of the game), ideas/ (not built yet), BRIEF.md, FEATURE_STATUS.md
@@ -81,7 +82,7 @@ CHANGELOG.md          version history (the version shows on the title screen)
 
 ### Replacing the generated art
 
-All pixel art is generated in code. Drop PNG sheets + JSON atlases into `assets/sprites/` (see `assets/sprites/README.md`); matching ids override generated sprites. Dragon layers are keyed `dragon.<tier>.<part>.<pose>`. Details: `docs/systems/art-and-sprites.md`.
+All pixel art is generated in code until it is redrawn. **Pixel editor:** `editor/index.html` (live at https://hoardbound.netlify.app/editor/) draws the dragon frame by frame, the raid sprites and map symbols, previews them, and saves them to `assets/pixelart/` in this repository through the GitHub API; the game loads them at start. Guide: `docs/pixel-editor.md`. PNG sheets + JSON atlases in `assets/sprites/` (see `assets/sprites/README.md`) also override generated sprites by id. Details: `docs/systems/art-and-sprites.md`.
 
 The parchment map's symbols are replaced by **map art packs** in `assets/map/packs/<name>/` (PNGs + a manifest; anything missing stays hand-drawn), chosen in Settings → Map art or with `?mappack=<name>`. The artist's handoff (measured catalog, contact sheets, art spec, steps): `docs/map-art/README.md`. Preview: `index.html?scene=mappreview&mappack=sample`; validate a pack with `node tools/mappack.js <name>`. Newly explored land washes in like watercolour, and the territory is painted in watercolour (optional textures: `docs/map-art/WASH.md`); try both in `index.html?scene=washpreview` (`docs/map-art/WASH_PREVIEW.md`).
 

@@ -39,6 +39,8 @@
       if (name === 'none') return Promise.resolve(false);
       if (!/^[\w-]+$/.test(name)) { MA.warn(`bad pack name "${name}"`); return Promise.resolve(false); }
       MA._pending = name;
+      // 'pixel': the map symbols drawn in the pixel editor (assets/pixelart/), no pack folder
+      if (name === 'pixel' && HB.pixelArt) return HB.pixelArt.load().then(() => { if (request !== MA._request) return false; MA.definePack(HB.pixelArt.mapPack(), 'pixel'); return !!MA.pack; });
       return new Promise((resolve) => {
         const s = document.createElement('script');
         s.src = `assets/map/packs/${name}/pack.js`;

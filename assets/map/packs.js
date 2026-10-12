@@ -3,5 +3,6 @@
  * works without it. Loaded by index.html as a classic script, so it also works from file://. */
 HB.MAP_PACKS = [
   { name: 'illuminated', label: 'Illuminated parchment' },
+  { name: 'pixel', label: 'Pixel art (editor)' },
   { name: 'sample', label: 'Sample (test)' },
 ];

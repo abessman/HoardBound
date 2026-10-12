@@ -19,5 +19,7 @@
   Watercolour: `?scene=washpreview[&mappack=sample][&slow=1][&reducedmotion=1][&auto=1]`; `--only=wash` steps it frame
   by frame through `tools/washcheck-page.js`. Timing drawing into an offscreen canvas: read one pixel per frame, or the
   browser batches the drawing and its cost lands on some later call.
+- Pixel editor (`editor/index.html`, `docs/pixel-editor.md`): no automated browser test; `window.PIXEL_EDITOR` exposes
+  its state and actions for Playwright checks. `test.js` validates every file in `assets/pixelart/`.
 - `node tools/docscheck.js`: doc size budgets, broken relative links, the six sections in every system doc.
 - Slow runs: each new world takes 1–2 s to generate; running several seeds can exceed two minutes.

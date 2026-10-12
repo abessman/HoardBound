@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.16.0 — 2026-10-12 · Pixel editor
+- **Draw the game's pixel art yourself:** a pixel editor at `editor/` (https://hoardbound.netlify.app/editor/). Pick
+  anything the game draws in pixels: each dragon size and pose with all its animation frames, the raid people,
+  animals, treasure and props, or a map symbol. Tap a frame and draw: pencil, eraser, fill, eyedropper, box select,
+  move, copy, cut and paste (also whole frames, between sprites), flip, lines, rectangles and ellipses (outlined or
+  filled), mirror painting, brush sizes, any colour or the game's palette, 120 undo steps, onion skin, and the game's
+  current drawing faintly behind to trace. Works with a finger, a pen or a mouse (pinch to zoom), and with keys.
+- **See it:** Play runs the animation at its game speed over a raid, parchment or dark background; Sample map scatters
+  your map symbols over parchment; "Dragons in game" and "Map in game" open the game with your unsaved drawings.
+- **Saved in the GitHub repository:** Save to GitHub commits your changed sprites (one small readable file each, in
+  `assets/pixelart/`), so they are versioned and can be edited again any time; the site redeploys with them. It needs
+  a fine-grained GitHub token (Contents: read and write, this repository only), kept in your browser. Unsaved work
+  stays in the browser until you save; drawings saved on another device are brought in when you open the editor.
+- **The game uses them:** drawn raid sprites and dragon frames replace the generated ones at start; drawn map symbols
+  appear with Settings → Map art → "Pixel art (editor)". Anything not drawn keeps its current art.
+- `node tools/test.js` checks every drawn sprite file (rows, colours, ids, anchors, the list).
+
 ## 0.15.0 — 2026-10-12
 - Complete the Illuminated map: 30 additional illustrations cover mines, caravans, cities, camps, holds,
   sacred sites, lairs, endgame strongholds, travelers, armies, dragon markers and corrupted terrain.

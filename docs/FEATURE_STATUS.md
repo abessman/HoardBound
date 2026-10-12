@@ -97,6 +97,17 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Reduced motion for map effects | Functional | Settings → Reduce motion or `?reducedmotion=1`: revealed land and the territory fade in (0.3 s) without spreading or tint. |
 | Finished watercolour textures | Deferred | Placeholder textures only; an artist's PNGs drop into a pack. |
 
+## Pixel editor (0.16.0)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| Draw the game's pixel art in the browser | Functional | `editor/` ([guide](pixel-editor.md)): every dragon tier and pose with its frames, raid people, animals, treasure and props, map symbols; pencil, eraser, fill, eyedropper, box select, move, copy/cut/paste, flip, line, rectangle, ellipse (filled or not), mirror, brush sizes, colour picker and game palette, undo, onion skin, the game's drawing behind to trace; touch, pinch and keys. |
+| See it move and in place | Functional | Play at the game's fps over a raid or parchment background; sample map of drawn map symbols; open the game's dragon sheet or map preview with unsaved drawings (`?drafts=1`). |
+| Saved to GitHub, editable later | Functional | One readable file per sprite in `assets/pixelart/`, committed through the GitHub API with a fine-grained token kept in the browser; drafts kept locally until saved; brings in art saved from another device; checked by `tools/test.js`. |
+| The game uses the drawings | Functional | Raid sprites (first frame), dragon frames per tier and pose (all breeds share one drawing), map symbols through the "Pixel art (editor)" map art pack (Settings → Map art). |
+| Breed colours, mutations and scars on drawn dragons | Deferred | Drawn art replaces the composed dragon whole; layers or palette swaps would bring them back. |
+| Walk cycles for raid people | Deferred | The game shows one frame of a raid sprite; extra frames are kept but unused. |
+
 ## Encounters and travel
 
 | Requirement | Status | Notes |

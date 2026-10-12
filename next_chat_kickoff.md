@@ -2,58 +2,59 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-12 · **Version 0.15.0** · Branch `claude/laughing-mayer-npu2ei` · The owner plays at hoardbound.netlify.app on an iPad.
+Updated 2026-10-12 · **Version 0.16.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
 - Full loop works: explore the parchment map, raid in side-view scenes, store treasure, build the lair, sleep, wake.
-- Goals (0.6), first valley (0.7), domain (0.8), great struggle prototype (0.9), debug tools (0.9.1), map art packs
-  (0.10), seven regions and territory by life phase with the grievance ledger (0.11), territory watercolour (0.12).
-- 0.13: newly explored land washes in (a thin watercolour bleed from the dragon, `HB.mapReveal` in `src/art/mapfx.js`);
-  the 0.12 ink discovery (drops, pools, rivulets, ink masks) was removed at the owner's request.
-- 275 headless checks pass on the default seed; `node tools/mapart-export.mjs --only=wash` passes its browser checks.
+- Goals (0.6) … territory watercolour (0.12), reveal wash (0.13), Illuminated parchment map pack (0.14–0.15, by Codex).
+- 0.16: the **pixel editor** (`editor/`, guide `docs/pixel-editor.md`) for the owner to redraw the game's pixel art and
+  commit it to `assets/pixelart/` through the GitHub API; the game loads it at start (`src/art/pixelart.js`).
+- 279 headless checks pass on both seeds (one more per drawn art file); `node tools/illuminated-check.mjs` covers the pack.
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
-## Current project: the map's look (owner's direction, 2026-10-12)
-The owner wants a **simple, thin watercolour wash that reveals new areas**, "slightly interesting", like a map
-animation where colour bleeds over the parchment (an After Effects reference: a flat colour spreading with an uneven,
-speckled edge). Explicitly not ink drops, streams or black ink; "we are overthinking this". The owner is **redoing the
-sprites**; the art-pack system (PNG by semantic id) stays, and the washes must not depend on the art.
-Working decisions by Claude (not confirmed):
-- The clouds stay as the frontier of the unknown; only newly revealed land washes in (clouds over it clear early).
-- Timing: 1 s to uncover a cell, starting 0.08 s later per cell from the dragon (≤ 0.7 s); tint `#8c6234` ≤ 26%,
-  dries in 0.75 s. Far views (zoom < 0.8) fade cell by cell. Reduced motion: 0.3 s fade.
-- 0.12's territory watercolour is unchanged (owner earlier: wants uneven pigment, pale interiors, pooled edges, small
-  gaps, no blur or aura; not yet revisited).
+## Two sessions push to this branch, and so does the owner's editor
+- Codex sessions did 0.14–0.15; Claude did 0.16. The editor commits art straight to the default branch.
+- **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
-## 0.15 art completion (Codex)
-- Owner asked to complete all map symbols after seeing old mines/carts. Illuminated now has 39 PNGs, 96 ids,
-  23 native dynamic ink details, every declared glyph family/state, all home stages and a save-free art catalog.
-- `?scene=artcatalog&mappack=illuminated` shows all symbols; `?mappack=illuminated` selects the art for a visit.
-- Image decodes are shared across damage variants; cached treatments show missing roofs, char and rubble.
-- New map dragon uses breed tint and tier scale. Mutations/scars remain in pixel scenes, not its small map glyph.
-- Existing washes, placements, gameplay, save formats and saved art preferences remain unchanged.
+## Current project: the owner redraws the pixel art (2026-10-12)
+The owner disliked AI-generated art and asked for a simple in-house pixel tool: every frame of an animation, click a
+frame and draw, copy between frames, colour picker and eyedropper, fill, box select, copy/paste, delete, shapes, play
+the animation, a sample map for map sprites, saved in GitHub so it can be edited later. Asked about Supabase: answered
+no (a backend breaks the no-backend rule; files in the repo are versioned for free).
+Working decisions by Claude (not confirmed by the owner):
+- Saving: one commit per save (Git Data API) with a fine-grained token (Contents read/write, this repo only) kept in
+  localStorage. Last save wins; no merge of two devices' edits to the same sprite.
+- New sprites start blank at the game's size and anchor, with the game's drawing faintly behind ("From game art"
+  copies it in). Imports merge near-identical colours; up to 62 colours a sprite.
+- Dragon: one drawing per tier × pose × frame serves every breed and alignment (no breed tint, mutations or scars on
+  drawn art yet). Anchor = body centre. Raid sprites: frame 1 only, always bottom-centre (raidview ignores anchors).
+- Map symbols: frames are variants in the separate "Pixel art (editor)" pack (pixel sampling, `scale` map px a pixel).
+  A pack is chosen whole, so picking it means undrawn symbols fall back to the original ink, not to Illuminated.
+- Previews: Play at the saved fps; Sample map; "in game" buttons open `?scene=dragons` or
+  `?scene=mappreview&mappack=pixel` with `&drafts=1` (unsaved drafts from this browser).
+
+## 0.15 Illuminated map (Codex, summary)
+- Illuminated has 39 PNGs, 96 ids, ink details, every glyph family and state, all home stages; default for new
+  settings. `?scene=artcatalog&mappack=illuminated` shows every symbol. Map dragon marker uses breed tint and tier scale.
 - Backups: `backup/map-before-illuminated-2026-10-12` (0.13), `backup/map-first-art-pack-2026-10-12` (0.14).
-- Both headless seeds pass 275 checks; browser playthrough, file delivery, art coverage and rollback verified.
-- Owner still needs to review the look and performance on a physical iPad.
-
-## What the preceding session did
-- 0.12.0 territory watercolour and ink discovery; then a stroke-based ink rebuild that the owner stopped (never pushed);
-  0.13.0 the reveal wash, ink removed, `washpreview`, docs `docs/map-art/WASH.md` and `WASH_PREVIEW.md`.
 
 ## Next tasks (in order)
-1. Owner looks at the live map on the iPad (fly somewhere new) and `?scene=washpreview&slow=1`; tune the wash (tint,
-   speed, edge) to taste, or drop the clouds if the owner prefers land washing in from blank paper.
-2. If wanted: the territory watercolour revisited along the owner's notes (uneven fronts, pale interiors, pooled edges).
-3. Review Illuminated parchment on the live map; review the completed symbol catalog and tune after owner feedback.
-4. Castle politics (lordships, feuds, help a side or both) after the owner answers the questions in the ideas doc.
-5. Backlog: remaining lieutenants and crystals, seasonal events, raid balance, home-name label collision.
+1. The owner sets up a token and draws; respond to what the editor lacks (likely: layers, breed palettes, walk cycles,
+   scaling or rotating a selection, bigger canvases).
+2. Let editor map symbols layer over another pack (drawn ids from `pixel`, the rest from Illuminated) if the owner
+   wants both; discuss first.
+3. If drawn dragons should keep breed colours: palette swap by breed or drawn layers; discuss before building.
+4. Raid walk cycles: let raidview play a sprite's frames while moving (the editor already stores frames).
+5. Owner review of Illuminated and the 0.13 wash on the iPad; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
-- Keep the clouds at the frontier, or let new land wash in straight from blank parchment?
-- Is the wash's warm tint right, or should it be more colourful (like the reference's red) or fainter?
-- Castle politics: feuds while you sleep too? Can a sworn castle fight in your name? How visible should borders be?
+- Should drawn dragons take the breed's colours automatically, or will you draw each breed?
+- Do raid people need walk/attack frames in the game now that you can draw them?
+- Map: your drawn symbols on top of Illuminated, or a pixel-art map of their own?
+- Keep the clouds at the frontier? Is the wash tint right? Castle politics questions in the ideas doc.
 
 ## Check on the iPad
-- A campaign (or `?scene=map&preset=young-kind`): fly into unexplored land and watch it wash in behind the clouds.
-- `index.html?scene=washpreview` (Fly east; Speed ¼× to see the edge; Motion: reduced).
-- Settings → Reduce motion: new land fades in quickly instead.
+- https://hoardbound.netlify.app/editor/ → GitHub… (token) → "Dragon · Young · fly" → draw → ▶ Play → Dragons in
+  game ↗ → Save to GitHub; after the redeploy (a minute or two) the game shows it.
+- A map symbol: draw it, Sample map, Map in game ↗; in the game Settings → Map art → Pixel art (editor).
