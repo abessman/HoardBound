@@ -30,8 +30,8 @@
       <div id="title"></div>
       <div id="note" class="muted small"></div>
       <div class="row small" id="size-row">
-        <label>W <input id="in-w" type="number" min="1" max="256"></label>
-        <label>H <input id="in-h" type="number" min="1" max="256"></label>
+        <label>W <input id="in-w" type="number" min="1" max="512"></label>
+        <label>H <input id="in-h" type="number" min="1" max="512"></label>
         <button id="btn-resize" title="Change the canvas size (keeps the drawing anchored at the top left)">Resize</button>
         <span class="sep"></span>
         <button data-shift="-1,0" title="Shift every frame one pixel left">←</button>
@@ -59,9 +59,6 @@
       </div>
     </div>
     <div id="edit-bar" class="row wrap small">
-      <button id="btn-undo" title="Undo (Ctrl/Cmd+Z)">↶ Undo</button>
-      <button id="btn-redo" title="Redo (Ctrl/Cmd+Shift+Z)">↷ Redo</button>
-      <span class="sep"></span>
       <button id="btn-copy" title="Copy the selection (Ctrl/Cmd+C)">Copy</button>
       <button id="btn-cut" title="Cut the selection (Ctrl/Cmd+X)">Cut</button>
       <button id="btn-paste" title="Paste (Ctrl/Cmd+V): drag it into place, then tap outside or press Enter">Paste</button>
@@ -73,12 +70,26 @@
       <label><input type="checkbox" id="chk-onion" checked> onion skin</label>
       <label title="The game's current drawing, faintly behind yours, to trace or size against"><input type="checkbox" id="chk-ref"> game art behind</label>
       <label><input type="checkbox" id="chk-grid" checked> grid</label>
+      <span class="sep"></span>
+      <button id="btn-refimg" title="Load your own picture behind the pixels, to draw over it (kept in this browser for this sprite)">Image behind…</button>
+      <input type="file" id="in-refimg" accept="image/*" hidden>
+      <span id="refimg-ctl" class="row" hidden>
+        <label title="How strongly your picture shows">opacity <input type="range" id="in-refop" min="5" max="100" value="50"></label>
+        <label title="Size of your picture (100 = fits the canvas)">size <input type="range" id="in-refsc" min="10" max="400" value="100"></label>
+        <button id="btn-refmove" title="Drag on the canvas to move your picture (tap again to draw)">Move it</button>
+        <button id="btn-reffront" title="Show your picture over the pixels instead of behind them">On top</button>
+        <button id="btn-refdel" title="Remove your picture">✕</button>
+      </span>
       <span class="grow"></span>
       <button id="zoom-out" title="Zoom out (or pinch)">−</button><button id="zoom-fit" title="Fit">Fit</button><button id="zoom-in" title="Zoom in (or pinch)">+</button>
     </div>
     <div id="stage"><canvas id="canvas"></canvas></div>
   </section>
   <aside id="side">
+    <div class="panel">
+      <div class="row"><button id="btn-undo" class="big grow" title="Undo (Ctrl/Cmd+Z, or tap the canvas with two fingers)">↶ Undo</button><button id="btn-redo" class="big grow" title="Redo (Ctrl/Cmd+Shift+Z, or tap with three fingers)">↷ Redo</button></div>
+      <div class="small muted">Two-finger tap: undo · three-finger tap: redo</div>
+    </div>
     <div class="panel">
       <div class="tools" id="tools">
         <button data-tool="pencil" title="Pencil (B)">✏️<span>Pencil</span></button>
@@ -119,6 +130,7 @@
         <button id="btn-samplemap" title="Your map symbols on a small sample map">Sample map</button>
         <button id="btn-game-map" title="Open the game's map preview with your unsaved art (this browser)">Map in game ↗</button>
         <button id="btn-game-dragon" title="Open the game's dragon sheet with your unsaved art (this browser)">Dragons in game ↗</button>
+        <button id="btn-game-lair" title="Open a test campaign's lair with your unsaved art (this browser)">Lair in game ↗</button>
       </div>
     </div>
   </aside>
@@ -148,6 +160,8 @@
 <script src="../src/art/parchment.js"></script>
 <script src="../src/art/sprites.js"></script>
 <script src="../src/art/dragon.js"></script>
+<script src="../src/data/upgrades.js"></script>
+<script src="../src/art/lairart.js"></script>
 <script src="../src/data/mapspec.js"></script>
 <script src="../src/art/mapassets.js"></script>
 <script src="../src/art/mapart.js"></script>

@@ -32,7 +32,19 @@ Formula shape: `bonus = cap * (1 - exp(-value / scale))` per category, plus flat
   for its size, coin included, never what is locked.
 
 ### Lair
-Pixel cutaway that grows with chambers. Upgrades: treasure chamber, reinforced entrance, strongroom, concealed
+Two views of the lair (0.17, pictures in `src/art/lairart.js`, both 345×194 shown at exactly 2×):
+- **The hoard (close-up):** the dragon, about twice its raid size, perched on its hoard and idling (asleep on it while
+  it sleeps; the sleep screen shows the same chamber). The hoard is generated from what is in it: footprint by bulk,
+  copper to gold by richness, swords, helms, books, chalices and gems sticking out by category, the most prized piece
+  glowing in front of the dragon. Trophy alcoves along both walls (the strongroom bars the first ones; tap one for its
+  card), torches, a light shaft, workers at twice raid size, the glow of the hoard. The chamber is bigger and grander
+  with each Treasure Chamber level (pillars, a vault, banners, a carved dragon).
+- **All rooms (zoomed out):** the hill in cross-section, a room for every upgrade in a fixed place joined by passages:
+  built rooms show their furnishings by level, rooms being dug show scaffolding and a percentage, the rest a dotted
+  outline where they could be dug. Traps, the ward and the concealed approach show on the passage and the mouth;
+  cells appear while you hold captives. Tap a room to open it in the Build tab (cells: Captives; the hoard zooms back
+  in). Switch with the button in the corner, pinch, the wheel, or − / +.
+Upgrades: treasure chamber, reinforced entrance, strongroom, concealed
 approach, traps, guard post, sleeping chamber, magical ward, forge, larder, lookout. Each shows cost, resulting
 balance, stat change and which risk it mitigates. Construction progresses over active days or sleep years.
 The Build tab lists upgrades with a reason first ("Thieves took the Ember Crown while you slept"; "A hoard worth
@@ -62,7 +74,8 @@ Rebuilding a burned village is paid from what you carry, then from the hoard. Se
 
 ## Code
 - Power: `src/game/stats.js` (`HB.CATEGORIES`); treasure tables `src/data/treasures.js`; hoard, bulk, trophies `src/game/hoard.js`.
-- Lair, upgrades, workers, why-now reasons: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`.
+- Lair, upgrades, workers, why-now reasons: `src/game/lair.js`, `src/data/upgrades.js`, view `src/views/lairview.js`;
+  its pictures `src/art/lairart.js` (`HB.lairArt`); test lair `index.html?scene=lair[&preset=…][&view=rooms][&sleep=1]`.
 - Ransom `src/game/ransom.js`; tribute, protection, offerings `src/game/tribute.js`; petitions `src/game/petitions.js`.
 
 ## Tests
@@ -70,6 +83,8 @@ Rebuilding a burned village is paid from what you carry, then from the hoard. Se
 
 ## Known issues and tuning
 - Opportunity and offering numbers are first guesses; offerings scale with village wealth (≈4% a season).
+- The lair pictures are placeholders for the owner to redraw (editor: Lair · dragon, Lair · places); how upgrades
+  should look is still open. Room places are fixed in `ROOMS`; a new upgrade needs a slot there.
 
 ## Related
 [sleep-and-growth](sleep-and-growth.md) · [goals-stories-renown](goals-stories-renown.md) · [realms-and-memory](realms-and-memory.md) · [domain-and-influence](domain-and-influence.md)

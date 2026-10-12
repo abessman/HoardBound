@@ -132,12 +132,20 @@
     return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
 
-  /* Sprite registry. define(id, builder) where builder(...args) returns a canvas. get(id, ...args) caches by args. */
+  /* Sprite registry. define(id, builder, meta) where builder(...args) returns a canvas. get(id, ...args) caches by args.
+   * Every sprite is also listed in HB.art (below) so the pixel editor can redraw it; meta: { group, editable: false
+   * for builders that take sizes (houses, walls, ground) }. */
   const sprites = HB.sprites = {
     defs: {},
     cache: new Map(),
     overrides: new Map(),  // id -> {image, x, y, w, h, ax, ay}
-    define(id, builder) { sprites.defs[id] = builder; },
+    overrideMeta: new Map(), // id -> {frames, fps} of a drawing from the pixel editor (src/art/pixelart.js)
+    define(id, builder, meta = {}) {
+      sprites.defs[id] = builder;
+      if (meta.editable !== false) art.define(id, { kind: 'sprite', group: meta.group || 'Props', gen: () => builder() });
+    },
+    /** put already-defined sprites into editor groups: { People: ['villager', ...], ... } */
+    groups(map) { for (const g in map) for (const id of map[g]) { const e = art.entries.get(id); if (e) e.group = g; } },
     has(id) { return !!sprites.defs[id] || sprites.overrides.has(id); },
     get(id, ...args) {
       const key = args.length ? id + '|' + args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join('|') : id;
@@ -175,5 +183,36 @@
         sprites.cache.clear();
       } catch (e) { /* no overrides present (also fails silently on file://) */ }
     },
+  };
+
+  /* Art registry: everything drawn in pixels that the pixel editor (editor/index.html) can redraw. Register new art
+   * here (HB.sprites.define does it for sprites) and it appears in the editor by itself.
+   *   define(id, { kind, group, label, frames, fps, note, framesAre, gen(k, opts) })
+   * kind 'sprite': one frame, replaces the sprite id; 'dragon': dragon.<tier>.<pose>, frame k; 'anim': any other
+   * picture or animation, frame k (framesAre: 'levels' when frame k is used at level k instead of in time).
+   * gen(k, opts) draws the game's own frame k (a canvas; anchorX/anchorY where it is placed). */
+  const art = HB.art = {
+    entries: new Map(),
+    define(id, o) { art.entries.set(id, Object.assign({ id, kind: 'anim', group: 'Other', label: id, frames: 1, fps: 2 }, o)); },
+    list() { return [...art.entries.values()]; },
+    /** how many frames and how fast: the editor drawing's if there is one, else the registered ones */
+    frames(id) { const m = sprites.overrideMeta.get(id), e = art.entries.get(id); return (m && m.frames) || (e && e.frames) || 1; },
+    fps(id) { const m = sprites.overrideMeta.get(id), e = art.entries.get(id); return (m && m.fps) || (e && e.fps) || 2; },
+    /** frame k (wrapped) of an art id: the editor's drawing when there is one, else the generated frame.
+     *  opts go to gen; optsKey must change whenever opts change the drawing (it is part of the cache key). */
+    frame(id, k = 0, opts, optsKey = '') {
+      const n = art.frames(id); k = ((Math.floor(k) % n) + n) % n;
+      const ov = sprites.overrides.get(`${id}.${k}`) || (k === 0 ? sprites.overrides.get(id) : null);
+      const key = `art|${id}|${k}|${ov ? 'ov' : optsKey}`;
+      let c = sprites.cache.get(key);
+      if (c) return c;
+      if (ov) { c = px.create(ov.w, ov.h); c.ctx.drawImage(ov.image, ov.x, ov.y, ov.w, ov.h, 0, 0, ov.w, ov.h); c.anchorX = ov.ax || 0; c.anchorY = ov.ay || 0; }
+      else { const e = art.entries.get(id); c = e && e.gen ? e.gen(Math.min(k, e.frames - 1), opts) : px.create(4, 4); }
+      if (sprites.cache.size > 4000) sprites.cache.clear();
+      sprites.cache.set(key, c);
+      return c;
+    },
+    /** the frame to show at time t (seconds) */
+    at(id, t, opts, optsKey) { return art.frame(id, Math.floor(t * art.fps(id)), opts, optsKey); },
   };
 })();

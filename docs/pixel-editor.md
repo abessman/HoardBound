@@ -1,6 +1,7 @@
 # Pixel editor
 
-A drawing tool for the game's own pixel art: the dragon frame by frame, the raid sprites, and map symbols. Your
+A drawing tool for the game's own pixel art: the dragon frame by frame, the lair (the big dragon on its hoard, the
+chamber, the rooms), the raid sprites, and map symbols. Your
 drawings are saved as small files in the repository (`assets/pixelart/`), so they are versioned like the code and
 anyone (or any Claude session) can edit them later. Nothing else is needed: no account but GitHub, no backend.
 
@@ -18,8 +19,10 @@ Without a token you can still draw: unsaved work is kept in the browser, and **D
 commit by hand.
 
 ## Drawing
-- **Left:** everything you can draw, grouped: the dragon by size (hatchling, young, adult, ancient) and pose; people,
-  animals, treasure and props from the raids; map symbols. ● marks what you have drawn, ✎ what is unsaved.
+- **Left:** everything you can draw, grouped: the dragon by size (hatchling, young, adult, ancient) and pose; the lair
+  (the dragon on its hoard and asleep on it, the chamber, the hill and every room); people, animals, treasure and
+  props from the raids; map symbols. ● marks what you have drawn, ✎ what is unsaved. The list comes from the game
+  itself, so new art added to the game shows up here without changing the editor.
 - **Frames strip:** every frame of the animation (the dragon's poses have 2 or 4, as the game plays them). Tap a frame
   to draw on it. **Duplicate**, **+ Blank**, **Delete**, ◀ ▶ to reorder, **Copy frame / Paste frame** between frames
   or sprites, **From game art** to start from the game's current drawing.
@@ -31,17 +34,30 @@ commit by hand.
   box. **Recolour swatch** changes that colour everywhere in the sprite. Up to 62 colours per sprite.
 - **Helpers:** onion skin (the previous frame, faint), game art behind (the current drawing, faint, to trace or size
   against), grid, zoom (pinch, wheel, − Fit +), pan with two fingers or Space + drag.
+- **Your own picture behind:** **Image behind…** loads any picture (a sketch, a photo of a drawing) behind the pixels
+  to draw over. Set its opacity and size, **Move it** (then drag on the canvas), show it **On top** of the pixels, or
+  remove it (✕). The eyedropper picks its colours where a pixel is still empty. Each sprite keeps its own picture in
+  this browser (not saved to GitHub).
 - **Preview:** ▶ Play runs the animation at its game speed (fps is saved with the sprite), at 1–4× over a raid,
   parchment, dark or checker background. **Sample map** shows your map symbols scattered over parchment at map zoom.
-- **Dragons in game ↗ / Map in game ↗** open the game's dragon sheet or map preview with your unsaved drawings.
-- Undo and redo go back 120 steps per sprite. **Revert** drops a sprite's unsaved changes; **Delete art** removes your
-  drawing so the game's own art comes back.
+- **Dragons in game ↗ / Lair in game ↗ / Map in game ↗** open the game's dragon sheet, a test campaign's lair (the
+  right dragon size, the rooms view for room art, asleep for the sleeping pose) or the map preview, with your unsaved
+  drawings.
+- **Undo / Redo** (top right, with how many steps there are): up to 120 steps per sprite (at least 20 on the biggest
+  canvases), including colour, fps and scale changes. On the iPad: **tap with two fingers to undo, three to redo**.
+  **Revert** drops a sprite's unsaved changes; **Delete art** removes your drawing so the game's own art comes back.
+- Canvases go up to 512 × 512 (**Resize**).
 
 Keys (with a keyboard): B pencil, E eraser, G fill, I eyedropper, M select, V move, L line, R / Shift+R rectangle /
 box, O / Shift+O ellipse / disc, A anchor, P play, ← → frames, Ctrl/Cmd+Z / Shift+Z / Y undo / redo, Ctrl/Cmd+C X V,
 Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
 
 ## What the game does with it
+- **Lair** (0.17): `lair.dragon.<size>.perch` is the dragon sitting on its hoard (frames loop at their fps) and
+  `.sleep` asleep on it (also the sleep screen); put the anchor ⊕ where it rests on the pile. `lair.chamber` is the
+  chamber behind it (345×194, frame 1 the bare cave, then one frame per Treasure Chamber level); `lair.hill` is the
+  zoomed-out backdrop and `lair.room.<name>` each room (one frame per level). The hoard, trophies, torch flames,
+  workers and light are drawn on top, so leave room for them.
 - **Dragon** (`dragon.<tier>.<pose>`): frame k replaces that pose's frame k for every breed and alignment (the game's
   colour changes by breed and deed are not applied to drawn art yet). The anchor ⊕ marks the body centre: the
   game places and rotates the dragon around it. Size tiers 0–3 are hatchling to ancient; keep each tier's canvas

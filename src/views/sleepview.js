@@ -39,9 +39,16 @@
     draw(ctx) {
       const st = this.state, sl = st.sleeping, Pp = HB.palette;
       ctx.fillStyle = '#120a06'; ctx.fillRect(0, 0, HB.W, HB.H);
-      // illustration
-      HB.illustrations.draw(ctx, 'sleep', 0, 0, HB.W, 360, this.t);
-      ctx.fillStyle = 'rgba(18,10,6,0.35)'; ctx.fillRect(0, 0, HB.W, 360);
+      // the dragon asleep on its hoard, in its own chamber (src/art/lairart.js), at 2× like the lair view
+      if (HB.lairArt) {
+        const L = HB.lairArt; if (!this.buf) this.buf = HB.px.create(L.W, L.H);
+        L.drawChamber(this.buf.ctx, st, this.t, { asleep: true });
+        const w = L.W * 2, h = L.H * 2, x = Math.round((HB.W - w) / 2), y = Math.round((360 - h) / 2);
+        ctx.save(); ctx.beginPath(); ctx.rect(0, 0, HB.W, 360); ctx.clip(); ctx.imageSmoothingEnabled = false; ctx.drawImage(this.buf, x, y, w, h);
+        for (const [x0, dir] of [[x, 1], [x + w, -1]]) { const gr = ctx.createLinearGradient(x0, 0, x0 + dir * 90, 0); gr.addColorStop(0, '#120a06'); gr.addColorStop(1, 'rgba(18,10,6,0)'); ctx.fillStyle = gr; ctx.fillRect(Math.min(x0, x0 + dir * 90), 0, 90, 360); }
+        ctx.restore();
+      } else HB.illustrations.draw(ctx, 'sleep', 0, 0, HB.W, 360, this.t);
+      ctx.fillStyle = 'rgba(18,10,6,0.25)'; ctx.fillRect(0, 0, HB.W, 360);
       const years = sl ? sl.yearsDone : 0;
       HB.text.draw(ctx, sl && sl.years < 1 ? 'A season passes' : `${Math.floor(years)} of ${HB.fmt.years(Math.round(sl ? sl.years : 0))}`, HB.W / 2, 70, { size: 44, family: 'display', align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });
       HB.text.draw(ctx, HB.game.dateString(st), HB.W / 2, 100, { size: 18, italic: true, align: 'center', color: Pp.parchmentLight, shadow: 'rgba(0,0,0,0.7)' });

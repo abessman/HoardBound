@@ -11,7 +11,8 @@
 - `node tools/screenshot.mjs out.png "js to run" --url="index.html?debug=1&scene=map&seed=…"`: one screenshot.
   Add `&preset=adult-kind` (or `adult-cruel`, `young-kind`, `young-cruel`) to start later in the game (`src/game/presets.js`).
 - In the game: Menu → Debug tools (`src/game/cheats.js`): toggles and jumps for hand testing; tested in *debug tools*.
-  `?scene=dragons` is the dragon sheet; `?scene=map&seed=…` jumps into a world.
+  `?scene=dragons` is the dragon sheet; `?scene=map&seed=…` jumps into a world; `?scene=lair[&preset=…|none][&tier=3]
+  [&view=rooms][&sleep=1]` opens a test campaign's lair (add `&drafts=1` for the editor's unsaved art).
 - `node tools/worldstats.js [seed] [size] [--ascii]`: world generation report.
 - Map art: `node tools/mappack.js <pack>` validates a pack and writes pack.js; `node tools/mapart-export.mjs
   [--only=catalog,sheets,sample,shots,check,perf,wash]` rewrites `docs/map-art/` (re-run after changing map glyphs).

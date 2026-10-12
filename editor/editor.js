@@ -12,29 +12,26 @@
   // =====================================================================================================
   // What can be drawn
   // =====================================================================================================
-  const TIERS = ['Hatchling', 'Young', 'Adult', 'Ancient'];
-  const POSES = { idle: 4, fly: 4, grab: 4, hurt: 4, land: 2, bite: 2, roar: 2, sleep: 2, breathe: 2 };
-  const POSE_FPS = { idle: 1.5, fly: 8, grab: 8, hurt: 8, land: 2, bite: 2, roar: 2, sleep: 1.5, breathe: 2 };
-  const PEOPLE = ['villager', 'villager2', 'bandit', 'guard', 'archer', 'knight', 'noble', 'hero', 'priest', 'dwarf', 'goblin', 'orc', 'warlord', 'warden', 'child', 'corpse'];
-  const ANIMALS = ['sheep', 'cow', 'horse'];
-  const TREASURE = ['chest', 'chestOpen', 'coins', 'goblet', 'crown', 'gem', 'gemRed', 'gemGreen', 'ring', 'signet', 'sceptre', 'bell', 'helm', 'plate', 'pearl', 'chalice', 'sword', 'shield', 'key', 'book', 'scroll', 'crystal'];
-  const PARAMETRIC = new Set(['house', 'wallSegment', 'towerSeg', 'gate', 'ground', 'hillsSilhouette', 'mountainsSilhouette', 'cloud']);
+  // Everything registered in HB.art (src/art/pixel.js: sprites, dragon poses, the lair's pictures) plus the map symbols.
+  // New art registered in the game shows up here by itself.
   const MAP_GROUP = { terrain: 'Map · terrain', place: 'Map · places', entity: 'Map · moving pieces', seal: 'Map · marks', seal2: 'Map · marks', threat: 'Map · marks', rumor: 'Map · marks', fog: 'Map · fog', ui: 'Map · other' };
+  const GROUP_ORDER = ['Dragon · Hatchling', 'Dragon · Young', 'Dragon · Adult', 'Dragon · Ancient', 'Lair · dragon', 'Lair · places', 'People', 'Animals', 'Treasure', 'Props', 'Map · terrain', 'Map · places', 'Map · moving pieces', 'Map · marks', 'Map · fog', 'Map · other'];
   let catalog = [];
   function buildCatalog() {
     catalog = [];
-    for (let t = 0; t < 4; t++) for (const pose in POSES) catalog.push({ id: `dragon.${t}.${pose}`, kind: 'dragon', group: `Dragon · ${TIERS[t]}`, label: pose, frames: POSES[pose], fps: POSE_FPS[pose], tier: t, pose });
-    const groupOf = (id) => PEOPLE.includes(id) ? 'People' : ANIMALS.includes(id) ? 'Animals' : TREASURE.includes(id) ? 'Treasure' : 'Props';
-    for (const id of Object.keys(HB.sprites.defs)) if (!PARAMETRIC.has(id)) catalog.push({ id, kind: 'sprite', group: groupOf(id), label: id, frames: 1, fps: 2 });
+    for (const e of HB.art.list()) catalog.push({ id: e.id, kind: e.kind, group: e.group, label: e.label, frames: e.frames, fps: e.fps, entry: e });
     if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) catalog.push({ id: rec.id, kind: 'map', group: MAP_GROUP[rec.screen] || 'Map · other', label: rec.id.replace(/^map\./, ''), frames: 1, fps: 1, rec });
-    // art for ids the catalog does not know (drawn elsewhere or older ids)
+    // art for ids the game no longer registers (renamed or removed): still listed so it can be deleted or kept
     for (const id of docs.keys()) if (!catalog.some(c => c.id === id)) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
-    const order = ['Dragon · Hatchling', 'Dragon · Young', 'Dragon · Adult', 'Dragon · Ancient', 'People', 'Animals', 'Treasure', 'Props', 'Map · terrain', 'Map · places', 'Map · moving pieces', 'Map · marks', 'Map · fog', 'Map · other', 'Other'];
-    catalog.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group));
+    const groups = GROUP_ORDER.slice(); for (const c of catalog) if (!groups.includes(c.group) && c.group !== 'Other') groups.push(c.group);
+    groups.push('Other');
+    catalog = catalog.map((c, i) => [c, i]).sort((a, b) => groups.indexOf(a[0].group) - groups.indexOf(b[0].group) || a[1] - b[1]).map(p => p[0]);
   }
-  const noteFor = (item, doc) => item.kind === 'dragon' ? `The game shows frames 1–${item.frames} of this pose (${item.fps} fps). One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
-    : item.kind === 'sprite' ? 'A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. The game uses the first frame.'
-      : `A map symbol: each frame is a variant (the map picks one per symbol and keeps it). Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`;
+  const noteFor = (item, doc) => item.entry && item.entry.note ? item.entry.note
+    : item.kind === 'dragon' ? `The game shows frames 1–${item.frames} of this pose (${item.fps} fps). One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
+      : item.kind === 'sprite' ? 'A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. The game uses the first frame.'
+        : item.kind === 'map' ? `A map symbol: each frame is a variant (the map picks one per symbol and keeps it). Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
+          : 'No longer used by the game (its id is not registered).';
 
   // =====================================================================================================
   // Documents: one per sprite id. frames are Uint8Arrays of palette indices (255 = transparent)
@@ -66,7 +63,13 @@
   };
   const indexText = (files) => `/* Pixel art made with the editor (editor/index.html): the list of sprite files in this folder. Written by the editor. */\nHB.pixelArt && HB.pixelArt.index(${JSON.stringify(files, null, 1)});\n`;
   const parseCall = (text) => { const a = text.indexOf('('), b = text.lastIndexOf(')'); return JSON.parse(text.slice(text.indexOf(a >= 0 && text[a + 1] === '[' ? '[' : '{', a), b)); };
-  const isDirty = (doc) => !doc.fresh && fileText(toDef(doc)) !== saved.get(doc.id);
+  /** unsaved: differs from the saved file (remembered per edit, so big sprites are not re-serialised all the time) */
+  const isDirty = (doc) => {
+    if (doc.fresh) return false;
+    const sv = saved.get(doc.id), k = doc._dk;
+    if (k && k.rev === doc._rev && k.sv === sv) return k.v;
+    const v = fileText(toDef(doc)) !== sv; doc._dk = { rev: doc._rev, sv, v }; return v;
+  };
   const dirtyIds = () => [...docs.values()].filter(isDirty).map(d => d.id);
   /** the palette index for a colour, adding it if new; with tol, an existing colour that close is reused (imports) */
   function color(doc, hex, tol = 0) {
@@ -88,12 +91,12 @@
   /** the game's own drawing of an item, to trace or start from: canvases (one per frame, at the doc's pixel size),
    *  ghosts (the same, sharp enough to show behind the grid) and a suggested size and anchor */
   function gameArt(item, doc) {
-    if (item.kind === 'dragon') {
-      const spec = { tier: item.tier, breed: 'red', alignment: 0, mutations: [], scars: 0 };
-      const cs = Array.from({ length: item.frames }, (_, k) => HB.dragonArt.generated(spec, item.pose, k));
-      return { canvases: cs, ghosts: cs, w: cs[0].width, h: cs[0].height, anchor: [cs[0].anchorX, cs[0].anchorY], bodyLength: HB.dragonArt.SIZES[item.tier] };
+    if (item.entry && item.entry.gen) {
+      // the game's own frames (a red, middle-of-the-road dragon where the art depends on the dragon)
+      const e = item.entry, cs = Array.from({ length: e.frames }, (_, k) => e.gen(k, { breed: 'red', alignment: 0, mutations: [], scars: 0 })), c = cs[0];
+      const anchor = item.kind === 'sprite' ? [c.width >> 1, c.height] : isFinite(c.anchorX) && isFinite(c.anchorY) ? [Math.round(c.anchorX), Math.round(c.anchorY)] : [0, 0];
+      return { canvases: cs, ghosts: cs, w: c.width, h: c.height, anchor, bodyLength: c.bodyLength || null };
     }
-    if (item.kind === 'sprite') { const b = HB.sprites.defs[item.id]; if (!b) return null; const c = b(); return { canvases: [c], ghosts: [c], w: c.width, h: c.height, anchor: [c.width >> 1, c.height] }; }
     if (item.kind === 'map' && item.rec) {
       // the hand-drawn symbol at its usual size (measured once), drawn at the doc's pixel size (1/scale) and 8× that for the ghost
       const s = doc ? doc.scale : 1, M = 240, c0 = document.createElement('canvas'); c0.width = c0.height = M;
@@ -121,11 +124,16 @@
   // Editing primitives (with undo)
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
-  function snapshot() { const d = D(); return { frames: d.frames.map(f => f.slice()), w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame }; }
-  function restore(s) { const d = D(); d.frames = s.frames.map(f => f.slice()); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); S.frame = Math.min(s.frame, d.frames.length - 1); }
-  function pushUndo() { const d = D(); d.undo.push(snapshot()); if (d.undo.length > 120) d.undo.shift(); d.redo.length = 0; d.fresh = false; }
-  function undo() { const d = D(); dropFloat(); if (!d.undo.length) return; d.redo.push(snapshot()); restore(d.undo.pop()); changed(true); }
-  function redo() { const d = D(); if (!d.redo.length) return; d.undo.push(snapshot()); restore(d.redo.pop()); changed(true); }
+  function snapshot() { const d = D(); return { frames: d.frames.map(f => f.slice()), w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale }; }
+  function restore(s) { const d = D(); d.frames = s.frames.map(f => f.slice()); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); S.frame = Math.min(s.frame, d.frames.length - 1); if (s.palette) { d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; } d._rev = (d._rev || 0) + 1; }
+  /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
+  const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length))));
+  function pushUndo() { const d = D(); d.undo.push(snapshot()); while (d.undo.length > undoCap(d)) d.undo.shift(); d.redoKept = d.redo; d.redo = []; d.fresh = false; }
+  /** take back the step just pushed (the first finger of a two- or three-finger tap), keeping what could be redone */
+  function dropLastStep() { const d = D(); restore(d.undo.pop()); if (d.redoKept) d.redo = d.redoKept; d.redoKept = null; }
+  function undo() { const d = D(); dropFloat(); if (!d.undo.length) { toast('Nothing to undo'); return; } d.redo.push(snapshot()); restore(d.undo.pop()); renderColors(); changed(true); }
+  function redo() { const d = D(); if (!d.redo.length) { toast('Nothing to redo'); return; } d.undo.push(snapshot()); restore(d.redo.pop()); renderColors(); changed(true); }
+  function renderUndo() { const d = D(), u = d ? d.undo.length : 0, r = d ? d.redo.length : 0; $('btn-undo').textContent = `↶ Undo${u ? ` (${u})` : ''}`; $('btn-redo').textContent = `↷ Redo${r ? ` (${r})` : ''}`; $('btn-undo').disabled = !u; $('btn-redo').disabled = !r; }
   function setPx(f, x, y, v) { const d = D(); if (x < 0 || y < 0 || x >= d.w || y >= d.h) return; f[y * d.w + x] = v; if (S.mirror) { const mx = d.w - 1 - x; f[y * d.w + mx] = v; } }
   function dab(x, y, v) { const f = F(), b = S.brush, o = Math.floor((b - 1) / 2); for (let j = 0; j < b; j++) for (let i = 0; i < b; i++) setPx(f, x - o + i, y - o + j, v); }
   function linePts(x0, y0, x1, y1) { const pts = [], dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy; for (;;) { pts.push([x0, y0]); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } } return pts; }
@@ -174,7 +182,7 @@
     changed();
   }
   function resize(w, h) {
-    const d = D(); w = Math.max(1, Math.min(256, w | 0)); h = Math.max(1, Math.min(256, h | 0)); if (w === d.w && h === d.h) return;
+    const d = D(); w = Math.max(1, Math.min(512, w | 0)); h = Math.max(1, Math.min(512, h | 0)); if (w === d.w && h === d.h) return;
     pushUndo(); commitFloat();
     d.frames = d.frames.map(f => { const o = new Uint8Array(w * h).fill(CLEAR); for (let y = 0; y < Math.min(h, d.h); y++) for (let x = 0; x < Math.min(w, d.w); x++) o[y * w + x] = f[y * d.w + x]; return o; });
     d.w = w; d.h = h; d.anchor = d.kind === 'sprite' ? [w >> 1, h] : [Math.min(d.anchor[0], w), Math.min(d.anchor[1], h)]; S.sel = null; fit(); changed(true);
@@ -209,12 +217,14 @@
     // transparency checker
     ctx.save(); ctx.beginPath(); ctx.rect(X, Y, W, H); ctx.clip();
     const cs = Math.max(4, z); for (let y = 0; y < d.h * z; y += cs) for (let x = 0; x < d.w * z; x += cs) { ctx.fillStyle = ((x / cs + y / cs) & 1) ? '#efe6d2' : '#fbf6ea'; ctx.fillRect(X + x, Y + y, cs, cs); }
-    // the game's drawing behind (to trace), the previous frame (onion skin), the frame, floating pixels
+    // your picture, the game's drawing behind (to trace), the previous frame (onion skin), the frame, floating pixels
+    const ri = curRef(); if (ri && !ri.front) drawRef(ri, X, Y, z);
     if (S.ref && S.ghosts.length) { ctx.globalAlpha = 0.32; ctx.imageSmoothingEnabled = d.kind === 'map'; ctx.drawImage(S.ghosts[Math.min(S.frame, S.ghosts.length - 1)], X, Y, W, H); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
     if (S.onion && S.frame > 0) { ctx.globalAlpha = 0.25; ctx.drawImage(frameCanvas(d, d.frames[S.frame - 1]), X, Y, W, H); ctx.globalAlpha = 1; }
     ctx.drawImage(frameCanvas(d, F()), X, Y, W, H);
     if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
     if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: d.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
+    if (ri && ri.front) drawRef(ri, X, Y, z);
     ctx.restore();
     // grid
     if (S.grid && z >= 6) { ctx.strokeStyle = 'rgba(60,40,20,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = 0; x <= d.w; x++) { ctx.moveTo(X + x * z + 0.5, Y); ctx.lineTo(X + x * z + 0.5, Y + H); } for (let y = 0; y <= d.h; y++) { ctx.moveTo(X, Y + y * z + 0.5); ctx.lineTo(X + W, Y + y * z + 0.5); } ctx.stroke(); }
@@ -229,31 +239,53 @@
   // =====================================================================================================
   // Pointer: tools, plus two-finger pan and pinch (and wheel zoom)
   // =====================================================================================================
-  const pointers = new Map(); let stroke = null, gesture = null;
+  // A two-finger tap undoes and a three-finger tap redoes (as in drawing apps); a single finger draws at once, so the
+  // first finger of such a tap is taken back (cancelStroke, or `instant` for fill, eyedropper and anchor).
+  const pointers = new Map(); let stroke = null, gesture = null, tap = null, instant = null;
   const toPx = (e) => { const r = cv.getBoundingClientRect(); return [Math.floor((e.clientX - r.left - S.ox) / S.zoom), Math.floor((e.clientY - r.top - S.oy) / S.zoom)]; };
+  const toF = (e) => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left - S.ox) / S.zoom, (e.clientY - r.top - S.oy) / S.zoom]; };
   const local = (e) => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
   const inside = (p, r) => r && p[0] >= r.x && p[1] >= r.y && p[0] < r.x + r.w && p[1] < r.y + r.h;
   cv.addEventListener('pointerdown', (e) => {
-    if (!D()) return; cv.setPointerCapture(e.pointerId); pointers.set(e.pointerId, local(e));
-    if (pointers.size === 2) { cancelStroke(); const [a, b] = [...pointers.values()]; gesture = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; return; }
+    if (!D()) return; try { cv.setPointerCapture(e.pointerId); } catch (err) { /* synthetic pointer */ } pointers.set(e.pointerId, local(e));
+    if (pointers.size === 1) tap = { t0: performance.now(), max: 1, moved: false, starts: new Map() };
+    if (tap) { tap.max = Math.max(tap.max, pointers.size); tap.starts.set(e.pointerId, local(e)); }
+    if (pointers.size === 2) {
+      cancelStroke(); takeBackInstant();
+      const [a, b] = [...pointers.values()]; gesture = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] }; return;
+    }
     if (pointers.size > 2) return;
     if (e.button === 1 || (e.button === 0 && keys.space)) { gesture = { pan: local(e) }; return; }
+    const ri = curRef(); if (S.refMove && ri) { gesture = { ref: toF(e), x0: ri.x, y0: ri.y }; return; }
     toolDown(toPx(e), e);
   });
   cv.addEventListener('pointermove', (e) => {
     if (!D()) return; const p = toPx(e); S.hover = p;
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, local(e));
+    if (tap && tap.starts.has(e.pointerId)) { const a = tap.starts.get(e.pointerId), l = local(e); if (Math.hypot(l[0] - a[0], l[1] - a[1]) > 14) tap.moved = true; }
+    if (gesture && gesture.ref) { const ri = curRef(), f = toF(e); if (ri) { ri.x = gesture.x0 + f[0] - gesture.ref[0]; ri.y = gesture.y0 + f[1] - gesture.ref[1]; } draw(); return; }
     if (gesture && gesture.pan) { const l = local(e); S.ox += l[0] - gesture.pan[0]; S.oy += l[1] - gesture.pan[1]; gesture.pan = l; draw(); return; }
     if (gesture && pointers.size >= 2) { const [a, b] = [...pointers.values()], dd = Math.hypot(a[0] - b[0], a[1] - b[1]), c = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; S.ox += c[0] - gesture.c[0]; S.oy += c[1] - gesture.c[1]; gesture.c = c; if (Math.abs(dd / gesture.d - 1) > 0.12) { zoomAt(c[0], c[1], dd / gesture.d); gesture.d = dd; } draw(); return; }
     if (stroke) toolMove(p, e); else draw();
   });
-  const up = (e) => { pointers.delete(e.pointerId); if (gesture) { if (pointers.size === 0) gesture = null; return; } if (stroke) toolUp(toPx(e), e); };
+  const up = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0 && tap) { const t = tap; tap = null; if (!t.moved && t.max >= 2 && performance.now() - t.t0 < 450) { gesture = null; if (t.max === 2) undo(); else redo(); return; } }
+    if (gesture) { if (pointers.size === 0) { if (gesture.ref && S.item) saveRef(S.item.id); gesture = null; } return; }
+    if (stroke) toolUp(toPx(e), e);
+  };
   cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   cv.addEventListener('pointerleave', () => { S.hover = null; draw(); });
   cv.addEventListener('wheel', (e) => { e.preventDefault(); const l = local(e); zoomAt(l[0], l[1], e.deltaY < 0 ? 1.25 : 0.8); }, { passive: false });
-  function cancelStroke() { if (stroke && stroke.undo) { restore(D().undo.pop()); } stroke = null; S.shape = null; draw(); }
+  function cancelStroke() { if (stroke && stroke.undo) dropLastStep(); stroke = null; S.shape = null; draw(); }
+  function takeBackInstant() {
+    const i = instant; instant = null; if (!i || performance.now() - i.t > 300) return;
+    const d = D(); if (i.undo !== undefined && d.undo.length === i.undo + 1) dropLastStep();
+    S.color = i.color; if (S.tool !== i.tool) setTool(i.tool); renderColors(); draw();
+  }
   function toolDown(p, e) {
     const t = (e.altKey && (S.tool === 'pencil' || S.tool === 'fill')) ? 'picker' : S.tool, d = D();
+    if (t === 'fill' || t === 'picker' || t === 'anchor') instant = { t: performance.now(), undo: t === 'picker' ? undefined : d.undo.length, color: S.color, tool: S.tool };
     if (t !== 'move' && t !== 'select' && S.float) commitFloat();
     if (t === 'pencil' || t === 'eraser') { pushUndo(); stroke = { t, last: p, undo: true }; dab(p[0], p[1], t === 'eraser' ? CLEAR : S.color); changed(false, true); return; }
     if (t === 'fill') { pushUndo(); flood(p[0], p[1], S.color); changed(); return; }
@@ -288,8 +320,54 @@
     if (st.t === 'select') { draw(); return; }
     changed();
   }
-  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = F()[p[1] * d.w + p[0]]; if (v === CLEAR) { S.color = CLEAR; } else S.color = v; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
+  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = F()[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
   const DRAWING = ['pencil', 'fill', 'line', 'rect', 'rectf', 'ellipse', 'ellipsef'];
+
+  // =====================================================================================================
+  // Your own picture behind the pixels, to draw over (one per sprite, kept in this browser's IndexedDB)
+  // =====================================================================================================
+  const refImgs = new Map(); // id -> { img, blob, fit, scale, x, y (sprite px), opacity, front }
+  let idb = null;
+  function db() { if (!idb) idb = new Promise((ok) => { try { const r = indexedDB.open('hb-editor', 1); r.onupgradeneeded = () => r.result.createObjectStore('refimg'); r.onsuccess = () => ok(r.result); r.onerror = () => ok(null); } catch (e) { ok(null); } }); return idb; }
+  async function idbDo(mode, fn) { const d = await db(); if (!d) return null; return new Promise((ok) => { try { const r = fn(d.transaction('refimg', mode).objectStore('refimg')); r.onsuccess = () => ok(r.result || null); r.onerror = () => ok(null); } catch (e) { ok(null); } }); }
+  const blobImage = (blob) => new Promise((ok, no) => { const img = new Image(); img.onload = () => ok(img); img.onerror = no; img.src = URL.createObjectURL(blob); });
+  const curRef = () => (S.item && refImgs.get(S.item.id)) || null;
+  function saveRef(id) { const r = refImgs.get(id); if (r) idbDo('readwrite', st => st.put({ blob: r.blob, fit: r.fit, scale: r.scale, x: r.x, y: r.y, opacity: r.opacity, front: !!r.front }, id)); }
+  async function loadRefImg(id) {
+    S.refMove = false; renderRefCtl();
+    if (refImgs.has(id)) return;
+    const v = await idbDo('readonly', st => st.get(id)); if (!v || !v.blob) return;
+    try { const img = await blobImage(v.blob); refImgs.set(id, Object.assign({}, v, { img })); if (S.item && S.item.id === id) { renderRefCtl(); draw(); } } catch (e) { /* unreadable */ }
+  }
+  function drawRef(ri, X, Y, z) { ctx.save(); ctx.globalAlpha = ri.opacity; ctx.imageSmoothingEnabled = true; ctx.drawImage(ri.img, X + ri.x * z, Y + ri.y * z, ri.img.width * ri.scale * z, ri.img.height * ri.scale * z); ctx.restore(); }
+  /** the colour of your picture under a pixel (for the eyedropper), or null */
+  function refColor(p) {
+    const ri = curRef(); if (!ri) return null;
+    if (!ri.sample) { const c = document.createElement('canvas'); c.width = ri.img.width; c.height = ri.img.height; c.getContext('2d').drawImage(ri.img, 0, 0); ri.sample = c.getContext('2d'); }
+    const ix = Math.floor((p[0] + 0.5 - ri.x) / ri.scale), iy = Math.floor((p[1] + 0.5 - ri.y) / ri.scale);
+    if (ix < 0 || iy < 0 || ix >= ri.img.width || iy >= ri.img.height) return null;
+    const px = ri.sample.getImageData(ix, iy, 1, 1).data; return px[3] < 128 ? null : hexOf(px[0], px[1], px[2]);
+  }
+  function renderRefCtl() {
+    const r = curRef(); $('refimg-ctl').hidden = !r; $('btn-refimg').textContent = r ? 'Change image…' : 'Image behind…';
+    if (r) { $('in-refop').value = Math.round(r.opacity * 100); $('in-refsc').value = Math.round(r.scale / r.fit * 100); $('btn-reffront').classList.toggle('on', !!r.front); }
+    $('btn-refmove').classList.toggle('on', !!(S.refMove && r));
+  }
+  $('btn-refimg').onclick = () => $('in-refimg').click();
+  $('in-refimg').onchange = async (e) => {
+    const f = e.target.files && e.target.files[0]; e.target.value = ''; const d = D(); if (!f || !d) return;
+    try {
+      const img = await blobImage(f), fit = Math.min(d.w / img.width, d.h / img.height);
+      refImgs.set(d.id, { img, blob: f, fit, scale: fit, x: (d.w - img.width * fit) / 2, y: (d.h - img.height * fit) / 2, opacity: 0.5, front: false });
+      saveRef(d.id); renderRefCtl(); draw(); toast('Your picture is behind the pixels: draw over it. The eyedropper picks its colours where a pixel is empty.', 5000);
+    } catch (err) { toast('Could not read that image'); }
+  };
+  $('in-refop').oninput = (e) => { const r = curRef(); if (!r) return; r.opacity = +e.target.value / 100; draw(); };
+  $('in-refsc').oninput = (e) => { const r = curRef(); if (!r) return; const cx = r.x + r.img.width * r.scale / 2, cy = r.y + r.img.height * r.scale / 2; r.scale = r.fit * +e.target.value / 100; r.x = cx - r.img.width * r.scale / 2; r.y = cy - r.img.height * r.scale / 2; draw(); };
+  $('in-refop').onchange = $('in-refsc').onchange = () => { if (S.item) saveRef(S.item.id); };
+  $('btn-refmove').onclick = () => { S.refMove = !S.refMove; renderRefCtl(); if (S.refMove) toast('Drag on the canvas to move your picture; tap Move it again to draw'); };
+  $('btn-reffront').onclick = () => { const r = curRef(); if (!r) return; r.front = !r.front; saveRef(S.item.id); renderRefCtl(); draw(); };
+  $('btn-refdel').onclick = () => { if (!S.item) return; refImgs.delete(S.item.id); idbDo('readwrite', st => st.delete(S.item.id)); S.refMove = false; renderRefCtl(); draw(); };
 
   // =====================================================================================================
   // Panels
@@ -308,13 +386,14 @@
   }
   function renderFrames() {
     const d = D(), box = $('frames'); box.innerHTML = ''; if (!d) return;
-    const label = d.kind === 'map' ? 'variant' : 'frame', th = 64, sc = Math.max(1, Math.min(4, Math.floor(th / Math.max(d.h, 1))));
+    const label = d.kind === 'map' ? 'variant' : 'frame', fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
     d.frames.forEach((f, k) => {
       const el = document.createElement('div'); el.className = 'fr' + (k === S.frame ? ' cur' : '');
       let c = frameCanvas(d, f);
-      if (S.ref && S.ghosts.length && f.every(v => v === CLEAR)) { const g = document.createElement('canvas'); g.width = d.w * sc; g.height = d.h * sc; const x = g.getContext('2d'); x.globalAlpha = 0.3; x.drawImage(S.ghosts[Math.min(k, S.ghosts.length - 1)], 0, 0, g.width, g.height); c = g; }
+      if (S.ref && S.ghosts.length && f.every(v => v === CLEAR)) { const g = document.createElement('canvas'); g.width = Math.max(1, Math.round(d.w * sc)); g.height = Math.max(1, Math.round(d.h * sc)); const x = g.getContext('2d'); x.globalAlpha = 0.3; x.drawImage(S.ghosts[Math.min(k, S.ghosts.length - 1)], 0, 0, g.width, g.height); c = g; }
       c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
-      const cap = document.createElement('div'); cap.textContent = `${label} ${k + 1}${S.item && S.item.kind === 'dragon' && k >= S.item.frames ? ' (unused)' : ''}`; el.appendChild(cap);
+      const cap = document.createElement('div'); const it = S.item, unused = it && k >= it.frames && (it.kind === 'dragon' || it.kind === 'sprite' || (it.entry && it.entry.framesAre === 'levels'));
+      cap.textContent = `${label} ${k + 1}${unused ? ' (unused)' : ''}`; el.appendChild(cap);
       el.onclick = () => { commitFloat(); S.frame = k; S.sel = null; renderFrames(); draw(); }; box.appendChild(el);
     });
   }
@@ -354,10 +433,10 @@
   }
   let draftTimer = 0;
   function changed(structure, light) {
-    if (D()) D().fresh = false;
+    if (D()) { D().fresh = false; D()._rev = (D()._rev || 0) + 1; }
     draw();
     if (light) return; // mid-stroke: the rest refreshes on release
-    renderFrames(); renderInfo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
+    renderFrames(); renderInfo(); renderUndo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
     void structure;
   }
   function setRefs(art) { S.refs = art ? art.canvases : []; S.ghosts = art ? art.ghosts : []; }
@@ -368,7 +447,8 @@
     setRefs(gameArt(item, doc));
     if (doc.fresh) S.ref = true;
     $('chk-ref').checked = S.ref;
-    fit(); renderColors(); renderFrames(); renderInfo(); renderList(); draw();
+    loadRefImg(item.id);
+    fit(); renderColors(); renderFrames(); renderInfo(); renderUndo(); renderList(); draw();
     try { localStorage.setItem('hb.editor.last', item.id); } catch (e) { /* private mode */ }
   }
 
@@ -393,11 +473,13 @@
     const d = D(); pg.imageSmoothingEnabled = false;
     if (!d) { bg('checker'); return; }
     if (S.sample) { drawSampleMap(); return; }
-    const kind = $('in-bg').value, sc = +$('in-pscale').value; bg(kind);
+    const kind = $('in-bg').value, W = pv.width, H = pv.height; bg(kind);
+    // big pictures (the lair's) shrink to fit the preview; backdrops (anchor at the corner) are centred
+    const sc = Math.min(+$('in-pscale').value, W * 0.96 / d.w, H * 0.96 / d.h), backdrop = d.anchor[0] === 0 && d.anchor[1] === 0;
     const n = d.frames.length, k = S.playing ? Math.floor(S.playT * (d.fps || 2)) % n : S.frame, c = frameCanvas(d, k === S.frame && S.float ? withFloat() : d.frames[k]);
-    const W = pv.width, H = pv.height, gy = kind === 'raid' ? Math.round(H * 0.72) : Math.round(H * 0.6);
-    const ax = W / 2, ay = d.kind === 'dragon' ? Math.round(H * 0.42) : gy;
-    pg.drawImage(c, Math.round(ax - d.anchor[0] * sc), Math.round(ay - d.anchor[1] * sc), d.w * sc, d.h * sc);
+    const gy = kind === 'raid' ? Math.round(H * 0.72) : Math.round(H * 0.6);
+    const ax = backdrop ? (W - d.w * sc) / 2 : W / 2 - d.anchor[0] * sc, ay = backdrop ? (H - d.h * sc) / 2 : (d.kind === 'dragon' ? Math.round(H * 0.42) : Math.min(gy, H - 4 - (d.h - d.anchor[1]) * sc)) - d.anchor[1] * sc;
+    pg.drawImage(c, Math.round(ax), Math.round(ay), Math.round(d.w * sc), Math.round(d.h * sc));
     pg.fillStyle = 'rgba(0,0,0,0.45)'; pg.font = '11px system-ui'; pg.fillText(`${d.kind === 'map' ? 'variant' : 'frame'} ${k + 1}/${n}`, 6, 14);
   }
   function withFloat() { const d = D(), f = F().slice(), fl = S.float; for (let y = 0; y < fl.h; y++) for (let x = 0; x < fl.w; x++) { const v = fl.data[y * fl.w + x], X = fl.x + x, Y = fl.y + y; if (v !== CLEAR && X >= 0 && Y >= 0 && X < d.w && Y < d.h) f[Y * d.w + X] = v; } return f; }
@@ -549,6 +631,7 @@
   $('btn-samplemap').onclick = () => { S.sample = !S.sample; $('btn-samplemap').classList.toggle('on', S.sample); };
   $('btn-game-map').onclick = () => { saveDrafts(); window.open('../index.html?scene=mappreview&mappack=pixel&drafts=1', '_blank'); };
   $('btn-game-dragon').onclick = () => { saveDrafts(); window.open('../index.html?scene=dragons&drafts=1', '_blank'); };
+  $('btn-game-lair').onclick = () => { saveDrafts(); const id = S.item ? S.item.id : '', tier = (id.match(/^lair\.dragon\.(\d)/) || [])[1]; window.open(`../index.html?scene=lair&drafts=1&preset=${tier === undefined ? 'adult-kind' : ['none', 'young-kind', 'adult-kind', 'adult-kind'][+tier]}${tier === '3' ? '&tier=3' : ''}${/^lair\.(hill|room)/.test(id) ? '&view=rooms' : ''}${/\.sleep$/.test(id) ? '&sleep=1' : ''}`, '_blank'); };
   $('btn-save').onclick = saveToGitHub;
   $('btn-settings').onclick = openSettings;
   $('btn-download').onclick = () => { const d = D(); if (!d) return; commitFloat(); download(PA.fileOf(d.id), new Blob([fileText(toDef(d))], { type: 'text/javascript' })); };
@@ -568,7 +651,7 @@
     if (mod) return;
     if (k === 'delete' || k === 'backspace') { deleteSel(); return; }
     if (k === 'enter') { commitFloat(); return; }
-    if (k === 'escape') { if (S.float) { const d = D(); if (d.undo.length) restore(d.undo.pop()); S.float = null; } S.sel = null; changed(); return; }
+    if (k === 'escape') { if (S.float) { if (D().undo.length) dropLastStep(); S.float = null; } S.sel = null; changed(); return; }
     if (k === 'arrowleft' || k === ',') { if (D() && S.frame > 0) { commitFloat(); S.frame--; renderFrames(); draw(); } return; }
     if (k === 'arrowright' || k === '.') { if (D() && S.frame < D().frames.length - 1) { commitFloat(); S.frame++; renderFrames(); draw(); } return; }
     const tools = { b: 'pencil', e: 'eraser', g: 'fill', i: 'picker', m: 'select', v: 'move', l: 'line', r: e.shiftKey ? 'rectf' : 'rect', o: e.shiftKey ? 'ellipsef' : 'ellipse', a: 'anchor' };

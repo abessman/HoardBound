@@ -64,6 +64,21 @@ ax,ay} }`, `ax`/`ay` the anchor pixel) into `assets/sprites/` and list them in `
 override generated sprites at load. Dragon layers are keyed `dragon.<tier>.<part>.<pose>` and can be
 overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README.md`.
 
+### Art registry (0.17)
+- `HB.art` (`src/art/pixel.js`) lists everything drawn in pixels that the pixel editor can redraw, with its kind,
+  group, frame count, fps, a note and `gen(k, opts)` (the game's own frame). `HB.sprites.define` registers sprites
+  (`{ group, editable: false }` for builders that take sizes); `dragon.js` registers each tier × pose (`POSES`);
+  `lairart.js` the lair pictures. **Register new art there and it shows in the editor by itself.**
+- `HB.art.frame(id, k, opts, optsKey)` / `HB.art.at(id, t, …)` return the editor's drawing when there is one (its
+  own frame count and fps, `HB.sprites.overrideMeta`), else the generated frame, cached.
+
+### Lair pictures (0.17)
+- `src/art/lairart.js`: `lair.dragon.<tier>.perch` and `.sleep` (4 frames; placeholder = the composed dragon at body
+  length 40/60/84/104 in the breed's colours; anchor = where it rests on the pile), `lair.chamber` (frame = chamber
+  level 0–4), `lair.hill` (rooms backdrop), `lair.room.<id>` (frame = level, from 0 for the entrance and the hoard).
+  The hoard pile, trophies, torch flames, light, workers, captives and construction stay generated on top.
+  How the lair views use them: [lair-and-economy](lair-and-economy.md).
+
 ### Pixel editor (0.16)
 - `editor/index.html` (a dev tool, ordinary HTML; not part of the game): the owner draws the dragon frame by frame,
   the raid sprites and map symbols, and commits them to `assets/pixelart/` through the GitHub API (Git Data API, one
@@ -72,7 +87,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `.` clear, `0-9a-zA-Z` palette index) plus `index.js`; classic scripts, so `file://` works. `src/art/pixelart.js`
   loads them at boot (after the PNG atlas) and puts them into `HB.sprites.overrides`:
   `sprite` → the id (frame 0; raidview stands sprites bottom-centre, anchors unused); `dragon` → `dragon.<tier>.<pose>.<k>`
-  per frame, one drawing for every breed and alignment, placed by its anchor (body centre); `map` → the `pixel` map
+  per frame, one drawing for every breed and alignment, placed by its anchor (body centre; fewer frames loop); `anim`
+  (0.17) → `<id>.<k>` for any other registered picture, with the drawing's frame count and fps; `map` → the `pixel` map
   art pack (`HB.pixelArt.mapPack()`, built in memory by `HB.mapAssets.use('pixel')`; frames are variants, pixel
   sampling, `logicalSize = size × scale`).
 - `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
@@ -85,6 +101,7 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   exporter); preview `?scene=mappreview` (`HB.debug.mapPreview` in `src/main.js`, `HB.presets.preview`).
 - Watercolour: `src/art/mapfx.js`, `src/views/washpreview.js`; checks `tools/washcheck-page.js` driven by
   `node tools/mapart-export.mjs --only=wash`.
+- Art registry `HB.art` in `src/art/pixel.js`; lair pictures `src/art/lairart.js`.
 - Pixel editor: `editor/` (index.html, editor.css, editor.js; uses the art files and `tools/mapart-page.js` recipes to
   draw map symbols as tracing guides), `src/art/pixelart.js` (game-side loader), `assets/pixelart/` (the art).
 

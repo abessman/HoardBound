@@ -20,10 +20,11 @@
     return { base, light, dark, belly, eye, membrane, outline: P.outline, horn: px.mix('#e8dcc0', dark, 0.3), claw: '#e8dcc0' };
   }
 
-  /** spec: {tier, breed, alignment, mutations:[], scars, element}. pose: fly|idle|land|sleep|breathe|bite|roar|grab|hurt. */
+  /** spec: {tier, breed, alignment, mutations:[], scars, element, length?}. pose: fly|idle|land|sleep|breathe|bite|roar|grab|hurt.
+   *  length overrides the tier's body length (the lair draws a larger dragon, src/art/lairart.js). */
   function render(spec, pose = 'fly', frame = 0) {
     const tier = HB.clamp(spec.tier | 0, 0, 3);
-    const L = SIZES[tier];
+    const L = spec.length || SIZES[tier];
     const W = Math.round(L * 1.7), H = Math.round(L * 1.35);
     const c = px.create(W, H);
     const g = c.ctx;
@@ -148,7 +149,14 @@
     return out;
   }
 
+  /** the poses the game draws, how many frames it uses of each and at what speed (the pixel editor lists these) */
+  const POSES = { idle: [4, 1.5], fly: [4, 8], grab: [4, 8], hurt: [4, 8], land: [2, 2], bite: [2, 2], roar: [2, 2], sleep: [2, 1.5], breathe: [2, 2] };
+  const TIER_NAMES = ['Hatchling', 'Young', 'Adult', 'Ancient'];
+  for (let t = 0; t < 4; t++) for (const pose in POSES) HB.art.define(`dragon.${t}.${pose}`, { kind: 'dragon', group: `Dragon · ${TIER_NAMES[t]}`, label: pose, frames: POSES[pose][0], fps: POSES[pose][1],
+    gen: (k, spec) => dragonArt.generated(Object.assign({ breed: 'red', alignment: 0, mutations: [], scars: 0 }, spec, { tier: t }), pose, k) });
+
   const dragonArt = HB.dragonArt = {
+    POSES, TIER_NAMES,
     /** the generated drawing, ignoring overrides (the pixel editor traces it) */
     generated(spec, pose = 'fly', frame = 0) { return render(Object.assign({}, spec, { alignment: Math.round((spec.alignment || 0) / 10) * 10 }), pose, frame); },
     SIZES,
@@ -177,7 +185,9 @@
       const key = `dragon|${dragonArt.specKey(spec)}|${pose}|${frame}`;
       let c = HB.sprites.cache.get(key);
       if (c) return c;
-      const ov = HB.sprites.overrides.get(`dragon.${spec.tier}.${pose}.${frame}`);
+      // a drawing from the pixel editor with fewer frames than asked for loops its own frames
+      const drawn = HB.sprites.overrideMeta.get(`dragon.${spec.tier}.${pose}`);
+      const ov = HB.sprites.overrides.get(`dragon.${spec.tier}.${pose}.${drawn ? frame % drawn.frames : frame}`);
       if (ov) { c = px.create(ov.w, ov.h); c.ctx.drawImage(ov.image, ov.x, ov.y, ov.w, ov.h, 0, 0, ov.w, ov.h); c.anchorX = ov.ax || ov.w / 2; c.anchorY = ov.ay || ov.h / 2; c.bodyLength = ov.bodyLength || SIZES[spec.tier] || 16; }
       else c = render(Object.assign({}, spec, { alignment: Math.round((spec.alignment || 0) / 10) * 10 }), pose, frame);
       HB.sprites.cache.set(key, c);

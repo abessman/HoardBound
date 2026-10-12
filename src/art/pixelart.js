@@ -4,6 +4,8 @@
  * A row is one character per pixel: '.' is transparent, otherwise ALPHABET[i] is palette[i].
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
+ *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
+ *        replaces its frame k, and the drawing's frame count and fps are used;
  *        'map' is a map symbol id: each frame is a variant, drawn through the 'pixel' map art pack (Settings → Map art).
  * Loaded at boot with script tags, so it also works from file://. With ?drafts=1 the editor's unsaved drafts in this
  * browser are applied on top (the editor's "preview in game" buttons use it). Guide: docs/pixel-editor.md. */
@@ -54,7 +56,10 @@
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
         if (def.kind === 'sprite') ov.set(def.id, Object.assign({ image: fr[0] }, base));
-        else if (def.kind === 'dragon') fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
+        else if (def.kind === 'dragon' || def.kind === 'anim') {
+          fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
+          HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps });
+        }
       }
       HB.sprites.cache.clear();
     },

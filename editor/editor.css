@@ -6,6 +6,8 @@ button, .btn { background: var(--panel); border: 1px solid var(--line); border-r
 button:hover, .btn:hover { border-color: var(--soft); }
 button:disabled { opacity: 0.45; cursor: default; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff6e6; }
+button.big { font-size: 17px; min-height: 46px; justify-content: center; }
+input[type=range] { width: 80px; vertical-align: middle; }
 button.on { outline: 2px solid var(--sel); outline-offset: -2px; background: #fffaf0; }
 input[type=number] { width: 58px; padding: 4px; border: 1px solid var(--line); border-radius: 5px; background: #fffaf0; }
 input[type=search], input[type=password], input:not([type]) { padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fffaf0; width: 100%; }
@@ -57,3 +59,4 @@ dialog::backdrop { background: rgba(30, 20, 10, 0.35); }
 #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: var(--ink); color: #fff6e6; padding: 8px 14px; border-radius: 8px; opacity: 0; transition: opacity 0.2s; pointer-events: none; max-width: 80vw; }
 #toast.show { opacity: 0.95; }
 @media (max-width: 1000px) { main { grid-template-columns: 190px 1fr 270px; } .swatches { grid-template-columns: repeat(8, 1fr); } }
+[hidden] { display: none !important; }

@@ -431,7 +431,7 @@
     g.fillStyle = P.outline; g.fillRect(3, h - 2, 5, 5); g.fillStyle = P.skyLight; g.fillRect(4, h - 1, 3, 3);
     if (w > 20) { g.fillStyle = P.outline; g.fillRect(w - 7, h - 2, 5, 5); g.fillStyle = P.skyLight; g.fillRect(w - 6, h - 1, 3, 3); }
     return c;
-  });
+  }, { editable: false });
   S.define('wallSegment', (w = 32, h = 20) => {
     const c = px.create(w, h); const g = c.ctx;
     g.fillStyle = P.outline; g.fillRect(0, 0, w, h);
@@ -440,7 +440,7 @@
     // crenellations
     for (let x = 0; x < w; x += 6) { g.fillStyle = P.outline; g.fillRect(x, 0, 4, 4); g.fillStyle = P.stone; g.fillRect(x + 1, 1, 2, 3); }
     return c;
-  });
+  }, { editable: false });
   S.define('towerSeg', (w = 18, h = 48, flag = 1) => {
     const c = px.create(w + 8, h + 12); const g = c.ctx;
     g.fillStyle = P.outline; g.fillRect(0, 12, w, h);
@@ -450,7 +450,7 @@
     for (let x = 0; x < w; x += 5) { g.fillStyle = P.outline; g.fillRect(x, 8, 4, 5); g.fillStyle = P.stone; g.fillRect(x + 1, 9, 2, 4); }
     if (flag) { g.fillStyle = P.outline; g.fillRect(Math.floor(w / 2), 0, 1, 9); g.fillStyle = P.cloth; g.fillRect(Math.floor(w / 2) + 1, 1, 6, 4); }
     return c;
-  });
+  }, { editable: false });
   S.define('gate', (w = 20, h = 24) => {
     const c = px.create(w, h); const g = c.ctx;
     g.fillStyle = P.outline; g.fillRect(0, 0, w, h);
@@ -459,7 +459,7 @@
     g.fillStyle = P.wood; g.fillRect(5, 9, w - 10, h - 9);
     g.fillStyle = P.ironDark; for (let y = 11; y < h; y += 5) g.fillRect(5, y, w - 10, 1);
     return c;
-  });
+  }, { editable: false });
   S.define('ground', (w = 320, kind = 'grass', seed = 1) => {
     const c = px.create(w, 24); const g = c.ctx; const rng = new HB.RNG(seed);
     const top = kind === 'grass' ? P.grass : kind === 'dirt' ? P.dirtLight : kind === 'sand' ? P.sand : kind === 'stone' ? P.stoneLight : kind === 'snow' ? P.white : P.grass;
@@ -469,24 +469,31 @@
     for (let i = 0; i < w / 3; i++) { const x = rng.int(w), y = 3 + rng.int(18); g.fillRect(x, y, 1 + rng.int(2), 1); }
     if (kind === 'grass') { g.fillStyle = P.grassLight; for (let i = 0; i < w / 6; i++) { const x = rng.int(w); g.fillRect(x, 0, 1, 2); } }
     return c;
-  });
+  }, { editable: false });
   S.define('hillsSilhouette', (w = 320, h = 40, color = '#5f7f5a', seed = 2) => {
     const c = px.create(w, h); const g = c.ctx; const rng = new HB.RNG(seed); const noise = new HB.Noise2D(rng);
     g.fillStyle = color;
     for (let x = 0; x < w; x++) { const y = h * (0.45 + noise.fbm(x / 60, 0, 3) * 0.35); g.fillRect(x, Math.round(y), 1, h); }
     return c;
-  });
+  }, { editable: false });
   S.define('mountainsSilhouette', (w = 320, h = 60, color = '#8a93a6', seed = 3) => {
     const c = px.create(w, h); const g = c.ctx; const rng = new HB.RNG(seed); const noise = new HB.Noise2D(rng);
     g.fillStyle = color;
     for (let x = 0; x < w; x++) { const y = h * (0.35 + noise.ridged(x / 45, 0.5, 3) * -0.5 + 0.35); g.fillRect(x, Math.round(HB.clamp(y, 4, h)), 1, h); }
     g.fillStyle = P.white; for (let x = 0; x < w; x++) { const y = h * (0.35 + noise.ridged(x / 45, 0.5, 3) * -0.5 + 0.35); if (y < h * 0.3) g.fillRect(x, Math.round(HB.clamp(y, 4, h)), 1, 2); }
     return c;
-  });
+  }, { editable: false });
   S.define('cloud', (w = 30, seed = 1) => {
     const c = px.create(w, Math.round(w * 0.45)); const g = c.ctx; const rng = new HB.RNG(seed);
     for (let i = 0; i < 5; i++) { const r = w * (0.12 + rng.next() * 0.14); px.ellipse(g, w * (0.2 + rng.next() * 0.6), c.height * 0.6, r, r * 0.7, P.white); }
     px.ellipse(g, w / 2, c.height * 0.65, w * 0.42, c.height * 0.3, P.white);
     return c;
+  }, { editable: false });
+
+  // groups in the pixel editor's list (new sprites default to Props)
+  S.groups({
+    People: ['villager', 'villager2', 'bandit', 'guard', 'archer', 'knight', 'noble', 'hero', 'priest', 'dwarf', 'goblin', 'orc', 'warlord', 'warden', 'child', 'corpse'],
+    Animals: ['sheep', 'cow', 'horse'],
+    Treasure: ['chest', 'chestOpen', 'coins', 'goblet', 'crown', 'gem', 'gemRed', 'gemGreen', 'ring', 'signet', 'sceptre', 'bell', 'helm', 'plate', 'pearl', 'chalice', 'sword', 'shield', 'key', 'book', 'scroll', 'crystal'],
   });
 })();

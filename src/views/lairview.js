@@ -1,13 +1,17 @@
-/* Lair view: pixel cutaway of the cave plus hoard / build / workers / captives / sleep panels. */
+/* Lair view: the hoard chamber close-up (the dragon on its hoard) or, zoomed out, every room of the lair (pictures in
+ * src/art/lairart.js), plus hoard / build / workers / captives / domain / sleep panels. */
 (function () {
   const HB = globalThis.HB;
   if (!HB.isBrowser) return;
-  const px = HB.px, P = HB.px_palette, S = HB.sprites;
-  const CW = 320, CH = 180;
+  const px = HB.px;
+  const LA = () => HB.lairArt, ZOOM_S = 0.35; // seconds to zoom between the hoard and all rooms
 
   class LairScene {
     constructor(state, opts = {}) {
-      this.state = state; this.opaque = true; this.ui = new HB.ui.UI(); this.tab = opts.tab || 'hoard'; this.t = 0; this.buf = px.create(CW, CH); this.workerAnim = [];
+      this.state = state; this.opaque = true; this.ui = new HB.ui.UI(); this.tab = opts.tab || 'hoard'; this.t = 0;
+      this.buf = px.create(LA().W, LA().H); this.rbuf = px.create(LA().W, LA().H);
+      // view: 'hoard' (the close-up) or 'rooms' (zoomed out); zoom runs 0 (hoard) → 1 (rooms)
+      this.view = opts.view || 'hoard'; this.zoom = this.view === 'rooms' ? 1 : 0; this.pinchAcc = 0;
       if (opts.upgrade && HB.UPGRADE_BY_ID[opts.upgrade]) this.selectedUpgrade = { u: HB.UPGRADE_BY_ID[opts.upgrade] };
     }
     enter() { this.buildUi(); }
@@ -19,6 +23,10 @@
       const tw = (pw - (tabs.length - 1) * 6) / tabs.length;
       tabs.forEach(([id, label], i) => ui.add(new HB.ui.Button({ x: px0 + i * (tw + 6), y: 20, w: tw, h: 36, label, size: 15, primary: this.tab === id, onClick: () => { this.tab = id; this.buildUi(); } })));
       ui.add(new HB.ui.Button({ x: 20, y: HB.H - 56, w: 180, h: 40, label: 'Back to map', size: 16, hotkey: 'cancel', hotkeyLabel: 'Esc', onClick: () => HB.scenes.pop(this) }));
+      const F = this.frame, rooms = this.view === 'rooms';
+      ui.add(new HB.ui.Button({ x: F.x + F.w - 162, y: F.y + 10, w: 152, h: 36, label: rooms ? 'The hoard' : 'All rooms', size: 15, hotkey: rooms ? 'zoomIn' : 'zoomOut', hotkeyLabel: rooms ? '+' : '−',
+        tooltip: rooms ? 'Back to the dragon on its hoard (or pinch out, or tap the hoard).' : 'Zoom out to every room of the lair: what is built, what is being dug, and where more could go (or pinch in).',
+        onClick: () => this.setView(rooms ? 'hoard' : 'rooms') }));
       ui.add(new HB.ui.Button({ x: 210, y: HB.H - 56, w: 180, h: 40, label: 'Rest a season', size: 16, tooltip: 'Pass 90 days at home: heal fully, let construction advance, let the world move. Workers are not paid until year’s end.', onClick: () => this.rest(90) }));
       this.panel = { x: px0, y: 70, w: pw, h: HB.H - 90 };
       const build = { hoard: this.buildHoardTab, build: this.buildBuildTab, workers: this.buildWorkersTab, captives: this.buildCaptivesTab, domain: this.buildDomainTab, sleep: this.buildSleepTab }[this.tab];
@@ -169,45 +177,67 @@
       ui.add(new HB.ui.Button({ x: p.x + 16, y: p.y + p.h - 80, w: 260, h: 40, label: sel ? `Sleep ${sel.label.toLowerCase()}` : 'Sleep', primary: true, size: 15, disabled: !sel || !sel.allowed, disabledReason: sel ? sel.reason : '', tooltip: 'Years pass. You grow; the world changes; thieves and hunters test the lair.', onClick: () => HB.confirm('Sleep?', `${sel.label}: ${this.sleepPreview.warning || 'The hoard is as safe as you have made it.'} Begin?`, () => { HB.scenes.pop(this); HB.sleep.begin(st, sel.years, HB.flow.map); }, { yes: 'Sleep', no: 'Not yet' }) }));
     }
     // ---------- update / draw
+    setView(v) { if (v === this.view) return; this.view = v; this.pinnedTrophy = null; this.hoverRoom = null; this.buildUi(); }
     update(dt) {
       this.t += dt; this.ui.update(dt);
       if (HB.cheats && HB.cheats.any(this.state)) { const n = this.state.lair.construction.length; HB.cheats.topUp(this.state); if (n !== this.state.lair.construction.length) this.buildUi(); }
-      const ptr = HB.input.pointer, F = this.frame;
-      const bx = (ptr.x - F.x) * CW / F.w, by = (ptr.y - F.y) * CH / F.h;
+      const target = this.view === 'rooms' ? 1 : 0;
+      this.zoom = target > this.zoom ? Math.min(target, this.zoom + dt / ZOOM_S) : Math.max(target, this.zoom - dt / ZOOM_S);
+      const ptr = HB.input.pointer, F = this.frame, L = LA();
       const inFrame = HB.pointInRect(ptr.x, ptr.y, F.x, F.y, F.w, F.h);
-      const hit = inFrame ? (this.trophyRects || []).find(r => HB.pointInRect(bx, by, r.x, r.y, r.w, r.h)) : null;
-      this.hoverTrophy = hit || null;
-      if (ptr.released && !ptr.dragging && !this.ui.consumedPointer && inFrame) this.pinnedTrophy = hit && this.pinnedTrophy !== hit.item ? hit.item : null;
-      if (this.pinnedTrophy && !this.state.hoard.items.includes(this.pinnedTrophy)) this.pinnedTrophy = null;
+      // pinch in or wheel down: all rooms; pinch out or wheel up: the hoard
+      if (inFrame) {
+        this.pinchAcc += ptr.pinch || 0;
+        if (ptr.wheel > 0 || this.pinchAcc < -0.25) { this.setView('rooms'); this.pinchAcc = 0; }
+        else if (ptr.wheel < 0 || this.pinchAcc > 0.25) { this.setView('hoard'); this.pinchAcc = 0; }
+      }
+      if (!ptr.down) this.pinchAcc = 0;
+      const bx = (ptr.x - F.x) * L.W / F.w, by = (ptr.y - F.y) * L.H / F.h;
+      const tapped = ptr.released && !ptr.dragging && !this.ui.consumedPointer && inFrame && this.zoom === target;
+      if (this.view === 'hoard') {
+        const hit = inFrame ? (this.trophyRects || []).find(r => HB.pointInRect(bx, by, r.x, r.y, r.w, r.h)) : null;
+        this.hoverTrophy = hit || null;
+        if (tapped) this.pinnedTrophy = hit && this.pinnedTrophy !== hit.item ? hit.item : null;
+        if (this.pinnedTrophy && !this.state.hoard.items.includes(this.pinnedTrophy)) this.pinnedTrophy = null;
+      } else {
+        const hit = inFrame ? (this.rooms || []).find(r => HB.pointInRect(bx, by, r.x, r.y, r.w, r.h)) : null;
+        this.hoverRoom = hit || null;
+        if (tapped && hit) this.openRoom(hit);
+      }
     }
-    get frame() { return { x: 20, y: 20, w: 690, h: 388 }; }
+    /** a tapped room: the hoard zooms in; captives open their tab; an upgrade opens in the Build tab */
+    openRoom(r) {
+      if (r.id === 'chamber') { this.setView('hoard'); return; }
+      if (r.captives) { this.tab = 'captives'; this.buildUi(); return; }
+      if (HB.UPGRADE_BY_ID[r.id]) { this.tab = 'build'; this.selectedUpgrade = { u: HB.UPGRADE_BY_ID[r.id] }; this.buildUi(); }
+    }
+    get frame() { return { x: 20, y: 20, w: 690, h: 388 }; } // exactly 2× the 345×194 lair pictures
     drawTrophyTip(ctx) {
+      if (this.view !== 'hoard' || this.zoom > 0) return;
       const r = this.hoverTrophy && HB.input.usingPointer() && HB.input.lastDevice !== 'touch' ? this.hoverTrophy : this.pinnedTrophy ? (this.trophyRects || []).find(q => q.item === this.pinnedTrophy) : null;
       if (!r) return;
-      const it = r.item, F = this.frame;
+      const it = r.item, F = this.frame, L = LA();
       const lines = [`${HB.hoard.itemLabel(it)} — ${HB.fmt.int(it.value)} gold`, `${HB.hoard.catName(it.cat)} · from ${it.source || 'somewhere'}${it.year ? ', Year ' + it.year : ''} · ${HB.fmt.int(HB.hoard.itemDensity(it))} gold per space`];
       if (it.lore) lines.push(it.lore);
       lines.push(r.locked ? 'Locked in the strongroom: thieves cannot reach it.' : 'Within a thief’s reach.');
       // place the card above the alcove so the pile stays visible
       const text = lines.join('\n');
       const th = HB.text.wrap(ctx, text, 280, 14).length * 14 * 1.3 + 14;
-      const sx = F.x + (r.x + r.w / 2) * F.w / CW, top = F.y + r.y * F.h / CH;
-      HB.ui.UI.drawTooltip(ctx, text, null, { x: sx - 150, y: Math.max(F.y + 30, top - th - 6) });
+      const sx = F.x + (r.x + r.w / 2) * F.w / L.W, top = F.y + r.y * F.h / L.H;
+      HB.ui.UI.drawTooltip(ctx, text, null, { x: HB.clamp(sx - 150, F.x, F.x + F.w - 300), y: Math.max(F.y + 30, top - th - 6) });
     }
     draw(ctx) {
-      const st = this.state, Pp = HB.palette;
+      const st = this.state, Pp = HB.palette, F = this.frame, L = LA();
       HB.parchment.fill(ctx, 0, 0, HB.W, HB.H, 'dark');
       HB.parchment.vignette(ctx, 0, 0, HB.W, HB.H, 0.45);
-      // cutaway frame
-      const fx = 20, fy = 20, fw = 690, fh = 388;
-      this.drawCutaway(this.buf.ctx);
-      ctx.save(); ctx.imageSmoothingEnabled = false; ctx.drawImage(this.buf, fx, fy, fw, fh); ctx.restore();
-      HB.parchment.border(ctx, fx - 2, fy - 2, fw + 4, fh + 4, { width: 2, flourish: 10 });
-      // dragon status under the cutaway
-      this.drawStatus(ctx, fx, fy + fh + 16, fw);
-      // caption: how rich the hoard is for its size
-      const dens = HB.hoard.density(st);
-      if (dens > 0) HB.text.draw(ctx, `${HB.fmt.cap(HB.hoard.richnessName(st))} · ${HB.fmt.int(dens)} gold per space${this.trophyRects && this.trophyRects.length ? ' · tap a treasure on the wall' : ''}`, fx + 12, fy + 22, { size: 14, italic: true, color: HB.palette.parchmentLight, stroke: 'rgba(20,10,5,0.75)', strokeWidth: 3 });
+      this.drawPicture(ctx);
+      HB.parchment.border(ctx, F.x - 2, F.y - 2, F.w + 4, F.h + 4, { width: 2, flourish: 10 });
+      // dragon status under the picture
+      this.drawStatus(ctx, F.x, F.y + F.h + 16, F.w);
+      // caption: how rich the hoard is for its size, or what the rooms view shows
+      const dens = HB.hoard.density(st), cap = (txt) => HB.text.draw(ctx, txt, F.x + 12, F.y + 26, { size: 14, italic: true, color: Pp.parchmentLight, stroke: 'rgba(20,10,5,0.75)', strokeWidth: 3, maxWidth: F.w - 190 });
+      if (this.zoom === 0 && dens > 0) cap(`${HB.fmt.cap(HB.hoard.richnessName(st))} · ${HB.fmt.int(dens)} gold per space${this.trophyRects && this.trophyRects.length ? ' · tap a treasure on the wall' : ''}`);
+      if (this.zoom === 1) cap('Your lair · dotted: could be dug · tap a room');
       // right panel
       const p = this.panel;
       HB.parchment.panel(ctx, p.x, p.y, p.w, p.h, { tone: 'light', title: { hoard: 'The Hoard', build: 'The Lair', workers: 'Workers', captives: 'Captives', domain: 'Your Domain', sleep: 'Sleep' }[this.tab] });
@@ -215,6 +245,37 @@
       drawTab.call(this, ctx);
       this.ui.draw(ctx);
       this.drawTrophyTip(ctx);
+    }
+    /** the close-up, the rooms view, or (while zooming) the hoard room growing into the close-up */
+    drawPicture(ctx) {
+      const st = this.state, F = this.frame, L = LA(), z = this.zoom;
+      const asleep = st.phase === 'sleeping';
+      if (z < 1) this.trophyRects = L.drawChamber(this.buf.ctx, st, this.t, { asleep }).trophyRects;
+      if (z > 0) this.rooms = L.drawRooms(this.rbuf.ctx, st, this.t);
+      ctx.save(); ctx.beginPath(); ctx.rect(F.x, F.y, F.w, F.h); ctx.clip(); ctx.imageSmoothingEnabled = false;
+      if (z === 0) ctx.drawImage(this.buf, F.x, F.y, F.w, F.h);
+      else {
+        // the hoard room's rectangle in the rooms picture eases from filling the frame (z = 0) to its place (z = 1)
+        const hr = L.ROOMS.find(r => r.id === 'chamber'), e = z * z * (3 - 2 * z);
+        const sx = F.w / L.W, sy = F.h / L.H, full = { x: F.x, y: F.y, w: F.w, h: F.h }, home = { x: F.x + hr.x * sx, y: F.y + hr.y * sy, w: hr.w * sx, h: hr.h * sy };
+        const cur = { x: HB.lerp(full.x, home.x, e), y: HB.lerp(full.y, home.y, e), w: HB.lerp(full.w, home.w, e), h: HB.lerp(full.h, home.h, e) };
+        const k = cur.w / (hr.w * sx); // how much the rooms picture is enlarged
+        ctx.drawImage(this.rbuf, cur.x - hr.x * sx * k, cur.y - hr.y * sy * k, F.w * k, F.h * k);
+        if (z < 0.6) { ctx.globalAlpha = 1 - z / 0.6; ctx.drawImage(this.buf, cur.x, cur.y, cur.w, cur.h); ctx.globalAlpha = 1; }
+        if (z === 1) this.drawRoomLabels(ctx);
+      }
+      ctx.restore();
+    }
+    drawRoomLabels(ctx) {
+      const F = this.frame, L = LA(), sx = F.w / L.W, sy = F.h / L.H, Pp = HB.palette;
+      for (const r of this.rooms || []) {
+        if (r.optional && !r.built) continue;
+        const max = r.max || 1, lv = r.level || 0;
+        // built rooms in light text with their level; rooms not dug yet dim (their dotted outline shows where)
+        const status = r.building ? ` · ${Math.round(r.building.progress * 100)}%` : r.built && max > 1 ? ` ${lv}/${max}` : '';
+        HB.text.draw(ctx, r.label + status, F.x + r.lx * sx, F.y + r.ly * sy + 5, { size: 13, family: 'sc', align: r.align || 'center', color: r.built || r.building ? Pp.parchmentLight : 'rgba(233,220,188,0.6)', stroke: 'rgba(20,10,5,0.85)', strokeWidth: 3 });
+        if (this.hoverRoom && this.hoverRoom.id === r.id) { ctx.strokeStyle = 'rgba(255,230,160,0.9)'; ctx.lineWidth = 2; ctx.strokeRect(F.x + r.x * sx - 2, F.y + r.y * sy - 2, r.w * sx + 4, r.h * sy + 4); }
+      }
     }
     drawStatus(ctx, x, y, w) {
       const st = this.state, d = st.dragon, s = d.stats, Pp = HB.palette;
@@ -285,169 +346,7 @@
       const pv = this.sleepPreview;
       if (pv) { let y = p.y + 300; for (const line of pv.lines) { const h = HB.text.paragraph(ctx, line.text, p.x + 16, y, p.w - 32, { size: 13, color: line.tone === 'bad' ? Pp.bad : line.tone === 'good' ? Pp.good : line.tone === 'warn' ? Pp.warn : Pp.ink }); y += h + 4; } }
     }
-    // ---------- cutaway
-    drawCutaway(g) {
-      const st = this.state, d = st.dragon;
-      const lv = (id) => HB.lair.level(st, id);
-      const chamber = lv('chamber');
-      g.fillStyle = '#2a1c22'; g.fillRect(0, 0, CW, CH);
-      // rock texture
-      const rng = new HB.RNG(HB.hash32('lair' + st.seed));
-      g.fillStyle = '#3b2a33'; for (let i = 0; i < 160; i++) g.fillRect(rng.int(CW), rng.int(CH), 2 + rng.int(4), 1 + rng.int(2));
-      // cave interior: grows with the chamber level
-      const cx0 = 40, cy0 = 34 - chamber * 4, cw = 180 + chamber * 30, ch = 120 + chamber * 6;
-      g.fillStyle = '#4f3a46';
-      g.beginPath(); g.moveTo(cx0, cy0 + 30); g.quadraticCurveTo(cx0 + cw * 0.3, cy0 - 10, cx0 + cw * 0.7, cy0 + 6); g.quadraticCurveTo(cx0 + cw, cy0 + 20, cx0 + cw, cy0 + ch * 0.6); g.lineTo(cx0 + cw, cy0 + ch); g.lineTo(cx0, cy0 + ch); g.closePath(); g.fill();
-      g.fillStyle = '#5a4552'; g.beginPath(); g.moveTo(cx0 + 10, cy0 + 40); g.quadraticCurveTo(cx0 + cw * 0.3, cy0 + 2, cx0 + cw * 0.7, cy0 + 16); g.quadraticCurveTo(cx0 + cw - 10, cy0 + 28, cx0 + cw - 10, cy0 + ch * 0.6); g.lineTo(cx0 + cw - 10, cy0 + ch); g.lineTo(cx0 + 10, cy0 + ch); g.closePath(); g.fill();
-      // stalactites
-      g.fillStyle = '#4f3a46'; for (let i = 0; i < 9; i++) { const sx = cx0 + 20 + i * (cw / 9), h = 6 + rng.int(10); g.beginPath(); g.moveTo(sx - 3, cy0 + 8 + (i % 2) * 4); g.lineTo(sx + 3, cy0 + 8 + (i % 2) * 4); g.lineTo(sx, cy0 + 8 + h); g.closePath(); g.fill(); }
-      const floor = cy0 + ch;
-      g.fillStyle = '#3b2a33'; g.fillRect(0, floor, CW, CH - floor);
-      g.fillStyle = '#6a5460'; g.fillRect(cx0, floor, cw, 2);
-      // the hoard lights its own cave: glow grows with total worth, warms with richness
-      const total = HB.game.hoardValue(st), bulk = HB.hoard.bulk(st), rich = HB.hoard.richness(st);
-      const pxc = cx0 + cw * 0.45;
-      const glow = HB.clamp(Math.log10(1 + total) / 4.6, 0, 1) * (0.45 + rich * 0.55);
-      if (total > 0) {
-        g.save(); g.globalCompositeOperation = 'lighter';
-        const gr = g.createRadialGradient(pxc, floor - 10, 4, pxc, floor - 20, 40 + glow * 130);
-        gr.addColorStop(0, `rgba(255,196,90,${0.10 + glow * 0.32})`); gr.addColorStop(0.5, `rgba(220,150,60,${0.04 + glow * 0.14})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
-        g.fillStyle = gr; g.fillRect(0, 0, CW, CH); g.restore();
-      }
-      // trophy wall: alcoves carved along the back wall hold the most prized pieces
-      this.drawTrophyWall(g, cx0, cw, floor, chamber);
-      // entrance tunnel on the left with daylight
-      const ent = lv('entrance');
-      g.fillStyle = '#5a4552'; g.fillRect(0, floor - 34, cx0 + 4, 34);
-      const sky = g.createLinearGradient(0, floor - 34, 0, floor); sky.addColorStop(0, '#8fb8d8'); sky.addColorStop(1, '#c9e0ee');
-      g.fillStyle = sky; g.fillRect(0, floor - 32, 14, 32);
-      if (lv('concealed')) { px.blit(g, S.get('bush'), 2, floor - 10); px.blit(g, S.get('bush'), 8, floor - 6); if (lv('concealed') >= 2) px.blit(g, S.get('tree'), -2, floor - 20); }
-      if (ent) { const gate = S.get('gate', 16, 30); px.blit(g, gate, 18, floor - 30); if (ent >= 2) { g.fillStyle = P.ironLight; g.fillRect(18, floor - 30, 16, 2); } if (ent >= 3) { g.fillStyle = P.iron; g.fillRect(16, floor - 32, 20, 2); g.fillRect(16, floor - 32, 2, 32); } }
-      if (lv('traps')) { g.fillStyle = P.ironLight; for (let i = 0; i < 3 + lv('traps') * 2; i++) { const tx = 38 + i * 4; g.beginPath(); g.moveTo(tx, floor); g.lineTo(tx + 2, floor); g.lineTo(tx + 1, floor - 4); g.closePath(); g.fill(); } }
-      if (lv('guardpost')) { px.blit(g, S.get('house', 16, 10, 1), 44, floor - 20); px.blit(g, S.get('lantern'), 62, floor - 18); }
-      if (lv('lookout')) { g.fillStyle = '#6a5460'; g.fillRect(2, floor - 50, 22, 3); px.blit(g, S.get('villager2'), 8, floor - 62); }
-      if (lv('ward')) { g.fillStyle = Math.floor(this.t * 2) % 2 ? '#7fe6ff' : '#4fb0d8'; for (let i = 0; i < 5; i++) g.fillRect(cx0 - 2 + (i % 2) * 2, floor - 30 + i * 6, 2, 2); }
-      if (lv('forge')) { px.blit(g, S.get('campfire'), cx0 + cw - 40, floor - 6); g.fillStyle = P.ironDark; g.fillRect(cx0 + cw - 30, floor - 6, 10, 4); g.fillRect(cx0 + cw - 28, floor - 9, 6, 3); }
-      if (lv('larder')) { px.blit(g, S.get('barrel'), cx0 + cw - 56, floor - 6); px.blit(g, S.get('hay'), cx0 + cw - 64, floor - 5); }
-      if (lv('sleeping')) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 10, floor - 50, 40, 50); g.fillStyle = '#4f3a46'; g.fillRect(cx0 + cw - 4, floor - 44, 30, 44); px.blit(g, S.get('gate', 12, 20), cx0 + cw - 12, floor - 20); }
-      // hoard pile: footprint by bulk (how much room it takes), look by richness and by what it is made of
-      const pileW = bulk > 0 ? HB.clamp(16 + Math.sqrt(bulk) * 9, 14, cw * 0.6) : 0, pileH = bulk > 0 ? HB.clamp(3 + Math.sqrt(bulk) * 2.6, 3, 40) : 0;
-      if (bulk > 0) this.drawPile(g, pxc, floor, pileW, pileH, rich, rng);
-      // dragon on the pile, wearing or guarding its most prized piece
-      const spec = HB.dragonArt.specOf(st);
-      const pose = st.phase === 'sleeping' ? 'sleep' : 'idle';
-      const dx = Math.round(pxc), dy = Math.round(floor - pileH * 0.6 - 6 - spec.tier * 4);
-      const dsp = HB.dragonArt.draw(g, spec, pose, Math.floor(this.t * 1.5) % 2, dx, dy, 1, 1);
-      this.drawDragonsPrize(g, dsp, dx, dy, pose);
-      // workers
-      let wi = 0;
-      for (const grp of st.lair.workers) { for (let k = 0; k < Math.min(grp.count, 6); k++) { const sp = S.get(HB.WORKER_TYPES[grp.type].sprite); const wx = 70 + ((wi * 23 + this.t * 6 * (grp.task === 'build' ? 1 : 0.3)) % (cw - 60)); px.blit(g, sp, Math.round(cx0 + wx), floor - sp.height, 1, wi % 2 === 0); if (grp.task === 'build') px.blit(g, S.get('pick'), Math.round(cx0 + wx + 6), floor - sp.height - 2); wi++; } }
-      // captives in a niche
-      if (st.lair.captives.length) { g.fillStyle = '#3b2a33'; g.fillRect(cx0 + cw - 30, cy0 + 30, 26, 30); g.fillStyle = P.ironDark; for (let i = 0; i < 5; i++) g.fillRect(cx0 + cw - 29 + i * 5, cy0 + 30, 1, 30); st.lair.captives.slice(0, 2).forEach((c, i) => px.blit(g, S.get(c.kind === 'priest' ? 'priest' : c.kind === 'knight' ? 'knight' : c.kind === 'noble' || c.kind === 'heir' || c.kind === 'official' ? 'noble' : 'villager'), cx0 + cw - 27 + i * 10, cy0 + 48)); }
-      // construction site
-      if (st.lair.construction.length) { px.blit(g, S.get('crate'), cx0 + cw - 20, floor - 6); px.blit(g, S.get('pick'), cx0 + cw - 12, floor - 10); }
-      // torches
-      for (let i = 0; i < 2 + chamber; i++) { const tx = cx0 + 30 + i * (cw / (2 + chamber)); g.fillStyle = P.wood; g.fillRect(tx, floor - 40, 1, 6); g.fillStyle = Math.floor(this.t * 8 + i) % 2 ? P.fire : P.fireHot; g.fillRect(tx - 1, floor - 43, 3, 3); }
-      // vignette
-      const vg = g.createRadialGradient(cx0 + cw / 2, floor - 40, 40, cx0 + cw / 2, floor - 40, 220); vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, `rgba(0,0,0,${0.55 - glow * 0.25})`); g.fillStyle = vg; g.fillRect(0, 0, CW, CH);
-      // twinkles over a rich pile (drawn last so they sparkle through the vignette)
-      if (bulk > 0) {
-        const tw = Math.round(1 + rich * 12 + glow * 4);
-        for (let i = 0; i < tw; i++) {
-          const speed = 0.6 + (i % 5) * 0.17, cyc = this.t * speed + i * 0.37, ph = cyc % 1;
-          if (ph > 0.35) continue;
-          const r2 = new HB.RNG(i * 977 + Math.floor(cyc));
-          const tx = Math.round(pxc + (r2.next() - 0.5) * pileW * 1.6), ty = Math.round(floor - r2.next() * pileH * 0.9 - 1);
-          const a = HB.clamp(1 - Math.abs(ph - 0.17) / 0.17, 0, 1);
-          g.fillStyle = `rgba(255,250,220,${a})`; g.fillRect(tx, ty, 1, 1);
-          if (a > 0.6) { g.fillRect(tx - 1, ty, 3, 1); g.fillRect(tx, ty - 1, 1, 3); }
-        }
-      }
-    }
-    /** the heap: base colour runs copper -> gold with richness; what sticks out shows what the hoard is made of */
-    drawPile(g, pxc, floor, pileW, pileH, rich, rng) {
-      const st = this.state, t = HB.stats.categoryTotals(st);
-      const k = HB.clamp((rich - 0.1) / 0.3, 0, 1); // plain goods are copper and bronze; coin and better is gold
-      const c1 = px.mix('#8a5a32', P.gold, k), c2 = px.mix('#b07a46', P.goldLight, k), cd = px.mix('#5e3c22', P.goldDark, k);
-      for (let i = 0; i < 4; i++) px.ellipse(g, pxc, floor - i * (pileH / 4), pileW * (1 - i * 0.22), pileH * 0.45 * (1 - i * 0.15), i % 2 ? c1 : c2);
-      const rx = () => pxc + (rng.next() - 0.5) * pileW * 1.5, ry = () => floor - rng.next() * pileH * 0.75;
-      g.fillStyle = cd; for (let i = 0; i < Math.min(50, 6 + pileW); i++) g.fillRect(Math.round(rx()), Math.round(ry()), 1, 1);
-      // gems: coloured pixels by the worth of gems held
-      const gemCols = [P.gem, P.gemRed, P.gemGreen, P.gemPurple];
-      for (let i = 0; i < Math.min(70, Math.round(t.gems / 25)); i++) { g.fillStyle = gemCols[i % 4]; g.fillRect(Math.round(rx()), Math.round(ry()), 1, 1); }
-      const stick = (id, n) => { for (let i = 0; i < n; i++) { const sp = S.get(id); const x = Math.round(rx() - sp.width / 2), y = Math.round(floor - pileH * (0.25 + rng.next() * 0.45) - sp.height * 0.6); px.blit(g, sp, x, y); } };
-      // plain goods sit around the base as sacks, crates and barrels
-      const goods = st.hoard.items.filter(i => i.cat === 'gold').length;
-      for (let i = 0; i < Math.min(6, goods); i++) { const sp = S.get(['sack', 'crate', 'barrel'][i % 3]); const side = i % 2 ? 1 : -1; px.blit(g, sp, Math.round(pxc + side * (pileW * 0.85 + 2 + Math.floor(i / 2) * 7) - sp.width / 2), floor - sp.height); }
-      stick('sword', Math.min(4, Math.floor(t.arms / 450)));
-      stick('helm', Math.min(2, Math.floor(t.arms / 1200)));
-      stick('book', Math.min(3, Math.floor(t.books / 450)));
-      stick('chalice', Math.min(3, Math.floor(t.royal / 700)));
-      stick('plate', Math.min(2, Math.floor(t.gold / 2500)));
-      stick('gemRed', Math.min(3, Math.floor(t.gems / 900)));
-    }
-    /** alcoves along the back wall for the most prized pieces; locked ones (strongroom) behind iron bars */
-    drawTrophyWall(g, cx0, cw, floor, chamber) {
-      const st = this.state;
-      const x0 = cx0 + 14, x1 = cx0 + cw - 40;
-      const slots = HB.clamp(Math.floor((x1 - x0) / 16), 0, 4 + chamber * 2);
-      const items = HB.hoard.trophies(st, slots).filter(it => it.named || it.value >= 150);
-      const locked = HB.hoard.protectedIds(st);
-      const strongN = HB.lair.values(st).strongroom || 0;
-      this.trophyRects = [];
-      const n = Math.max(items.length, Math.min(slots, strongN));
-      if (!n) return;
-      const step = (x1 - x0) / Math.max(1, slots);
-      const y = floor - 68, w = 12, h = 16;
-      for (let i = 0; i < n; i++) {
-        const x = Math.round(x0 + i * step + (step - w) / 2);
-        const it = items[i] || null;
-        const isLocked = it ? locked.has(it.id) : i < strongN;
-        // niche
-        g.fillStyle = '#2a1c22'; g.fillRect(x, y + 2, w, h - 2); g.fillRect(x + 1, y + 1, w - 2, 1); g.fillRect(x + 3, y, w - 6, 1);
-        g.fillStyle = '#6a5460'; g.fillRect(x - 1, y + h, w + 2, 2);
-        if (it) {
-          if (it.named) { const pulse = 0.25 + 0.2 * Math.sin(this.t * 2 + i); g.fillStyle = `rgba(255,220,120,${pulse})`; g.fillRect(x + 1, y + 3, w - 2, h - 3); }
-          const sp = S.get(trophySprite(it));
-          px.blit(g, sp, Math.round(x + (w - sp.width) / 2), y + h - sp.height);
-        }
-        if (isLocked) { g.fillStyle = P.ironDark; for (let b = 0; b < 4; b++) g.fillRect(x + 1 + b * 3, y + 1, 1, h - 1); g.fillStyle = P.iron; g.fillRect(x, y + 6, w, 1); g.fillStyle = P.goldDark; g.fillRect(x + w / 2 - 1, y + 7, 2, 2); }
-        if (it) this.trophyRects.push({ x: x - 1, y: y - 1, w: w + 2, h: h + 3, item: it, locked: isLocked });
-      }
-    }
-    /** the single most prized piece: a crown on the dragon's head, anything else under its claw */
-    drawDragonsPrize(g, dsp, dx, dy, pose) {
-      const top = HB.hoard.trophies(this.state, 1)[0];
-      if (!top || (!top.named && top.value < 200)) return;
-      const id = trophySprite(top), L = dsp.bodyLength;
-      const sc = 1 + Math.floor(this.state.dragon.tier / 2);
-      const sp = S.get(id);
-      if (id === 'crown' && pose !== 'sleep') px.blit(g, sp, Math.round(dx + 0.44 * L - sp.width * sc / 2), Math.round(dy - 0.42 * L - sp.height * sc + 1), sc);
-      else px.blit(g, sp, Math.round(dx + (pose === 'sleep' ? 0.42 : 0.32) * L), Math.round(dy + (pose === 'sleep' ? 0.22 : 0.39) * L - sp.height * sc), sc);
-    }
   }
-  /** which sprite shows a treasure on the wall */
-  function trophySprite(it) {
-    const n = (it.name || '').toLowerCase();
-    if (/crown|circlet|regalia|diadem/.test(n)) return 'crown';
-    if (/signet/.test(n)) return 'signet';
-    if (/\bring\b/.test(n)) return 'ring';
-    if (/goblet|chalice|cup|comb/.test(n)) return 'chalice';
-    if (/shield/.test(n)) return 'shield';
-    if (/sword|axe|bow|blade|bane|lance/.test(n)) return 'sword';
-    if (/helm|hauberk|mail/.test(n)) return 'helm';
-    if (/book|psalter|bestiary|lexicon|ledger|spell/.test(n)) return 'book';
-    if (/chart|map|scroll|astrolabe/.test(n)) return 'scroll';
-    if (/sceptre|horn|banner/.test(n)) return 'sceptre';
-    if (/bell/.test(n)) return 'bell';
-    if (/lamp|lantern/.test(n)) return 'lantern';
-    if (/pearl/.test(n)) return 'pearl';
-    if (/ruby|ember|heart|sun/.test(n)) return 'gemRed';
-    if (/emerald/.test(n)) return 'gemGreen';
-    if (/plate|silver/.test(n)) return 'plate';
-    return { gems: 'gem', royal: 'crown', arms: 'sword', books: 'book', gold: 'coins', artifacts: 'gem' }[it.cat] || 'chest';
-  }
-  HB.trophySprite = trophySprite;
   function describeEffect(e) { if (!e) return 'none'; const parts = []; for (const k in e) { if (k === 'mul') for (const kk in e.mul) parts.push(`${kk} ×${e.mul[kk]}`); else parts.push(`${k} ${typeof e[k] === 'number' ? HB.fmt.signed(e[k]) : e[k]}`); } return parts.join(', '); }
   function describeEffects(e) { if (e.space) return `room for ${HB.fmt.int(e.space)} spaces of treasure`; if (e.strongroom) return `locks away your ${e.strongroom} most prized treasures`; const names = { defense: 'defence', concealment: 'concealment', traps: 'traps', guard: 'guard', sleepSafety: 'sleep safety', ward: 'ward', forge: 'forge', heal: 'healing', warning: 'warning' }; return Object.keys(e).map(k => `${names[k] || k} +${e[k]}`).join(', '); }
   /** a drawn tick or cross for a requirement (no font glyphs needed) */

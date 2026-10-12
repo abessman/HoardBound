@@ -97,6 +97,15 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Reduced motion for map effects | Functional | Settings → Reduce motion or `?reducedmotion=1`: revealed land and the territory fade in (0.3 s) without spreading or tint. |
 | Finished watercolour textures | Deferred | Placeholder textures only; an artist's PNGs drop into a pack. |
 
+## Lair views (0.17.0)
+
+| Requirement | Status | Notes |
+| --- | --- | --- |
+| A large, detailed view of the dragon at home | Functional | The hoard close-up: the dragon at twice raid size perched on its generated hoard, idling (4 frames); trophy alcoves, torches, light shaft, workers; the chamber grows grander by level. |
+| Sleeping on the hoard | Functional | The same chamber with the dragon asleep on its hoard, in the lair while it sleeps and on the sleep screen. |
+| The lair zoomed out to every room | Functional | A cross-section of the hill: a room per upgrade (built by level, being dug with %, or dotted where it could be dug), passages, cells while holding captives; tap a room to open it in Build. |
+| Final lair art and how upgrades look | Deferred | Generated placeholders; the owner will redraw them in the editor (Lair · dragon, Lair · places) and decide how upgrades should look. |
+
 ## Pixel editor (0.16.0)
 
 | Requirement | Status | Notes |
@@ -105,6 +114,9 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | See it move and in place | Functional | Play at the game's fps over a raid or parchment background; sample map of drawn map symbols; open the game's dragon sheet or map preview with unsaved drawings (`?drafts=1`). |
 | Saved to GitHub, editable later | Functional | One readable file per sprite in `assets/pixelart/`, committed through the GitHub API with a fine-grained token kept in the browser; drafts kept locally until saved; brings in art saved from another device; checked by `tools/test.js`. |
 | The game uses the drawings | Functional | Raid sprites (first frame), dragon frames per tier and pose (all breeds share one drawing), map symbols through the "Pixel art (editor)" map art pack (Settings → Map art). |
+| New game art appears in the editor | Functional | 0.17: the editor lists the game's art registry (`HB.art`): sprites, dragon poses and the lair's pictures register where they are drawn. |
+| Your own picture behind the pixels | Functional | 0.17: load any image per sprite (kept in the browser), opacity, size, move, on top; the eyedropper samples it on empty pixels. |
+| Undo and redo on the iPad | Functional | Buttons with step counts (≥ 20, up to 120), two-finger tap undo, three-finger tap redo; colour, fps and scale changes are undoable. |
 | Breed colours, mutations and scars on drawn dragons | Deferred | Drawn art replaces the composed dragon whole; layers or palette swaps would bring them back. |
 | Walk cycles for raid people | Deferred | The game shows one frame of a raid sprite; extra frames are kept but unused. |
 

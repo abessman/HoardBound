@@ -2,59 +2,54 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-12 · **Version 0.16.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-12 · **Version 0.17.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
 - Full loop works: explore the parchment map, raid in side-view scenes, store treasure, build the lair, sleep, wake.
-- Goals (0.6) … territory watercolour (0.12), reveal wash (0.13), Illuminated parchment map pack (0.14–0.15, by Codex).
-- 0.16: the **pixel editor** (`editor/`, guide `docs/pixel-editor.md`) for the owner to redraw the game's pixel art and
-  commit it to `assets/pixelart/` through the GitHub API; the game loads it at start (`src/art/pixelart.js`).
-- 279 headless checks pass on both seeds (one more per drawn art file); `node tools/illuminated-check.mjs` covers the pack.
+- … reveal wash (0.13), Illuminated map pack (0.14–0.15, Codex), pixel editor saving to GitHub (0.16).
+- 0.17: the lair opens on a large dragon perched on its generated hoard (asleep on it while sleeping, also on the
+  sleep screen); zoom out to every room of the hill; the art registry `HB.art` feeds the editor's list; the editor
+  gained a picture behind the pixels and visible undo/redo with finger taps.
+- 279 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
-## Two sessions push to this branch, and so does the owner's editor
-- Codex sessions did 0.14–0.15; Claude did 0.16. The editor commits art straight to the default branch.
+## Several writers push to this branch
+- Codex sessions (0.14–0.15), Claude (0.16–0.17), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
-## Current project: the owner redraws the pixel art (2026-10-12)
-The owner disliked AI-generated art and asked for a simple in-house pixel tool: every frame of an animation, click a
-frame and draw, copy between frames, colour picker and eyedropper, fill, box select, copy/paste, delete, shapes, play
-the animation, a sample map for map sprites, saved in GitHub so it can be edited later. Asked about Supabase: answered
-no (a backend breaks the no-backend rule; files in the repo are versioned for free).
+## Current project: the lair and the owner's art (2026-10-12)
+Owner asked: new art should appear in the editor; a much larger, more detailed dragon in the lair, perched on its
+hoard idling and sleeping on it; a more detailed lair that zooms out into a group of rooms for the add-ons ("not yet
+sure how I want to visualize the addons", will draw and design later); the hoard stays generated; a picture behind
+the pixels in the editor; undo/redo buttons with at least 10 steps.
 Working decisions by Claude (not confirmed by the owner):
-- Saving: one commit per save (Git Data API) with a fine-grained token (Contents read/write, this repo only) kept in
-  localStorage. Last save wins; no merge of two devices' edits to the same sprite.
-- New sprites start blank at the game's size and anchor, with the game's drawing faintly behind ("From game art"
-  copies it in). Imports merge near-identical colours; up to 62 colours a sprite.
-- Dragon: one drawing per tier × pose × frame serves every breed and alignment (no breed tint, mutations or scars on
-  drawn art yet). Anchor = body centre. Raid sprites: frame 1 only, always bottom-centre (raidview ignores anchors).
-- Map symbols: frames are variants in the separate "Pixel art (editor)" pack (pixel sampling, `scale` map px a pixel).
-  A pack is chosen whole, so picking it means undrawn symbols fall back to the original ink, not to Illuminated.
-- Previews: Play at the saved fps; Sample map; "in game" buttons open `?scene=dragons` or
-  `?scene=mappreview&mappack=pixel` with `&drafts=1` (unsaved drafts from this browser).
-
-## 0.15 Illuminated map (Codex, summary)
-- Illuminated has 39 PNGs, 96 ids, ink details, every glyph family and state, all home stages; default for new
-  settings. `?scene=artcatalog&mappack=illuminated` shows every symbol. Map dragon marker uses breed tint and tier scale.
-- Backups: `backup/map-before-illuminated-2026-10-12` (0.13), `backup/map-first-art-pack-2026-10-12` (0.14).
+- Lair pictures are 345×194 shown at exactly 2× (crisp pixels); the dragon is about twice raid size (body length
+  40/60/84/104 by tier); placeholders are the composed dragon drawn bigger, in the breed's colours. Drawn art replaces
+  them for every breed (as with the raid dragon).
+- Rooms view: fixed slots in `HB.lairArt.ROOMS` (entrance, guard post, lookout, hoard, strongroom, sleeping chamber,
+  forge, larder, cells; traps, ward and concealment drawn on the passage and the mouth). Unbuilt rooms show as dotted
+  outlines to show what is possible; tapping opens the Build tab. The dragon sleeps on the hoard even with a
+  sleeping chamber built.
+- Each room and both backdrops are editable art with one frame per level; the hoard, trophies, flames, workers,
+  captives, construction and light stay generated on top.
+- Editor picture behind: per sprite in IndexedDB (not in GitHub). Undo history ≥ 20 steps (≤ 120).
 
 ## Next tasks (in order)
-1. The owner sets up a token and draws; respond to what the editor lacks (likely: layers, breed palettes, walk cycles,
-   scaling or rotating a selection, bigger canvases).
-2. Let editor map symbols layer over another pack (drawn ids from `pixel`, the rest from Illuminated) if the owner
-   wants both; discuss first.
-3. If drawn dragons should keep breed colours: palette swap by breed or drawn layers; discuss before building.
-4. Raid walk cycles: let raidview play a sprite's frames while moving (the editor already stores frames).
-5. Owner review of Illuminated and the 0.13 wash on the iPad; castle politics after the ideas-doc questions.
+1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
+   first (Lair · dragon), then the chamber and rooms. Adjust slots and sizes to the owner's drawings.
+2. How upgrades should look in the rooms view (owner's design to come): possibly drawn room cards per level.
+3. Raid walk cycles; breed palettes for drawn dragons; editor asks (layers, rotate or scale a selection).
+4. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
+- Is the lair dragon big enough? Should it sit (folded wings, curled tail) rather than stand on the pile?
+- With a sleeping chamber built, should the dragon sleep there instead of on the hoard?
+- Rooms view: is a hill cross-section the right picture, or a map of chambers, or room cards?
 - Should drawn dragons take the breed's colours automatically, or will you draw each breed?
-- Do raid people need walk/attack frames in the game now that you can draw them?
-- Map: your drawn symbols on top of Illuminated, or a pixel-art map of their own?
-- Keep the clouds at the frontier? Is the wash tint right? Castle politics questions in the ideas doc.
 
 ## Check on the iPad
-- https://hoardbound.netlify.app/editor/ → GitHub… (token) → "Dragon · Young · fly" → draw → ▶ Play → Dragons in
-  game ↗ → Save to GitHub; after the redeploy (a minute or two) the game shows it.
-- A map symbol: draw it, Sample map, Map in game ↗; in the game Settings → Map art → Pixel art (editor).
+- In a campaign: Lair (H) → the dragon on its hoard; All rooms (or pinch) → tap a room; Sleep → the sleep screen.
+- Quick look without a campaign: `index.html?scene=lair&view=rooms` (or `&preset=none` for the hatchling's cave).
+- https://hoardbound.netlify.app/editor/ → Lair · dragon → Image behind… → draw → two-finger tap to undo →
+  Lair in game ↗.

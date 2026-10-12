@@ -42,5 +42,15 @@
   HB.debug = HB.debug || {};
   HB.debug.gotoGame = function (name, params) {
     if (name === 'dragons') HB.scenes.push(new DragonSheetScene());
+    // ?scene=lair[&preset=adult-kind|none][&tier=3][&view=rooms][&sleep=1]: the lair of a test campaign (the pixel editor opens it)
+    if (name === 'lair') {
+      const state = HB.game.newCampaign({ seed: params.get('seed') || 'ember-quill-42', name: 'Vorthax', breed: params.get('breed') || 'red' });
+      state.flags.test = true;
+      if (params.get('preset') !== 'none') HB.presets.apply(state, params.get('preset') || 'adult-kind');
+      if (params.get('tier')) state.dragon.tier = HB.clamp(+params.get('tier'), 0, 3); // to look at the ancient's art
+      HB.flow.enterWorld(state, false);
+      if (params.get('sleep')) state.phase = 'sleeping';
+      HB.scenes.push(new HB.LairScene(state, { view: params.get('view') === 'rooms' ? 'rooms' : 'hoard' }));
+    }
   };
 })();

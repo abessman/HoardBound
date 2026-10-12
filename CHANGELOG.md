@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.17.0 — 2026-10-12 · The dragon at home
+- **A big, detailed view of your dragon in the lair.** The lair now opens on the hoard chamber with the dragon twice its
+  raid size, sitting on its hoard and idling. The hoard is still generated from what is in it (size by how much room
+  it takes, copper to gold by richness, swords, helms, books, chalices and gems sticking out), with your most prized
+  piece glowing in front. Trophy alcoves line both walls, torches flicker, a shaft of daylight falls through the roof,
+  workers go about the floor, and the chamber grows grander with each Treasure Chamber level.
+- **Asleep on the hoard.** While it sleeps the dragon lies curled on its hoard, and the sleep screen now shows it there
+  instead of a stock picture.
+- **Zoom out to every room.** "All rooms" (or pinch in, or −) shows the hill in cross-section with a room for every
+  upgrade: built rooms with their furnishings, rooms being dug with scaffolding and a percentage, and dotted outlines
+  where the rest could be dug. Tap a room to open it in the Build tab; tap the hoard (or pinch out) to go back.
+- **New art shows up in the pixel editor by itself.** The editor now lists whatever the game registers, so the new
+  lair pictures are there: the dragon on the hoard and asleep on it for each size, the chamber (one frame per level),
+  the hill, and every room (one frame per level). Your drawings replace them in the game, with their own frame count
+  and speed.
+- **Editor: your own picture behind the pixels.** "Image behind…" loads any picture to draw over; set its opacity and
+  size, move it, or show it on top. The eyedropper picks its colours on empty pixels. Each sprite keeps its picture in
+  your browser.
+- **Editor: undo and redo where you can see them.** Big buttons at the top right with the number of steps (up to 120,
+  at least 20), two-finger tap to undo and three-finger tap to redo on the iPad, and colour, speed and scale changes
+  now undo too. Canvases up to 512 × 512. "Lair in game" opens a test lair with your unsaved art.
+
 ## 0.16.0 — 2026-10-12 · Pixel editor
 - **Draw the game's pixel art yourself:** a pixel editor at `editor/` (https://hoardbound.netlify.app/editor/). Pick
   anything the game draws in pixels: each dragon size and pose with all its animation frames, the raid people,
