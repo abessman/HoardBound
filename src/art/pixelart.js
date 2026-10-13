@@ -19,6 +19,8 @@
 
   const PA = HB.pixelArt = {
     ALPHABET, DRAFTS, files: [], entries: new Map(), loaded: null, base: 'assets/pixelart/',
+    /** the editor's saved palettes (assets/pixelart/palettes.js, loaded by the editor only): [{ name, colors: ['#rrggbb'] }] */
+    palettes(list) { PA.savedPalettes = Array.isArray(list) ? list : []; },
     index(list) { PA.files = Array.isArray(list) ? list.filter(f => typeof f === 'string' && /^[\w.~-]+\.js$/.test(f)) : []; },
     add(def) { if (def && typeof def.id === 'string') { if (Array.isArray(def.layers) && !def.frames) def.frames = PA.flatten(def); PA.entries.set(def.id, def); } },
     /** a layered drawing's visible layers merged into frames (the topmost pixel wins) */

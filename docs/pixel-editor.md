@@ -31,8 +31,16 @@ commit by hand.
   filled disc, anchor. Brush 1–3 px; **mirror** paints both halves at once. Shapes: drag; Shift keeps them square.
 - **Select, copy, paste:** drag a box with Select; drag inside it to move those pixels; Copy / Cut / Paste / Delete /
   Flip. A paste floats until you tap elsewhere or press Enter, so you can drag it into place first.
-- **Colours:** tap a swatch from this sprite's colours or from the game's palette, or pick any colour with the colour
-  box. **Recolour swatch** changes that colour everywhere in the sprite. Up to 62 colours per sprite.
+- **Colour wheel:** drag around the dial for the colour, towards the edge for a stronger one, and on the bar beside it
+  for lighter or darker; or type a code (`#3366cc`). It changes the colour you draw with: a colour nothing is drawn in
+  yet changes as you drag (no pile of in-between colours); a colour already in the drawing is left alone and you get a
+  new one, unless you tick **change it everywhere**, which recolours that colour across the sprite as you drag (one
+  undo step). The small swatch under the big one is the colour before your last change: tap it to go back.
+- **Colours:** tap a swatch from this sprite's colours or the game's colours. Up to 62 colours per sprite.
+- **Saved palettes:** keep sets of colours you like under a name (map, map good, map evil…). **+ New** starts one from
+  this sprite's colours; **+ Colour** adds the colour you draw with; **− Colour** then a tap takes one out; tap a
+  colour in it to draw with it; **Use all** puts them all in this sprite's colours; **Rename**, **Delete**. Palettes are
+  saved to GitHub with your next **Save to GitHub** (in `assets/pixelart/palettes.js`), so every device has them.
 - **Helpers:** onion skin (the previous frame, faint), game art behind (the current drawing, faint, to trace or size
   against), grid, zoom (pinch, wheel, − Fit +), pan with two fingers or Space + drag.
 - **Your own picture behind:** **Image behind…** loads any picture (a sketch, a photo of a drawing) behind the pixels
@@ -97,7 +105,8 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
 in GitHub…), with a message naming them. The site redeploys from it in a minute or two. Opening the editor with a
 token also brings in drawings saved from another device that the site does not have yet. Unsaved changes stay in this
 browser until you save or revert them (the editor says so when you come back). Two devices editing the same sprite:
-the last save wins.
+the last save wins. A drawing with nothing visible is never saved (it would make the sprite vanish in the game): it
+stays a draft and the save says so; **Delete art** is how to remove a saved drawing.
 
 ## The files
 `assets/pixelart/index.js` lists the files; each `assets/pixelart/<id>.js` holds one sprite as readable text:

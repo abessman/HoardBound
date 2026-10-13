@@ -678,7 +678,12 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
   ok(problems(Object.assign({}, good, { frames: [{ rows: ['.0.', '012'] }] })).some(e => /not a palette index/.test(e)) && problems(Object.assign({}, good, { id: 'dragon.4.fly', kind: 'dragon' })).length && problems(Object.assign({}, good, { w: 4 })).some(e => /4 characters/.test(e)), 'a bad palette index, dragon id or row width is caught');
   const idx = read(fs.readFileSync(path.join(dir, 'index.js'), 'utf8'));
   ok(Array.isArray(idx.files) && idx.files.every(f => fs.existsSync(path.join(dir, f))), 'assets/pixelart/index.js lists files that exist');
-  const extra = fs.readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'index.js' && !(idx.files || []).includes(f));
+  const extra = fs.readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'index.js' && f !== 'palettes.js' && !(idx.files || []).includes(f));
+  // the editor's saved palettes (not loaded by the game): names and #rrggbb colours
+  if (fs.existsSync(path.join(dir, 'palettes.js'))) {
+    let pals = null; try { new Function('HB', fs.readFileSync(path.join(dir, 'palettes.js'), 'utf8'))({ pixelArt: { palettes: (l) => { pals = l; } } }); } catch (e) { pals = e.message; }
+    ok(Array.isArray(pals) && pals.every(p => p && typeof p.name === 'string' && Array.isArray(p.colors) && p.colors.every(c => /^#[0-9a-f]{6}$/i.test(c))), 'palettes.js holds named palettes of #rrggbb colours' + (Array.isArray(pals) ? '' : ': ' + pals));
+  }
   ok(!extra.length, 'every sprite file is listed in index.js' + (extra.length ? ': ' + extra.join(', ') : ''));
   for (const f of idx.files || []) {
     let got; try { got = read(fs.readFileSync(path.join(dir, f), 'utf8')); } catch (e) { ok(false, `${f} runs: ${e.message}`); continue; }

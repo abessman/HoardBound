@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.18.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.19.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -15,11 +15,15 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - 0.18 (editor): named layers saved in the sprite file (`layers`, bottom first; the game merges visible ones, hidden
   stay out), and a picture → pixels converter working from the image behind (ink threshold, line pickup, paper
   removal, colour count or palette snap, colour boost, outline; live preview; applies into a new layer).
+- 0.19 (editor): colour wheel (HSV dial + brightness bar + hex; an unused colour edits in place, "change it
+  everywhere" recolours live with one undo step), saved named palettes (a palettes.js beside the art, created by the
+  first save; saved and synced with GitHub like art), drawings with nothing visible are never saved, parseCall reads index.js correctly,
+  3×3 brush outline fixed. The owner's first save (an empty `dragon.1.bite`) was removed.
 - 280 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.18), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.19), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)

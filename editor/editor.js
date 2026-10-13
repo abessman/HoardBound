@@ -82,7 +82,10 @@
     return `/* HoardBound pixel art: ${def.id}. Made with the pixel editor (editor/index.html); safe to edit by hand: '.' is clear, other characters index the palette. */\nHB.pixelArt && HB.pixelArt.add({\n${fields.join(',\n')}\n});\n`;
   };
   const indexText = (files) => `/* Pixel art made with the editor (editor/index.html): the list of sprite files in this folder. Written by the editor. */\nHB.pixelArt && HB.pixelArt.index(${JSON.stringify(files, null, 1)});\n`;
-  const parseCall = (text) => { const a = text.indexOf('('), b = text.lastIndexOf(')'); return JSON.parse(text.slice(text.indexOf(a >= 0 && text[a + 1] === '[' ? '[' : '{', a), b)); };
+  /** the JSON inside a file's HB.pixelArt.add(...) / .index(...) / .palettes(...) call (the header comment may hold brackets too) */
+  const parseCall = (text) => { const m = /HB\.pixelArt\.(?:add|index|palettes)\(/.exec(text); if (!m) throw new Error('not an editor file'); return JSON.parse(text.slice(m.index + m[0].length, text.lastIndexOf(')'))); };
+  /** nothing the game would show (no pixel on a visible layer): such a drawing is never saved as art */
+  const isEmpty = (doc) => doc.layers.every(l => l.hidden || l.frames.every(f => f.every(v => v === CLEAR)));
   /** unsaved: differs from the saved file (remembered per edit, so big sprites are not re-serialised all the time) */
   const isDirty = (doc) => {
     if (doc.fresh) return false;
@@ -158,7 +161,9 @@
   function redo() { const d = D(); if (!d.redo.length) { toast('Nothing to redo'); return; } d.undo.push(snapshot()); restore(d.redo.pop()); renderColors(); changed(true); }
   function renderUndo() { const d = D(), u = d ? d.undo.length : 0, r = d ? d.redo.length : 0; $('btn-undo').textContent = `↶ Undo${u ? ` (${u})` : ''}`; $('btn-redo').textContent = `↷ Redo${r ? ` (${r})` : ''}`; $('btn-undo').disabled = !u; $('btn-redo').disabled = !r; }
   function setPx(f, x, y, v) { const d = D(); if (x < 0 || y < 0 || x >= d.w || y >= d.h) return; f[y * d.w + x] = v; if (S.mirror) { const mx = d.w - 1 - x; f[y * d.w + mx] = v; } }
-  function dab(x, y, v) { const f = F(), b = S.brush, o = Math.floor((b - 1) / 2); for (let j = 0; j < b; j++) for (let i = 0; i < b; i++) setPx(f, x - o + i, y - o + j, v); }
+  /** the brush covers b×b pixels centred on the one under the pointer (for even sizes, it reaches right and down) */
+  const brushOff = (b) => Math.floor((b - 1) / 2);
+  function dab(x, y, v) { const f = F(), b = S.brush, o = brushOff(b); for (let j = 0; j < b; j++) for (let i = 0; i < b; i++) setPx(f, x - o + i, y - o + j, v); }
   function linePts(x0, y0, x1, y1) { const pts = [], dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1; let e = dx + dy; for (;;) { pts.push([x0, y0]); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } } return pts; }
   function shapePts(tool, a, b) {
     if (tool === 'line') return linePts(a[0], a[1], b[0], b[1]);
@@ -258,7 +263,14 @@
     const s = S.float || S.sel; if (s) { ctx.save(); ctx.setLineDash([4, 3]); ctx.lineDashOffset = -(performance.now() / 60) % 7; ctx.strokeStyle = '#1d4f91'; ctx.lineWidth = 1.5; ctx.strokeRect(X + s.x * z + 0.5, Y + s.y * z + 0.5, s.w * z - 1, s.h * z - 1); ctx.restore(); }
     // anchor
     const ax = X + d.anchor[0] * z, ay = Y + d.anchor[1] * z; ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ax - 7, ay); ctx.lineTo(ax + 7, ay); ctx.moveTo(ax, ay - 7); ctx.lineTo(ax, ay + 7); ctx.stroke();
-    if (S.hover) { const [hx, hy] = S.hover; if (hx >= 0 && hy >= 0 && hx < d.w && hy < d.h) { ctx.strokeStyle = 'rgba(29,79,145,0.7)'; ctx.strokeRect(X + hx * z + 0.5, Y + hy * z + 0.5, z * S.brush - 1, z * S.brush - 1); } }
+    // the pixels the next touch changes: the brush (pencil, eraser, mirrored too) or the one pixel the other tools use
+    if (S.hover) {
+      const [hx, hy] = S.hover, b = S.tool === 'pencil' || S.tool === 'eraser' ? S.brush : 1, o = brushOff(b);
+      if (hx >= 0 && hy >= 0 && hx < d.w && hy < d.h) {
+        ctx.strokeStyle = 'rgba(29,79,145,0.8)'; ctx.lineWidth = 1.5; ctx.strokeRect(X + (hx - o) * z + 0.5, Y + (hy - o) * z + 0.5, z * b - 1, z * b - 1);
+        if (S.mirror && (S.tool === 'pencil' || S.tool === 'eraser')) { ctx.setLineDash([3, 3]); ctx.strokeRect(X + (d.w - (hx - o) - b) * z + 0.5, Y + (hy - o) * z + 0.5, z * b - 1, z * b - 1); ctx.setLineDash([]); }
+      }
+    }
   }
 
   // =====================================================================================================
@@ -536,6 +548,110 @@
   };
 
   // =====================================================================================================
+  // Colour wheel: the colour around the dial, stronger towards the edge, lighter or darker on the bar. Moving it
+  // changes the colour you draw with: a colour no pixel uses yet changes in place (no clutter of in-between colours);
+  // a used one becomes a new colour, unless "change it everywhere" is ticked (the sprite recolours live, one undo step).
+  // =====================================================================================================
+  const WH = { h: 0, s: 0, v: 0.15, drag: null, target: null, old: null, undone: false, fromWheel: false, disc: null };
+  function hsvToRgb(h, s, v) { const f = (n) => { const k = (n + h / 60) % 6; return v - v * s * Math.max(0, Math.min(k, 4 - k, 1)); }; return [f(5), f(3), f(1)].map(x => Math.round(x * 255)); }
+  function rgbToHsv(r, g, b) { r /= 255; g /= 255; b /= 255; const mx = Math.max(r, g, b), mn = Math.min(r, g, b), dd = mx - mn; let h = 0; if (dd) { h = mx === r ? ((g - b) / dd) % 6 : mx === g ? (b - r) / dd + 2 : (r - g) / dd + 4; h *= 60; if (h < 0) h += 360; } return [h, mx ? dd / mx : 0, mx]; }
+  const wheelHex = () => hexOf(...hsvToRgb(WH.h, WH.s, WH.v));
+  function fitCanvas(c) { const dpr = window.devicePixelRatio || 1, r = c.getBoundingClientRect(), w = Math.max(1, Math.round(r.width * dpr)), h = Math.max(1, Math.round(r.height * dpr)); if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } return dpr; }
+  function drawWheel() {
+    const c = $('wheel'), dpr = fitCanvas(c), g = c.getContext('2d'), W = c.width, R = W / 2 - 2 * dpr;
+    if (!WH.disc || WH.disc.v !== WH.v || WH.disc.w !== W) { // the disc at this brightness, drawn once per brightness
+      const img = g.createImageData(W, W);
+      for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+        const dx = x + 0.5 - W / 2, dy = y + 0.5 - W / 2, rr = Math.hypot(dx, dy); if (rr > R + 1) continue;
+        const rgb = hsvToRgb((Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360, Math.min(1, rr / R), WH.v), o = (y * W + x) * 4;
+        img.data[o] = rgb[0]; img.data[o + 1] = rgb[1]; img.data[o + 2] = rgb[2]; img.data[o + 3] = rr > R ? Math.round(255 * (R + 1 - rr)) : 255;
+      }
+      WH.disc = { v: WH.v, w: W, img };
+    }
+    g.putImageData(WH.disc.img, 0, 0);
+    const a = WH.h * Math.PI / 180, ring = WH.v > 0.55 ? '#1a1016' : '#ffffff';
+    g.lineWidth = 2 * dpr; g.strokeStyle = ring; g.beginPath(); g.arc(W / 2 + Math.cos(a) * WH.s * R, W / 2 + Math.sin(a) * WH.s * R, 6 * dpr, 0, Math.PI * 2); g.stroke();
+    const b = $('vbar'), bd = fitCanvas(b), bg = b.getContext('2d'), gr = bg.createLinearGradient(0, 0, 0, b.height);
+    gr.addColorStop(0, hexOf(...hsvToRgb(WH.h, WH.s, 1))); gr.addColorStop(1, '#000000'); bg.fillStyle = gr; bg.fillRect(0, 0, b.width, b.height);
+    bg.strokeStyle = ring; bg.lineWidth = 2 * bd; bg.strokeRect(bd, (1 - WH.v) * b.height - 3 * bd, b.width - 2 * bd, 6 * bd);
+  }
+  /** show the colour you draw with on the wheel (keeping the dial's position for greys and black) */
+  function syncWheel() {
+    const d = D(), hex = d && S.color !== CLEAR ? d.palette[S.color] : null;
+    $('in-hex').value = hex || ''; if (!hex) { drawWheel(); return; }
+    const [h, s, v] = rgbToHsv(...rgbOf(hex)); if (v > 0 && s > 0) WH.h = h; if (v > 0) WH.s = s; WH.v = v; drawWheel();
+  }
+  const colourUsed = (d, i) => d.layers.some(l => l.frames.some(f => f.includes(i)));
+  function startWheelChange() {
+    const d = D(); WH.old = S.color !== CLEAR ? d.palette[S.color] || null : null; WH.undone = false;
+    WH.target = S.color !== CLEAR && ($('chk-recolor').checked || !colourUsed(d, S.color)) ? S.color : null;
+  }
+  function applyWheel(done) {
+    const d = D(); if (!d) return; const hex = wheelHex(), everywhere = $('chk-recolor').checked && WH.target !== null;
+    if (everywhere && !WH.undone) { pushUndo(); WH.undone = true; }
+    if (WH.target === null) { if (d.palette.length >= AL.length) S.color = color(d, hex); else { d.palette.push(hex); WH.target = S.color = d.palette.length - 1; } }
+    else { d.palette[WH.target] = hex; S.color = WH.target; }
+    WH.fromWheel = true; renderColors(); WH.fromWheel = false; $('in-hex').value = hex; drawWheel();
+    if (everywhere) changed(false, !done); else draw();
+  }
+  function endWheelChange() { if (WH.undone) changed(); WH.undone = false; $('old-swatch').style.background = WH.old || 'transparent'; }
+  /** set the wheel to a colour and apply it, as one change (typed hex, the old-colour swatch) */
+  function wheelTo(hex) { if (!D() || !/^#[0-9a-f]{6}$/.test(hex)) return; const [h, s, v] = rgbToHsv(...rgbOf(hex)); if (s > 0 && v > 0) WH.h = h; if (v > 0) WH.s = s; WH.v = v; startWheelChange(); applyWheel(true); endWheelChange(); }
+  for (const [id, which] of [['wheel', 'disc'], ['vbar', 'bar']]) {
+    const el = $(id);
+    const move = (e) => {
+      const r = el.getBoundingClientRect();
+      if (which === 'disc') { const dx = e.clientX - r.left - r.width / 2, dy = e.clientY - r.top - r.height / 2; WH.h = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360; WH.s = Math.min(1, Math.hypot(dx, dy) / (r.width / 2 - 2)); }
+      else WH.v = HB.clamp(1 - (e.clientY - r.top) / r.height, 0, 1);
+      applyWheel(false);
+    };
+    el.addEventListener('pointerdown', (e) => { if (!D()) return; try { el.setPointerCapture(e.pointerId); } catch (err) { /* synthetic */ } WH.drag = which; startWheelChange(); move(e); });
+    el.addEventListener('pointermove', (e) => { if (WH.drag === which) move(e); });
+    const end = () => { if (WH.drag !== which) return; WH.drag = null; endWheelChange(); };
+    el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
+  }
+  $('in-hex').addEventListener('change', (e) => { let v = e.target.value.trim().toLowerCase(); if (/^[0-9a-f]{6}$/.test(v)) v = '#' + v; if (/^#[0-9a-f]{6}$/.test(v)) wheelTo(v); else { toast('Type a colour as #rrggbb'); syncWheel(); } });
+  $('in-hex').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
+  $('old-swatch').onclick = () => { if (WH.old) wheelTo(WH.old); };
+
+  // =====================================================================================================
+  // Saved palettes: named sets of colours you like (map, map good, map evil…) in assets/pixelart/palettes.js,
+  // saved to GitHub with the art (kept as a draft in this browser until then)
+  // =====================================================================================================
+  const PAL_DRAFT = 'hb.editor.palettes';
+  const PAL = { list: [], savedText: null, sel: 0, removing: false };
+  const palettesText = (list) => `/* Saved colour palettes for the pixel editor (editor/index.html). Written by the editor; safe to edit by hand. */\nHB.pixelArt && HB.pixelArt.palettes([\n${list.map(p => ' ' + JSON.stringify({ name: p.name, colors: p.colors })).join(',\n')}\n]);\n`;
+  const cleanPalettes = (list) => (Array.isArray(list) ? list : []).filter(p => p && typeof p.name === 'string').map(p => ({ name: p.name.slice(0, 40), colors: (Array.isArray(p.colors) ? p.colors : []).map(c => String(c).toLowerCase()).filter(c => /^#[0-9a-f]{6}$/.test(c)).slice(0, 64) }));
+  const palDirty = () => palettesText(PAL.list) !== PAL.savedText;
+  function palettesEdited() { try { if (palDirty()) localStorage.setItem(PAL_DRAFT, JSON.stringify(PAL.list)); else localStorage.removeItem(PAL_DRAFT); } catch (e) { /* private mode */ } renderPalettes(); status(); }
+  function renderPalettes() {
+    const sel = $('pal-sel'); sel.innerHTML = '';
+    if (!PAL.list.length) { const o = document.createElement('option'); o.textContent = 'none yet: + New'; sel.appendChild(o); }
+    PAL.list.forEach((p, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${p.name} (${p.colors.length})`; sel.appendChild(o); });
+    PAL.sel = HB.clamp(PAL.sel, 0, Math.max(0, PAL.list.length - 1)); if (PAL.list.length) sel.value = String(PAL.sel);
+    const p = PAL.list[PAL.sel], box = $('pal-swatches'); box.innerHTML = ''; box.classList.toggle('removing', PAL.removing && !!p);
+    if (p) p.colors.forEach((hex, ci) => {
+      const sw = document.createElement('div'); sw.className = 'sw'; sw.style.background = hex; sw.title = PAL.removing ? `Take ${hex} out of “${p.name}”` : `${hex}: draw with it`;
+      sw.onclick = () => { if (PAL.removing) { p.colors.splice(ci, 1); palettesEdited(); return; } const d = D(); if (!d) return; S.color = color(d, hex); renderColors(); };
+      box.appendChild(sw);
+    });
+    for (const id of ['pal-add', 'pal-remove', 'pal-use', 'pal-rename', 'pal-del']) $(id).disabled = !p;
+    $('pal-remove').classList.toggle('on', PAL.removing && !!p); $('pal-unsaved').hidden = !palDirty();
+  }
+  $('pal-sel').onchange = (e) => { PAL.sel = +e.target.value || 0; PAL.removing = false; renderPalettes(); };
+  $('pal-new').onclick = () => {
+    const name = (prompt('Name the new palette (for example: map good)', '') || '').trim().slice(0, 40); if (!name) return;
+    const d = D(), cols = d ? toDef(d).palette.map(c => c.toLowerCase()) : [];
+    PAL.list.push({ name, colors: cols }); PAL.sel = PAL.list.length - 1; PAL.removing = false; palettesEdited();
+    toast(`“${name}” made with ${cols.length} colour${cols.length === 1 ? '' : 's'} from this sprite. Add more with + Colour; it goes to GitHub with your next save.`, 5000);
+  };
+  $('pal-add').onclick = () => { const p = PAL.list[PAL.sel], d = D(); if (!p || !d) return; if (S.color === CLEAR) { toast('Pick a colour first'); return; } const hex = d.palette[S.color].toLowerCase(); if (p.colors.includes(hex)) { toast('Already in this palette'); return; } p.colors.push(hex); palettesEdited(); };
+  $('pal-remove').onclick = () => { PAL.removing = !PAL.removing; renderPalettes(); if (PAL.removing) toast('Tap a colour in the palette to take it out; tap − Colour again when you are done'); };
+  $('pal-use').onclick = () => { const p = PAL.list[PAL.sel], d = D(); if (!p || !d) return; for (const hex of p.colors) color(d, hex); renderColors(); toast(`“${p.name}”: its colours are now in this sprite's colours`); };
+  $('pal-rename').onclick = () => { const p = PAL.list[PAL.sel]; if (!p) return; const v = (prompt('Rename the palette', p.name) || '').trim().slice(0, 40); if (!v || v === p.name) return; p.name = v; palettesEdited(); };
+  $('pal-del').onclick = () => { const p = PAL.list[PAL.sel]; if (!p || !confirm(`Delete the palette “${p.name}”? (It is removed from GitHub with your next save.)`)) return; PAL.list.splice(PAL.sel, 1); PAL.sel = Math.max(0, PAL.sel - 1); PAL.removing = false; palettesEdited(); };
+
+  // =====================================================================================================
   // Panels
   // =====================================================================================================
   function setTool(t) { if (t !== S.tool) S.prevTool = S.tool; if (t !== 'move' && t !== 'select') commitFloat(); S.tool = t; document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.tool === t)); draw(); }
@@ -544,7 +660,7 @@
     const clear = document.createElement('div'); clear.className = 'sw clear' + (S.color === CLEAR ? ' cur' : ''); clear.title = 'Transparent'; clear.onclick = () => { S.color = CLEAR; renderColors(); }; pal.appendChild(clear);
     if (d) d.palette.forEach((hex, i) => { const s = document.createElement('div'); s.className = 'sw' + (S.color === i ? ' cur' : ''); s.style.background = hex; s.title = hex; s.onclick = () => { S.color = i; renderColors(); }; pal.appendChild(s); });
     $('cur-swatch').style.background = S.color === CLEAR || !d ? 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 10px 10px' : d.palette[S.color];
-    if (d && S.color !== CLEAR && d.palette[S.color]) $('in-color').value = d.palette[S.color];
+    if (!WH.fromWheel) syncWheel();
   }
   function renderGamePalette() {
     const gp = $('gamepal'); gp.innerHTML = ''; const seen = new Set();
@@ -625,7 +741,7 @@
     }
   }
   function status() {
-    const n = dirtyIds().length + deleted.size, gh = ghConfig();
+    const n = dirtyIds().length + deleted.size + (palDirty() ? 1 : 0), gh = ghConfig();
     $('status').textContent = `${n ? n + ' unsaved' : 'all saved'} · ${gh.token ? 'GitHub ready' : 'GitHub token not set'}`;
     $('btn-save').disabled = !n;
   }
@@ -717,7 +833,9 @@
   async function saveToGitHub() {
     commitFloat(); const c = ghConfig();
     if (!c.token) { openSettings(); toast('Add a GitHub token first'); return; }
-    const ids = dirtyIds(); if (!ids.length && !deleted.size) { toast('Nothing to save'); return; }
+    // a drawing with nothing visible would make the sprite vanish in the game: it stays a draft here instead
+    const empty = dirtyIds().filter(id => isEmpty(docs.get(id))), ids = dirtyIds().filter(id => !empty.includes(id)), palChanged = palDirty();
+    if (!ids.length && !deleted.size && !palChanged) { toast(empty.length ? `Nothing to save: ${empty.join(', ')} ${empty.length === 1 ? 'has' : 'have'} nothing visible yet (the game keeps its own art; Delete art removes a saved one)` : 'Nothing to save', 6000); return; }
     const btn = $('btn-save'); btn.disabled = true; btn.textContent = 'Saving…';
     try {
       const branch = await branchOf(), ref = await gh(`/git/ref/heads/${refPath(branch)}`), head = ref.object.sha, commit = await gh(`/git/commits/${head}`);
@@ -729,15 +847,17 @@
       for (const id of deleted) { if (set.delete(PA.fileOf(id))) tree.push({ path: 'assets/pixelart/' + PA.fileOf(id), mode: '100644', type: 'blob', sha: null }); }
       const list = [...set].sort();
       tree.push({ path: 'assets/pixelart/index.js', mode: '100644', type: 'blob', content: indexText(list) });
+      const palText = palettesText(PAL.list); if (palChanged) tree.push({ path: 'assets/pixelart/palettes.js', mode: '100644', type: 'blob', content: palText });
       const t = await gh('/git/trees', { method: 'POST', body: JSON.stringify({ base_tree: commit.tree.sha, tree }) });
-      const names = ids.concat([...deleted].map(id => id + ' (removed)'));
+      const names = ids.concat([...deleted].map(id => id + ' (removed)'), palChanged ? ['palettes'] : []);
       const msg = `Pixel art: ${names.slice(0, 6).join(', ')}${names.length > 6 ? ` and ${names.length - 6} more` : ''}\n\nMade with the pixel editor (editor/index.html).`;
       const nc = await gh('/git/commits', { method: 'POST', body: JSON.stringify({ message: msg, tree: t.sha, parents: [head] }) });
       await gh(`/git/refs/heads/${refPath(branch)}`, { method: 'PATCH', body: JSON.stringify({ sha: nc.sha }) });
       for (const id of ids) saved.set(id, fileText(toDef(docs.get(id))));
       for (const id of deleted) saved.delete(id);
       deleted.clear(); PA.files = list; saveDrafts();
-      toast(`Saved ${names.length} sprite${names.length === 1 ? '' : 's'} to ${branch} (commit ${nc.sha.slice(0, 7)}). The site picks it up after its next deploy.`, 6000);
+      if (palChanged) { PAL.savedText = palText; palettesEdited(); }
+      toast(`Saved ${names.join(', ')} to ${branch} (commit ${nc.sha.slice(0, 7)}). The site picks it up after its next deploy.${empty.length ? ` Not saved, nothing visible yet: ${empty.join(', ')}.` : ''}`, 7000);
     } catch (e) { toast('Save failed: ' + e.message, 7000); }
     btn.textContent = 'Save to GitHub'; renderInfo(); renderList(); status();
   }
@@ -767,6 +887,11 @@
         const fresh = fromDef(def), canon = fileText(toDef(fresh));
         if (saved.get(def.id) !== canon) { docs.set(def.id, fresh); saved.set(def.id, canon); n++; }
       }
+      // saved palettes from another device (unless you have unsaved palette changes here)
+      if (shaOf.has('palettes.js') && !palDirty() && await blobSha(PAL.savedText) !== shaOf.get('palettes.js')) {
+        const list = cleanPalettes(parseCall(await gh(`/contents/assets/pixelart/palettes.js${ref}`, raw))), text = palettesText(list);
+        if (text !== PAL.savedText) { PAL.list = list; PAL.savedText = text; renderPalettes(); n++; }
+      }
       // removed on GitHub since this site was built
       for (const [file, id] of idOfFile) if (!files.includes(file) && !deleted.has(id) && !(docs.get(id) && isDirty(docs.get(id)))) { saved.delete(id); docs.delete(id); n++; }
       PA.files = files;
@@ -790,8 +915,6 @@
   document.querySelectorAll('#tools button').forEach(b => b.onclick = () => setTool(b.dataset.tool));
   $('in-brush').onchange = (e) => { S.brush = +e.target.value; };
   $('chk-mirror').onchange = (e) => { S.mirror = e.target.checked; };
-  $('in-color').oninput = (e) => { if (!D()) return; S.color = color(D(), e.target.value); renderColors(); };
-  $('btn-recolor').onclick = () => { const d = D(); if (!d || S.color === CLEAR) return; pushUndo(); const hex = $('in-color').value.toLowerCase(), was = d.palette[S.color]; const other = d.palette.indexOf(hex); if (other >= 0 && other !== S.color) { for (const l of d.layers) for (const f of l.frames) for (let i = 0; i < f.length; i++) if (f[i] === S.color) f[i] = other; S.color = other; } else d.palette[S.color] = hex; renderColors(); changed(); toast(`${was} → ${hex}`); };
   $('btn-undo').onclick = undo; $('btn-redo').onclick = redo;
   $('btn-copy').onclick = () => copy(false); $('btn-cut').onclick = () => copy(true); $('btn-paste').onclick = paste; $('btn-del').onclick = deleteSel;
   $('btn-flip').onclick = () => flip(false); $('btn-flipv').onclick = () => flip(true);
@@ -869,8 +992,8 @@
     if (k === 'p') $('btn-play').click();
   });
   window.addEventListener('keyup', (e) => { if (e.code === 'Space') keys.space = false; });
-  window.addEventListener('resize', () => draw());
-  window.addEventListener('beforeunload', (e) => { if (dirtyIds().length || deleted.size) { saveDrafts(); e.preventDefault(); e.returnValue = ''; } });
+  window.addEventListener('resize', () => { draw(); drawWheel(); });
+  window.addEventListener('beforeunload', (e) => { if (dirtyIds().length || deleted.size || palDirty()) { saveDrafts(); e.preventDefault(); e.returnValue = ''; } });
 
   // =====================================================================================================
   // Start: the art on this site, then your unsaved drafts from this browser, then (with a token) newer art on GitHub
@@ -879,6 +1002,10 @@
     renderGamePalette(); setTool('pencil');
     await PA.load('../assets/pixelart/');
     for (const def of PA.entries.values()) { const doc = fromDef(def); docs.set(def.id, doc); saved.set(def.id, fileText(toDef(doc))); }
+    await PA.script('../assets/pixelart/palettes.js'); // saved palettes (missing until the first one is saved)
+    PAL.list = cleanPalettes(PA.savedPalettes); PAL.savedText = palettesText(PAL.list);
+    try { const pd = JSON.parse(localStorage.getItem(PAL_DRAFT) || 'null'); if (pd) PAL.list = cleanPalettes(pd); } catch (e) { /* no draft */ }
+    renderPalettes();
     let restored = 0;
     try { const dr = JSON.parse(localStorage.getItem(PA.DRAFTS) || '{}'); for (const id in dr) { if (dr[id] === null) { if (saved.has(id)) { deleted.add(id); docs.delete(id); restored++; } } else { docs.set(id, fromDef(dr[id])); restored++; } } } catch (e) { /* no drafts */ }
     buildCatalog();
@@ -887,6 +1014,6 @@
     status(); requestAnimationFrame(previewLoop);
     if (restored) toast(`${restored} unsaved change${restored === 1 ? '' : 's'} restored from this browser`, 4000);
     syncFromGitHub();
-    window.PIXEL_EDITOR = { S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
+    window.PIXEL_EDITOR = { S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
   })();
 })();

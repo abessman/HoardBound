@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.19.0 — 2026-10-13 · Colour wheel and saved palettes
+- **Colour wheel in the pixel editor:** drag around the dial for any colour, outwards for a stronger one, the bar for
+  lighter or darker, or type a colour code. A colour you have not drawn with yet changes as you drag, so the sprite's
+  colours do not fill up with in-between shades; "change it everywhere" recolours a colour across the sprite live. The
+  small swatch takes you back to the colour before your last change.
+- **Saved palettes:** keep sets of colours under a name (map, map good, map evil…): start one from a sprite's colours,
+  add or take out colours, rename, delete, or put a whole palette into the sprite you are drawing. They are saved to
+  GitHub with your art, so they are on every device.
+- **Fixed:** with the 3×3 brush, the outline showing where it would paint sat one pixel off from where it painted.
+- **Fixed:** opening the editor with a GitHub token failed to bring in art saved from another device ("Could not read
+  the latest art from GitHub").
+- **Saving an empty drawing no longer replaces the game's art with nothing.** A drawing with nothing visible stays a
+  draft, and the save says so. The young dragon's bite pose had been saved empty and was invisible in raids; it is
+  back to the game's own drawing.
+
 ## 0.18.1 — 2026-10-13
 - **Converter: lines only.** "Keep" chooses lines and colours, lines only (no colours, just the ink and the outline),
   or colours only.

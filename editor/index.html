@@ -141,14 +141,31 @@
       </div>
       <div class="small muted">You draw on the highlighted layer. Hidden layers (◌) stay out of the game.</div>
     </div>
-    <div class="panel">
-      <div class="row">
-        <div id="cur-swatch" title="Current colour"></div>
-        <input type="color" id="in-color" title="Choose any colour">
-        <button id="btn-recolor" class="small" title="Change the selected swatch to the chosen colour everywhere in this sprite">Recolour swatch</button>
+    <div class="panel" id="colour-panel">
+      <div id="wheel-box">
+        <canvas id="wheel" title="Drag: the colour around the dial, stronger towards the edge"></canvas>
+        <canvas id="vbar" title="Drag: lighter up, darker down"></canvas>
+        <div class="wheel-side">
+          <div id="cur-swatch" title="The colour you draw with"></div>
+          <div id="old-swatch" title="The colour before your last change on the wheel: tap to go back to it"></div>
+        </div>
+      </div>
+      <div class="row small">
+        <input id="in-hex" maxlength="7" spellcheck="false" autocomplete="off" title="Type a colour as #rrggbb, then Enter">
+        <label title="Change this colour everywhere it is used in the sprite while you move the wheel (one undo step)"><input type="checkbox" id="chk-recolor"> change it everywhere</label>
       </div>
       <div class="small muted">This sprite's colours</div>
       <div id="palette" class="swatches"></div>
+      <div class="row small"><b>Saved palettes</b><span id="pal-unsaved" class="muted" hidden>· unsaved</span><span class="grow"></span><select id="pal-sel" title="Your saved palettes"></select></div>
+      <div id="pal-swatches" class="swatches"></div>
+      <div class="row small wrap">
+        <button id="pal-new" title="A new palette, starting with this sprite's colours">+ New</button>
+        <button id="pal-add" title="Add the colour you draw with to this palette">+ Colour</button>
+        <button id="pal-remove" title="Then tap a colour in the palette to take it out">− Colour</button>
+        <button id="pal-use" title="Add all of this palette's colours to this sprite's colours">Use all</button>
+        <button id="pal-rename" title="Rename this palette">Rename</button>
+        <button id="pal-del" title="Delete this palette">Delete</button>
+      </div>
       <details id="gamepal-wrap" open><summary class="small muted">Game colours</summary><div id="gamepal" class="swatches"></div></details>
     </div>
     <div class="panel" id="preview-panel">
