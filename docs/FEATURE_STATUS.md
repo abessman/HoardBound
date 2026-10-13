@@ -53,6 +53,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Settlement statuses | Functional | Protected, allied, tributary, occupied, resisting, ruined; shown in the preview, on arrival cards and as pennants. Undead: deferred. |
 | Spread, convert, subjugate, destroy | Functional | Take oaths, help rebuild, occupy (inside influence), crush or ease resistance, raze; broken promises cost trust everywhere you protect. |
 | Allegiance can weaken | Functional | Resistance grows yearly and ends in revolt and freedom; allies lapse when trust falls; a cruel home revolts; a home turns with your deeds. |
+| The map in 3D (test view) | Simplified | 0.23: Settings → 3D map test: tilted parchment (WebGL ground from the live chunk drawing), standing symbols facing the camera, turning, tilt flattening with zoom, overview; no wash, travel or tapping yet ([idea](ideas/map-3d.md)). |
 | Ink on paper while panning | Functional | 0.21: the parchment moves and scales with the map, so the drawing no longer floats over a still paper. |
 | Mountain variety and legendary peaks | Functional | 0.20: small, regular and large mountains, small ones usually round the large; one legendary peak per region, a landmark about three cells across (its own art, `map.landmark.peak`). What it does in play is deferred ([idea](ideas/landmarks.md)). |
 | Map changes with your rule | Functional | Burned and bare forests, jagged ash-dark mountains, ash near a tyrant; fuller groves and fields near a protector; strongest near the lair. |

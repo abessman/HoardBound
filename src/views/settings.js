@@ -26,8 +26,11 @@
       if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Choose the map illustrations. Original ink restores the earlier artwork; your campaign stays the same.');
       y += 10;
       // a dev tool for now: the owner draws the game's pixel art there (docs/pixel-editor.md)
-      this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 460, h: 40, label: 'Pixel editor', onClick: () => HB.openEditor(),
+      this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 220, h: 40, label: 'Pixel editor', onClick: () => HB.openEditor(),
         tooltip: 'Draw the game’s pixel art (the dragon, the lair, raid sprites, map symbols) and save it to the game. Opens in a new tab where the browser allows it.' }));
+      // an experiment: the map as a tilted parchment with standing symbols (src/views/map3d.js); your campaign if one is open
+      this.ui.add(new HB.ui.Button({ x: x + w / 2 + 10, y, w: 220, h: 40, label: '3D map test', onClick: () => { const m = this.inGame && HB.flow && HB.flow.map; HB.scenes.push(new HB.Map3DScene(m && m.state ? m.state : HB.Map3DScene.testState())); },
+        tooltip: 'Try the map as a tilted parchment with its mountains, trees and places standing on it. Only a test: nothing in your campaign changes.' }));
       y += 52;
       this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 220, h: 40, label: 'Reset to defaults', onClick: () => { S.reset(); if (HB.mapAssets && HB.mapAssets.packName !== S.mapPack) HB.mapAssets.use(S.mapPack); HB.scenes.pop(this); HB.scenes.push(new SettingsScene({ inGame: this.inGame })); } }));
       this.ui.add(new HB.ui.Button({ x: x + w / 2 + 10, y, w: 220, h: 40, label: 'Back', primary: true, onClick: () => HB.scenes.pop(this) }));

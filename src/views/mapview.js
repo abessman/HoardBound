@@ -965,5 +965,6 @@
   }
 
   HB.MapScene = MapScene;
+  MapScene.GRID = { CELL, CHUNK, MARGIN, LOD1_CELL }; // for the 3D map test (src/views/map3d.js), which reuses renderChunk
   HB.MAP_CELL = CELL;
 })();

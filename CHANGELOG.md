@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.23.0 — 2026-10-13 · 3D map test
+- **A test of the map in 3D** (Settings → 3D map test, with your campaign if one is open): the parchment lies at a
+  steep angle and the mountains, hills, trees, places, legendary peaks and clouds stand up on it, facing you, with
+  your dragon circling above its shadow. Turn the paper with a two-finger twist (or ⟲ ⟳); pinch to zoom, and the paper
+  flattens as you go out; **Overview** shows the whole world with far less detail. Buttons compare tilts, standing
+  versus flat symbols, and fog. It is only a test: the real map has not changed and nothing in your campaign is
+  touched. The speed is shown in the corner.
+
 ## 0.22.0 — 2026-10-13 · Wash and opacity per layer
 - **How much territory wash lands on a drawing.** On the map, your territory's watercolour (kind green, cruel rust) used
   to cover every symbol in it. Each layer of a drawing now has **Wash on this layer** (in the Layers panel). The ground

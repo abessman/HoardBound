@@ -43,7 +43,7 @@
     pointer: {
       x: -1, y: -1, inside: false, down: false, pressed: false, released: false, button: 0,
       wheel: 0, dx: 0, dy: 0, dragging: false, dragStartX: 0, dragStartY: 0, dragDist: 0,
-      isTouch: false, pinch: 0, moved: false, lastMoveTime: 0, clickX: 0, clickY: 0,
+      isTouch: false, pinch: 0, twist: 0, moved: false, lastMoveTime: 0, clickX: 0, clickY: 0,
     },
     pointers: new Map(),
     gamepad: { connected: false, buttons: [], prevButtons: [], axes: [0, 0, 0, 0], index: -1, lastUsed: 0 },
@@ -95,7 +95,7 @@
         p.x = v.x; p.y = v.y; p.down = true; p.pressed = true; p.button = e.button;
         p.dragStartX = v.x; p.dragStartY = v.y; p.dragDist = 0; p.dragging = false; p.clickX = v.x; p.clickY = v.y;
       }
-      if (input.pointers.size === 2) { p.pinchStart = pinchDist(); p.pinchLast = p.pinchStart; }
+      if (input.pointers.size === 2) { p.pinchStart = pinchDist(); p.pinchLast = p.pinchStart; p.twistLast = pinchAngle(); }
       e.preventDefault();
     });
     canvas.addEventListener('pointermove', (e) => {
@@ -105,6 +105,8 @@
         const d = pinchDist();
         if (p.pinchLast) p.pinch += (d - p.pinchLast) / 200;
         p.pinchLast = d;
+        // a two-finger twist (radians, clockwise positive): the 3D map test turns the parchment with it
+        const a = pinchAngle(); if (p.twistLast !== null && p.twistLast !== undefined) { let da = a - p.twistLast; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI; p.twist += da; } p.twistLast = a;
         return;
       }
       if (e.pointerType !== 'touch') input.lastDevice = 'mouse';
@@ -114,7 +116,7 @@
     });
     const up = (e) => {
       input.pointers.delete(e.pointerId);
-      if (input.pointers.size < 2) { p.pinchLast = 0; }
+      if (input.pointers.size < 2) { p.pinchLast = 0; p.twistLast = null; }
       if (input.pointers.size === 0) {
         if (p.down) p.released = true;
         p.down = false;
@@ -126,6 +128,10 @@
     canvas.addEventListener('wheel', (e) => { p.wheel += Math.sign(e.deltaY); e.preventDefault(); }, { passive: false });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
+    function pinchAngle() {
+      const pts = [...input.pointers.values()];
+      return pts.length < 2 ? 0 : Math.atan2(pts[1].y - pts[0].y, pts[1].x - pts[0].x);
+    }
     function pinchDist() {
       const pts = [...input.pointers.values()];
       if (pts.length < 2) return 0;
@@ -164,7 +170,7 @@
     input.keysPressed.clear(); input.keysReleased.clear();
     input.textQueue.length = 0; input.specialQueue.length = 0;
     const p = input.pointer;
-    p.pressed = false; p.released = false; p.wheel = 0; p.dx = 0; p.dy = 0; p.pinch = 0; p.moved = false;
+    p.pressed = false; p.released = false; p.wheel = 0; p.dx = 0; p.dy = 0; p.pinch = 0; p.twist = 0; p.moved = false;
     if (!p.down) p.dragging = false;
   };
 

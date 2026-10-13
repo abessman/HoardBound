@@ -40,6 +40,7 @@
       HB.flow.enterWorld(state, false);
     }
     else if (name === 'artcatalog') HB.scenes.replace(new HB.ArtCatalogScene());
+    else if (name === 'map3d' && HB.Map3DScene) HB.scenes.replace(new HB.Map3DScene(HB.Map3DScene.testState(params))); // the 3D map test (&preset=, &reveal=)
     else if (name === 'mappreview') HB.debug.mapPreview(params);
     else if ((name === 'washpreview' || name === 'inkpreview') && HB.WashPreviewScene) HB.scenes.replace(new HB.WashPreviewScene(params)); // docs/map-art/WASH_PREVIEW.md
     else if (HB.debug.gotoGame) HB.debug.gotoGame(name, params);

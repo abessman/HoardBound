@@ -75,6 +75,8 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - Fog / knowledge / rumours / gating / sight: `src/world/world.js`.
 - Map rendering (chunk cache, ink glyphs, cloud fog, labels, previews, tap-to-explore, HUD): `src/views/mapview.js`, `src/art/mapart.js`; art packs `src/art/mapassets.js`, contract `src/data/mapspec.js`.
 - Place previews: `src/game/preview.js`.
+- 3D map test (0.23, an experiment): `src/views/map3d.js` reuses `renderChunk` for the ground and records the standing
+  glyphs; see [the idea](../ideas/map-3d.md).
 - Generation versions: `HB.worldgen.GEN` (2 since 0.11) and `GEN_VERSION` in `src/core/save.js`; saves store the
   version their world was made with and `deserialize` regenerates that version, so older campaigns keep their world.
   A further change to generation needs a new version branch in `worldgen.generate`.
