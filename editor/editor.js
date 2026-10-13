@@ -857,7 +857,8 @@
       for (const id of deleted) saved.delete(id);
       deleted.clear(); PA.files = list; saveDrafts();
       if (palChanged) { PAL.savedText = palText; palettesEdited(); }
-      toast(`Saved ${names.join(', ')} to ${branch} (commit ${nc.sha.slice(0, 7)}). The site picks it up after its next deploy.${empty.length ? ` Not saved, nothing visible yet: ${empty.join(', ')}.` : ''}`, 7000);
+      const big = ids.filter(id => terrainWarning(docs.get(id)));
+      toast(`Saved ${names.join(', ')} to ${branch} (commit ${nc.sha.slice(0, 7)}). The site picks it up after its next deploy.${empty.length ? ` Not saved, nothing visible yet: ${empty.join(', ')}.` : ''}${big.length ? ` Too big for the map, so the game keeps its own drawing until you lower the Scale or centre the anchor: ${big.join(', ')}.` : ''}`, big.length ? 10000 : 7000);
     } catch (e) { toast('Save failed: ' + e.message, 7000); }
     btn.textContent = 'Save to GitHub'; renderInfo(); renderList(); status();
   }

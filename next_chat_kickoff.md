@@ -19,6 +19,9 @@ The owner plays at hoardbound.netlify.app on an iPad.
   everywhere" recolours live with one undo step), saved named palettes (a palettes.js beside the art, created by the
   first save; saved and synced with GitHub like art), drawings with nothing visible are never saved, parseCall reads index.js correctly,
   3×3 brush outline fixed. The owner's first save (an empty `dragon.1.bite`) was removed.
+- The owner's art so far: `map.terrain.mountain` (64×54, layers "Layer 1" and "converted"). It is too big for terrain
+  at scale 1 (reach 3.5 cells, limit 2.2; anchor still at 16,24): the map shows the hand-drawn mountain until the owner
+  sets Scale 0.5 and moves the anchor to its foot (about 30,43). `tools/test.js` prints this as a note, not a failure.
 - 280 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 

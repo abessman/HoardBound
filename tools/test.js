@@ -646,6 +646,7 @@ section('map art: the contract, the packs, the preview');
 section('pixel art files (assets/pixelart, made with editor/index.html)');
 {
   const fs = require('fs'), path = require('path'), dir = path.join(__dirname, '../assets/pixelart');
+  const notes = []; // art the game shows its own drawing for instead (not an error: the owner may still be working on it)
   const AL = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ', POSES = ['idle', 'fly', 'grab', 'hurt', 'land', 'bite', 'roar', 'sleep', 'breathe'];
   const fileOf = (id) => id.replace(/[^\w.-]/g, '~') + '.js';
   // the same reading the game does (src/art/pixelart.js): run the file with a stand-in HB.pixelArt
@@ -658,7 +659,7 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
     if (!['sprite', 'dragon', 'anim', 'map'].includes(def.kind)) p.push(`kind ${def.kind}`);
     if (def.kind === 'anim' && !/^[a-z][\w.]*$/i.test(def.id)) p.push('anim ids are plain dotted names (lair.room.forge)');
     if (def.kind === 'dragon' && !new RegExp(`^dragon\\.[0-3]\\.(${POSES.join('|')})$`).test(def.id)) p.push('dragon ids are dragon.<0-3>.<pose>');
-    if (def.kind === 'map') { const f = HB.mapSpecFamily(def.id); if (!f) p.push('not a map spec id'); else if (f.spec.layer === 'terrain' && !HB.mapTerrainReach(f.spec, [def.w * (def.scale || 1), def.h * (def.scale || 1)], [def.w, def.h], def.anchor, false).ok) p.push('terrain reaches past the chunk margin'); }
+    if (def.kind === 'map') { const f = HB.mapSpecFamily(def.id); if (!f) p.push('not a map spec id'); else if (f.spec.layer === 'terrain' && Array.isArray(def.anchor) && !HB.mapTerrainReach(f.spec, [def.w * (def.scale || 1), def.h * (def.scale || 1)], [def.w, def.h], def.anchor, false).ok) notes.push(`${def.id}: too big for terrain (the map shows its hand-drawn symbol instead); a smaller Scale or a centred anchor fixes it`); }
     if (!(Number.isInteger(def.w) && Number.isInteger(def.h) && def.w >= 1 && def.h >= 1 && def.w <= 512 && def.h <= 512)) p.push('w and h are whole numbers 1–512');
     if (!(Array.isArray(def.anchor) && def.anchor.length === 2 && def.anchor.every(n) && def.anchor[0] >= 0 && def.anchor[1] >= 0 && def.anchor[0] <= def.w && def.anchor[1] <= def.h)) p.push('anchor is [x, y] inside the canvas');
     if (!(Array.isArray(def.palette) && def.palette.length <= AL.length && def.palette.every(c => /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(c)))) p.push('palette is up to 62 #rrggbb colours');
@@ -690,6 +691,7 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
     const p = got.defs.length === 1 ? problems(got.defs[0], f) : ['one HB.pixelArt.add(...) per file'];
     ok(!p.length, `${f} is a valid sprite` + (p.length ? ': ' + p.slice(0, 4).join('; ') : ''));
   }
+  for (const n of notes) console.log('  note:', n);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
