@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.25.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.26.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -17,7 +17,7 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.25), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.26), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -57,7 +57,8 @@ Working decisions by Claude (not confirmed by the owner):
 ## Map groupings and lighting (0.25)
 - Owner showed the Tolkien map: chains, dense forests, clumps, open paper (built, tune by eye). Shaded sprites must
   not mirror (now opt-in `mirror`). Owner asked (talk only) about outline + a shading mask for lighting: answered
-  feasible (light/shadow mask painted for a light from the left; the game relights mirrored or turned sprites).
+  feasible; 0.26 built shading layers (marks 1/2/3 for a light from the left, `PA.composite`; mirrored symbols get a
+  relit pre-mirrored variant). Next: relight with the 3D test's turning and for dragons facing the other way.
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses

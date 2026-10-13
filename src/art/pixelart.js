@@ -5,7 +5,10 @@
  * A drawing with layers stores layers: [{ name, hidden?, opacity?, wash?, frames: [{ rows }] }] (bottom first) instead
  * of frames; the game stacks the visible ones (hidden layers stay out) with real transparency: a layer's opacity
  * (0–100) and its colours' own (#rrggbbaa). wash (0–100, default 100) is how much of the map's territory watercolour
- * lands on that layer's pixels; less leaves them clearer (map symbols only).
+ * lands on that layer's pixels; less leaves them clearer (map symbols only). A shading layer ({ shade: { light, dark,
+ * hatch } }) holds marks, not colours ('1' lit, '2' shadow, '3' deep shadow, painted for a light from the left): it
+ * lights the layers under it (toward a warm light, toward ink; hatched lines when hatch), and a mirrored or relit
+ * drawing swaps lit and shadow so the light stays on its side.
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
@@ -30,7 +33,7 @@
     add(def) { if (def && typeof def.id === 'string') { if (Array.isArray(def.layers) && !def.frames) def.frames = PA.flatten(def); PA.entries.set(def.id, def); } },
     /** a layered drawing's visible layers merged into frames (the topmost pixel wins) */
     flatten(def) {
-      const layers = def.layers.filter(l => l && !l.hidden && Array.isArray(l.frames)), n = Math.max(0, ...def.layers.map(l => (l && l.frames ? l.frames.length : 0))), w = def.w | 0, h = def.h | 0;
+      const layers = def.layers.filter(l => l && !l.hidden && !l.shade && Array.isArray(l.frames)), n = Math.max(0, ...def.layers.map(l => (l && l.frames ? l.frames.length : 0))), w = def.w | 0, h = def.h | 0;
       return Array.from({ length: Math.max(1, n) }, (_, k) => ({ rows: Array.from({ length: h }, (_, y) => {
         let row = '';
         for (let x = 0; x < w; x++) { let ch = '.'; for (let i = layers.length - 1; i >= 0; i--) { const f = layers[i].frames[k], c = f && f.rows && f.rows[y] ? f.rows[y][x] : '.'; if (c && c !== '.') { ch = c; break; } } row += ch; }
@@ -44,7 +47,16 @@
       for (let i = 0; i < n; i++) {
         let A = 0, R = 0, G = 0, B = 0, K = 0;
         for (const L of layers) {
-          const v = L.at(i); if (v < 0) continue; const c = pal[v]; if (!c) continue;
+          const v = L.at(i); if (v < 0) continue;
+          if (L.shade) { // light the colours below (premultiplied): lit toward a warm light, shadow toward ink
+            if (A <= 0 || v < 1 || v > 3) continue; const m = L.swap && v < 3 ? 3 - v : v, S = L.shade;
+            let t, c;
+            if (m === 1) { t = (S.light === undefined ? 35 : S.light) / 100; c = LIGHT; }
+            else { const dk = (S.dark === undefined ? 35 : S.dark) / 100; t = m === 3 ? Math.min(1, dk * 1.7) : dk; c = INK;
+              if (S.hatch) { const x = i % w, y = (i / w) | 0; t = (m === 3 ? (x + y) % 2 === 0 : (x + y) % 3 === 0) ? Math.min(1, t * 2.2) : t * 0.25; } }
+            R = R * (1 - t) + c[0] * A * t; G = G * (1 - t) + c[1] * A * t; B = B * (1 - t) + c[2] * A * t; continue;
+          }
+          const c = pal[v]; if (!c) continue;
           const a = c[3] / 255 * L.op; if (a <= 0) continue; const ia = 1 - a;
           R = c[0] * a + R * ia; G = c[1] * a + G * ia; B = c[2] * a + B * ia; K = (1 - L.wash) * a + K * ia; A = a + A * ia;
         }
@@ -53,6 +65,9 @@
       }
       return { rgba, cut: any ? cut : null };
     },
+    /** a layer's shading settings ({ light, dark, hatch }), or null for a colour layer */
+    shadeOf(l) { return l && l.shade ? Object.assign({ light: 35, dark: 35, hatch: false }, typeof l.shade === 'object' ? l.shade : {}) : null; },
+    hasShade(def) { return Array.isArray(def.layers) && def.layers.some(l => l && !l.hidden && l.shade); },
     layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
     layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
     /** '<base>#<n>@<tone>' → { base, n (1 when none), tone ('' when none) } */
@@ -78,9 +93,11 @@
     },
     /** a definition's frames as canvases (cached on the definition); tone 'good' or 'evil' shifts the colours. A layered
      *  drawing is stacked with real transparency (PA.composite), which also gives its wash cut-outs (PA.cuts). */
-    canvases(def, tone) {
-      const cache = tone ? (def._toned = def._toned || {}) : null;
-      if (tone ? cache[tone] : def._canvases) return tone ? cache[tone] : def._canvases;
+    canvases(def, tone, swap) {
+      // swap: lit and shadow exchanged (the drawing seen with the light from the right: a mirrored copy of a shaded drawing)
+      if (swap && !PA.hasShade(def)) swap = false;
+      const ck = (tone || '') + (swap ? ':swap' : ''), cache = ck ? (def._toned = def._toned || {}) : null;
+      if (ck ? cache[ck] : def._canvases) return ck ? cache[ck] : def._canvases;
       const pal = (tone ? PA.tonedPalette(def, tone) : def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
       const vis = Array.isArray(def.layers) ? def.layers.filter(l => l && !l.hidden && Array.isArray(l.frames)) : null;
       if (vis && vis.length) {
@@ -89,14 +106,14 @@
           const layers = vis.map((l) => {
             const idx = new Int16Array(w * h).fill(-1), rows = (l.frames[k] && l.frames[k].rows) || [];
             rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) idx[y * w + x] = ALPHABET.indexOf(row[x]); });
-            return { at: (i) => idx[i], op: PA.layerOpacity(l), wash: PA.layerWash(l) };
+            return { at: (i) => idx[i], op: PA.layerOpacity(l), wash: PA.layerWash(l), shade: PA.shadeOf(l), swap: !!swap };
           });
           const r = PA.composite(w, h, layers, pal), c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h);
           const g = c.getContext('2d'), img = g.createImageData(c.width, c.height); img.data.set(r.rgba); g.putImageData(img, 0, 0);
-          if (!tone) { let m = null; if (r.cut) { m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const mg = m.getContext('2d'), mi = mg.createImageData(c.width, c.height); for (let i = 0; i < r.cut.length; i++) mi.data[i * 4 + 3] = r.cut[i]; mg.putImageData(mi, 0, 0); } cuts.push(m); }
+          if (!ck) { let m = null; if (r.cut) { m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const mg = m.getContext('2d'), mi = mg.createImageData(c.width, c.height); for (let i = 0; i < r.cut.length; i++) mi.data[i * 4 + 3] = r.cut[i]; mg.putImageData(mi, 0, 0); } cuts.push(m); }
           return c;
         });
-        if (tone) cache[tone] = list; else { def._canvases = list; def._cuts = cuts.some(Boolean) ? cuts : null; }
+        if (ck) cache[ck] = list; else { def._canvases = list; def._cuts = cuts.some(Boolean) ? cuts : null; }
         return list;
       }
       const list = (def.frames || []).map((f) => {
@@ -172,10 +189,13 @@
         g.normal.sort((a, b) => a[0] - b[0]);
         const out = { '': [], good: [], evil: [] };
         for (const [n, def] of g.normal) PA.canvases(def).forEach((c, i) => {
-          const v = PA.mapVariant(def, i, c, `v${n}.${i + 1}`); if (!v) return; out[''].push(v);
-          for (const tn of ['good', 'evil']) {
-            const td = g[tn].get(n), tv = td ? PA.mapVariant(td, Math.min(i, td.frames.length - 1), null, `v${n}.${i + 1}@${tn}`) : PA.mapVariant(def, i, PA.canvases(def, tn)[i], `v${n}.${i + 1}@${tn}`);
-            if (tv) out[tn].push(tv);
+          const lit = def.mirror && PA.hasShade(def); // mirrored copies relit (lit and shadow swapped), not flipped as drawn
+          for (const mir of lit ? [false, true] : [false]) {
+            const sfx = mir ? 'm' : '', v = PA.mapVariant(def, i, mir ? PA.canvases(def, '', true)[i] : c, `v${n}.${i + 1}${sfx}`, mir); if (!v) return; out[''].push(v);
+            for (const tn of ['good', 'evil']) {
+              const td = g[tn].get(n), tv = td ? PA.mapVariant(td, Math.min(i, td.frames.length - 1), mir ? PA.canvases(td, '', true)[Math.min(i, td.frames.length - 1)] : null, `v${n}.${i + 1}${sfx}@${tn}`, mir) : PA.mapVariant(def, i, PA.canvases(def, tn, mir)[i], `v${n}.${i + 1}${sfx}@${tn}`, mir);
+              if (tv) out[tn].push(tv);
+            }
           }
         });
         // a good or evil drawing whose variant has no normal drawing still counts
@@ -187,13 +207,17 @@
     },
     /** one map variant from frame i of a drawing: the picture (canvas, or the frame itself) cut to the drawn box,
      *  stretched to hold the anchor; sized by the drawing's scale (and MAP_SPEC drawnK); with its wash cut-out */
-    mapVariant(def, i, canvas, id) {
-      const c = canvas || PA.canvases(def)[i], b = PA.frameBox(def, i); if (!b || !c) return null;
-      const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(PA.parseId(def.id).base) : 1), a = def.anchor || [def.w / 2, def.h];
+    mapVariant(def, i, canvas, id, mirrored) {
+      const c0 = canvas || PA.canvases(def)[i], b0 = PA.frameBox(def, i); if (!b0 || !c0) return null;
+      const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(PA.parseId(def.id).base) : 1), a0 = def.anchor || [def.w / 2, def.h];
+      // mirrored: the picture flipped left to right, with its box and anchor
+      const flipC = (src) => { const k = document.createElement('canvas'); k.width = src.width; k.height = src.height; const kg = k.getContext('2d'); kg.translate(src.width, 0); kg.scale(-1, 1); kg.drawImage(src, 0, 0); return k; };
+      const c = mirrored ? flipC(c0) : c0, b = mirrored ? { x: def.w - b0.x - b0.w, y: b0.y, w: b0.w, h: b0.h } : b0, a = mirrored ? [def.w - a0[0], a0[1]] : a0;
       const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
       const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
-      const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.mirror }; // mirrored only when the drawing allows it
-      const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(wc[i]); // less territory wash on this symbol (its layers' wash setting)
+      // mirrored only when the drawing allows it; a shaded one comes pre-mirrored and relit instead
+      const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.mirror && !PA.hasShade(def) };
+      const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(mirrored ? flipC(wc[i]) : wc[i]); // less territory wash on this symbol (its layers' wash setting)
       return v;
     },
     /** the box around frame k's drawn pixels { x, y, w, h }, or null when it is empty */
@@ -203,6 +227,7 @@
       return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
     },
   };
+  const LIGHT = [255, 244, 214], INK = [43, 26, 14]; // what shading marks lean toward: a warm light, the map's ink
   /** '#rgb', '#rrggbb' or '#rrggbbaa' → [r, g, b, a] */
   function hex(s) {
     s = String(s || '').replace('#', ''); if (s.length === 3) s = s.split('').map(c => c + c).join('');

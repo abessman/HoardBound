@@ -108,6 +108,10 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   (0–100) gives a cut-out (`PA.cuts`) that the pixel pack ships as `washCut`. `mapassets` draws it into the chunk's
   `washCut` canvas (`g.washCut` while the chunk renders, only when `MA.hasCuts`); `drawTerritory` paints the wash into
   a buffer, erases it through the visible chunks' cut-outs and lays it on, so the ground keeps its wash.
+- 0.26: shading layers (`shade: { light, dark, hatch }`, marks 1 lit, 2 shadow, 3 deep): `PA.composite` leans the
+  colours below toward a warm light or the map's ink (hatched lines when `hatch`); `swap` exchanges lit and shadow.
+  `PA.canvases(def, tone, swap)`; the pixel pack gives a mirrorable shaded symbol a pre-mirrored, relit variant
+  instead of `allowFlipX`. Shading marks stay out of `flatten` (crop boxes) and of the palette.
 - Layers (0.18): a file may hold `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`;
   `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins) for bookkeeping (crop boxes); pictures
   are stacked with transparency (0.22, below).

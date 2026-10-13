@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.26.0 — 2026-10-13 · Shading layers
+- **Shading layers in the pixel editor.** **+ Shading** adds a layer of light and shadow marks rather than colours:
+  paint ☀ Lit, ◐ Shadow and ● Deep as if the light came from the left, and the game lights the layers below with them
+  (toward a warm light and toward ink; **hatched shadows** for an engraved look). **Suggest shading** fills a start
+  from the shape. **Light** and **Shadow** set the strength, **show marks** shows where you painted, and **light from ◀
+  ▶** previews the light from the other side.
+- **Mirrored symbols are relit, not flipped.** A shaded symbol that may be mirrored gets a mirrored copy with its
+  light and shadow swapped, so the light stays on the same side across the map.
+- **Fixed:** the editor's "may be mirrored" box (0.25) shared its name with the brush's mirror box, so one of them did
+  not work.
+
 ## 0.25.0 — 2026-10-13 · Grouped like an old map; no mirrored shading
 - **The map's symbols are grouped like a hand-drawn fantasy map.** Mountain ranges are chains of big peaks along their
   crests, with smaller mountains on the flanks, foothills at the edges and open paper in between, instead of a

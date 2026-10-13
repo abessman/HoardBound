@@ -59,7 +59,7 @@
         <button data-shift="0,1" title="Shift every frame one pixel down">↓</button>
         <span class="sep"></span>
         <label id="scale-wrap" title="Map symbols: logical map pixels per pixel (1 = one pixel per map pixel at zoom 1)">Scale <select id="in-scale"><option>0.5</option><option selected>1</option><option>1.5</option><option>2</option></select></label>
-        <label id="mirror-wrap" title="Let the map show this symbol mirrored for variety. Leave it off when the drawing is shaded from one side (the light would swap sides)."><input type="checkbox" id="chk-mirror"> may be mirrored</label>
+        <label id="mirror-wrap" title="Let the map show this symbol mirrored for variety. Leave it off when the drawing is shaded from one side (the light would swap sides)."><input type="checkbox" id="chk-symmirror"> may be mirrored</label>
         <button id="btn-revert" title="Throw away this sprite's unsaved changes">Revert</button>
         <button id="btn-delete-art" title="Remove your art for this sprite (the game's own art comes back after you save)">Delete art</button>
       </div>
@@ -160,6 +160,7 @@
     <div class="panel" id="layers-panel">
       <div class="row small"><b>Layers</b><span class="grow"></span>
         <button id="ly-add" title="A new empty layer above this one">+ New</button>
+        <button id="ly-shade" title="A shading layer above this one: paint where the light falls and where the shadows are; the game lights the layers below with it">+ Shading</button>
         <button id="ly-dup" title="Duplicate this layer">Dup</button>
         <button id="ly-up" title="Move this layer up">▲</button>
         <button id="ly-down" title="Move this layer down">▼</button>
@@ -169,6 +170,16 @@
         <button id="ly-rename" title="Rename this layer">Rename</button>
         <button id="ly-merge" title="Merge this layer into the one below it">Merge down</button>
         <button id="ly-del" title="Delete this layer">Delete</button>
+      </div>
+      <div id="shade-box" class="col small" hidden>
+        <div class="muted">Shading: paint the light (from the left) and the shadows; the game lights the layers below. A mirrored copy swaps them, so the light stays on its side.</div>
+        <div class="row"><button data-shade="1" title="Where the light falls">☀ Lit</button><button data-shade="2" title="In shadow">◐ Shadow</button><button data-shade="3" title="Deep shadow">● Deep</button></div>
+        <label class="col" title="How strongly the lit marks lean toward a warm light">Light <b id="sh-light-v"></b><input type="range" id="sh-light" min="0" max="80"></label>
+        <label class="col" title="How strongly the shadow marks lean toward ink">Shadow <b id="sh-dark-v"></b><input type="range" id="sh-dark" min="0" max="80"></label>
+        <label title="Shadows as hatched lines, like an engraved map"><input type="checkbox" id="sh-hatch"> hatched shadows</label>
+        <div class="row"><label title="Show where you painted (yellow lit, blue shadow, purple deep)"><input type="checkbox" id="sh-marks" checked> show marks</label>
+          <span class="grow"></span><span title="Preview the light from the other side (what a mirrored or turned copy gets)">light from</span><button id="sh-left" class="on">◀</button><button id="sh-right">▶</button></div>
+        <button id="sh-suggest" title="Fill this frame's shading from the shape: lit on the left of each part, shadow on the right, deep at the far edge. A start to paint over.">Suggest shading</button>
       </div>
       <label class="col small" title="How solid the whole layer is: lower lets what is under it show through (in the game too)">Layer opacity <b id="ly-op-v"></b><input type="range" id="ly-op" min="0" max="100" value="100"></label>
       <label class="col small" title="Map symbols: how much of the map's territory watercolour (kind green, cruel rust) lands on this layer's pixels. The ground keeps its wash; lower keeps the drawing clearer. Shown here with parchment under and Good or Evil.">Wash on this layer <b id="ly-wash-v"></b><input type="range" id="ly-wash" min="0" max="100" value="100"></label>
