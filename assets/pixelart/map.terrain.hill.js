@@ -4,9 +4,9 @@ HB.pixelArt && HB.pixelArt.add({
  "kind": "map",
  "w": 31,
  "h": 11,
- "anchor": [11,5],
+ "anchor": [16,6],
  "fps": 1,
- "scale": 0.5,
+ "scale": 1,
  "flip": true,
  "palette": ["#6c5635","#85663e","#95784d","#9f855a","#b3a27a","#c4b790","#bcac84","#c2b38b","#cab68c","#a6946e","#cbbd95","#dccea4","#baa47a","#d3bf95","#b4a682","#ab9b74","#927d59","#c6b993","#cdc29a","#ab9168","#644f2f","#998868","#d7c99f","#574427","#d2c59d","#766342","#4f3c21","#c4aa7c","#e3d4ab","#7b6b4c","#eee0ba","#89754f"],
  "layers": [
