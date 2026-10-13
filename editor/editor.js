@@ -118,7 +118,7 @@
   const isEmpty = (doc) => doc.layers.every(l => l.hidden || l.shade || l.frames.every(f => f.every(v => v === CLEAR)));
   /** unsaved: differs from the saved file (remembered per edit, so big sprites are not re-serialised all the time) */
   const isDirty = (doc) => {
-    if (doc.fresh) return false;
+    if (doc.fresh || isEmpty(doc)) return false; // nothing drawn (a pinch's first finger, a blank variant): nothing to keep
     const sv = saved.get(doc.id), k = doc._dk;
     if (k && k.rev === doc._rev && k.sv === sv) return k.v;
     const v = fileText(toDef(doc)) !== sv; doc._dk = { rev: doc._rev, sv, v }; return v;
@@ -949,12 +949,14 @@
   function variantNs(base) { const ns = new Set([1]); for (const id of docs.keys()) { const p = pid(id); if (p.base === base.id && !p.tone) ns.add(p.n); } return [...ns].sort((a, b) => a - b); }
   function renderVariants() {
     const base = baseOf(S.item), box = $('frames'), tone = S.item.tone || S.tone, curN = S.item.n || 1;
-    for (const n of variantNs(base)) {
-      const own = tone && docs.get(idOf(base.id, n, tone)), d = own || docs.get(idOf(base.id, n, '')); if (!d) continue;
+    const ns = new Set(variantNs(base)); for (const id of deleted) { const p = pid(id); if (p.base === base.id && !p.tone) ns.add(p.n); }
+    for (const n of [...ns].sort((a, b) => a - b)) {
+      const vid = idOf(base.id, n, ''), gone = deleted.has(vid), own = tone && docs.get(idOf(base.id, n, tone));
+      let d = own || docs.get(vid); if ((!d || isEmpty(d)) && gone) { try { d = fromDef(parseCall(saved.get(vid))); } catch (e) { /* keep the blank */ } } if (!d) continue;
       const fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
       const el = document.createElement('div'); el.className = 'fr' + (n === curN ? ' cur' : '');
-      const c = frameCanvas(own || !tone ? d : { w: d.w, h: d.h, palette: PA.tonedPalette(d, tone) }, flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
-      const cap = document.createElement('div'); cap.textContent = `variant ${n}${tone ? (own ? ` · ${tone} (drawn)` : ` · ${tone} (tint)`) : ''}`; el.appendChild(cap);
+      const c = frameCanvas(own || !tone ? d : { w: d.w, h: d.h, palette: PA.tonedPalette(d, tone) }, flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; if (gone) c.style.opacity = 0.35; el.appendChild(c);
+      const cap = document.createElement('div'); cap.textContent = `variant ${n}${gone ? ' · deleted (Revert brings it back)' : tone ? (own ? ` · ${tone} (drawn)` : ` · ${tone} (tint)`) : ''}`; el.appendChild(cap);
       el.onclick = () => openVersion(base, n, tone); box.appendChild(el);
     }
   }
@@ -994,7 +996,7 @@
   }
   function renderInfo() {
     const d = D(), it = S.item; if (!d) return;
-    $('title').textContent = `${it.group} · ${it.label}${isDirty(d) ? '  •  unsaved' : saved.has(d.id) ? '  •  saved' : ''}`;
+    $('title').textContent = `${it.group} · ${it.label}${deleted.has(d.id) ? '  •  deleted on your next save (Revert keeps it)' : isDirty(d) ? '  •  unsaved' : saved.has(d.id) ? '  •  saved' : ''}`;
     const warn = d.kind === 'map' ? terrainWarning(d) : '', fam = d.kind === 'map' && HB.mapSpecFamily ? HB.mapSpecFamily(d.id) : null;
     const nv = d.kind === 'map' ? variantNs(baseOf(it)).length : 0;
     const sizes = (it.tone ? ` Your own ${it.tone} version: the game uses it ${it.tone === 'good' ? 'in a kind setting' : 'in a cruel setting'} instead of tinting the normal drawing.` : '') + (nv > 1 ? ` Variant ${it.n || 1} of ${nv}: each spot gets one at random.` : '');
@@ -1038,7 +1040,9 @@
   function setRefs(art) { S.refs = art ? art.canvases : []; S.ghosts = art ? art.ghosts : []; }
   function open(item) {
     if (S.doc) commitFloat();
-    let doc = docs.get(item.id); if (!doc) { doc = newDoc(item); docs.set(item.id, doc); }
+    let doc = docs.get(item.id);
+    if (!doc && saved.has(item.id) && !deleted.has(item.id)) { doc = fromDef(parseCall(saved.get(item.id))); docs.set(item.id, doc); }
+    if (!doc) { doc = newDoc(item); docs.set(item.id, doc); }
     const split = splitFrames(doc); if (split) setTimeout(() => { toast(`Your ${split + 1} variants are now separate drawings (variant 1 to ${split + 1}), each with its own size and anchor. Save to GitHub keeps them.`, 6000); saveDrafts(); status(); renderList(); }, 0);
     S.item = item; S.doc = doc; S.frame = 0; S.sel = null; S.float = null; S.color = Math.min(S.color === CLEAR ? 0 : S.color, Math.max(0, doc.palette.length - 1));
     setRefs(gameArt(item, doc));
@@ -1220,8 +1224,8 @@
   $('v-add').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), nd = newDoc(it); nd.w = d.w; nd.h = d.h; nd.anchor = d.anchor.slice(); nd.scale = d.scale; nd.flip = d.flip; nd.palette = d.palette.slice(); nd.layers = [{ name: 'Layer 1', hidden: false, frames: [blank(nd)] }]; useLayer(nd, 0); docs.set(it.id, nd); S.tone = ''; open(it); toast(`Variant ${n}: draw it here. The map picks one variant at random for each spot.`, 4000); };
   $('v-dup').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; commitFloat(); const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), def = toDef(d); def.id = it.id; delete def.tones; const nd = fromDef(def); nd.fresh = false; docs.set(it.id, nd); S.tone = ''; open(it); changed(); toast(`Variant ${n} starts as a copy of the one you had open`); };
   $('v-del').onclick = () => {
-    const base = baseOf(S.item), n = S.item.n || 1; if (n === 1) { toast('Variant 1 is the main drawing: Delete art removes it'); return; }
-    if (!confirm(`Delete variant ${n}${variantNs(base).length > 2 ? '' : ''} and its own good and evil drawings? (Removed from GitHub with your next save.)`)) return;
+    const base = baseOf(S.item), n = S.item.n || 1; if (n === 1) { toast('Variant 1 is the main drawing and stays; draw over it, or delete the other variants'); return; }
+    if (!confirm(`Delete variant ${n} and its own good and evil drawings? (Removed from GitHub with your next save.)`)) return;
     for (const t of ['', 'good', 'evil']) { const id = idOf(base.id, n, t); if (saved.has(id)) deleted.add(id); docs.delete(id); }
     saveDrafts(); S.tone = ''; open(base); status(); renderList();
   };
@@ -1259,7 +1263,9 @@
     saveDrafts(); open(S.item); status(); toast('Reverted to the saved version');
   };
   $('btn-delete-art').onclick = () => {
-    const d = D(); if (!d) return; if (!confirm(`Remove your art for ${d.id}? The game's own drawing comes back once you save.`)) return;
+    const d = D(); if (!d) return;
+    if (d.kind === 'map' && !(S.item.n > 1) && !S.item.tone && variantNs(baseOf(S.item)).length > 1) { toast('Variant 1 is the main drawing and stays while other variants exist; draw over it, or delete the other variants first', 5000); return; }
+    if (!confirm(`Remove your art for ${d.id}? The game's own drawing comes back once you save.`)) return;
     if (saved.has(d.id)) deleted.add(d.id); docs.delete(d.id); saveDrafts(); open(S.item); status(); renderList();
   };
   $('btn-play').onclick = () => { S.playing = !S.playing; S.playT = 0; $('btn-play').textContent = S.playing ? '❚❚ Pause' : '▶ Play'; };
@@ -1309,8 +1315,9 @@
     PAL.list = cleanPalettes(PA.savedPalettes); PAL.savedText = palettesText(PAL.list);
     try { const pd = JSON.parse(localStorage.getItem(PAL_DRAFT) || 'null'); if (pd) PAL.list = cleanPalettes(pd); } catch (e) { /* no draft */ }
     renderPalettes();
-    let restored = 0;
-    try { const dr = JSON.parse(localStorage.getItem(PA.DRAFTS) || '{}'); for (const id in dr) { if (dr[id] === null) { if (saved.has(id)) { deleted.add(id); docs.delete(id); restored++; } } else { docs.set(id, fromDef(dr[id])); restored++; } } } catch (e) { /* no drafts */ }
+    let restored = 0, dropped = 0;
+    try { const dr = JSON.parse(localStorage.getItem(PA.DRAFTS) || '{}'); for (const id in dr) { if (dr[id] && saved.has(id)) { try { if (isEmpty(fromDef(dr[id]))) { dropped++; continue; } } catch (e) { dropped++; continue; } } if (dr[id] === null) { if (saved.has(id)) { deleted.add(id); docs.delete(id); restored++; } } else { docs.set(id, fromDef(dr[id])); restored++; } } } catch (e) { /* no drafts */ }
+    if (dropped) saveDrafts(); // forget empty drafts that were hiding saved drawings
     buildCatalog();
     let last = null; try { last = localStorage.getItem('hb.editor.last'); } catch (e) { /* private mode */ }
     const lp = last ? pid(last) : null, lb = lp && catalog.find(i => i.id === lp.base);

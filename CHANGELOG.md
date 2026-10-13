@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.26.1 — 2026-10-13 · A blank drawing no longer hides a saved one
+- **Fixed: the editor could show a saved drawing as blank.** A blank copy kept in the browser's unsaved changes (from
+  the first finger of a two-finger tap, or a variant left empty) hid the saved drawing, and opening a variant could
+  start a blank one where a saved drawing existed. The editor now ignores and forgets blank unsaved copies, so the
+  saved drawing shows again; nothing on GitHub was lost.
+- **Deleted variants stay visible until you save.** A deleted variant shows faded in the strip with "deleted (Revert
+  brings it back)", and the title says it goes on the next save. Variant 1 is the main drawing: Delete variant and
+  Delete art leave it alone while other variants exist.
+
 ## 0.26.0 — 2026-10-13 · Shading layers
 - **Shading layers in the pixel editor.** **+ Shading** adds a layer of light and shadow marks rather than colours:
   paint ☀ Lit, ◐ Shadow and ● Deep as if the light came from the left, and the game lights the layers below with them

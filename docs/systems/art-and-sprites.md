@@ -116,7 +116,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins) for bookkeeping (crop boxes); pictures
   are stacked with transparency (0.22, below).
 - `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
-  "in game" buttons use it. `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
+  "in game" buttons use it. Drafts hold only drawings with something visible (`isDirty` is false for a blank doc) and
+  `null` for a deletion; on load the editor drops a blank draft that would hide a saved file (0.26.1). `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
 
 ## Code
 - `src/art/` (palette, pixel helpers + sprite registry, sprites, dragon, mapart, parchment, illustrations).

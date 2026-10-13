@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.26.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.26.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -11,8 +11,8 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - 0.17–0.19: lair dragon on its hoard and the rooms view; editor picture behind, undo/redo, layers, converter, colour
   wheel, saved palettes. 0.20: mountains in three sizes, one legendary peak per region (`map.landmark.peak`, idea doc
   `docs/ideas/landmarks.md`), crop and anchor buttons, variants at their drawn size (MAP_SPEC `drawnK`).
-- The owner's art so far: `map.terrain.mountain` (55×30, layer "converted", scale 0.5, anchor at the foot; a second
-  frame in the owner's unsaved draft becomes variant `#2` when the editor opens it). It draws on every mountain kind until the others are drawn.
+- The owner's art so far: `map.terrain.mountain` (55×30, scale 0.5, anchor at the foot), its variant `#2`, and
+  `map.terrain.mountain.small` (32×15). The mountain draws on every mountain kind until the others are drawn.
 - 285 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
@@ -59,6 +59,10 @@ Working decisions by Claude (not confirmed by the owner):
   not mirror (now opt-in `mirror`). Owner asked (talk only) about outline + a shading mask for lighting: answered
   feasible; 0.26 built shading layers (marks 1/2/3 for a light from the left, `PA.composite`; mirrored symbols get a
   relit pre-mirrored variant). Next: relight with the 3D test's turning and for dragons facing the other way.
+- Owner asked (talk only): shadows as pen hatching at angles, and a light that moves. Recommended next: marks become
+  facing directions so any light angle works (draggable light in the editor), then hatch styles; not built.
+- 0.26.1: owner saw variant 1 blank ("you removed the first variant"): a blank draft in their browser hid the saved
+  file (GitHub was intact). Blank drafts are now ignored and dropped; deleted variants show faded until saved.
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses

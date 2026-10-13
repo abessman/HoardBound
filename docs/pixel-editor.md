@@ -30,6 +30,8 @@ commit by hand.
 - **Variants strip** (map symbols, instead of frames): each variant is its own drawing with its own canvas, size,
   anchor and layers; the map picks one at random for each spot. **+ New variant** (blank, the size of this one),
   **Duplicate variant**, **Delete variant**. An older drawing with several frames is split into variants when opened.
+  Variant 1 is the main drawing and stays while other variants exist. A deleted variant shows faded in the strip until
+  you save; **Revert** brings it back.
 - **Tools:** pencil, eraser, fill, eyedropper (or hold Alt), select a box, move, line, rectangle, filled box, ellipse,
   filled disc, anchor. Brush 1–3 px; **mirror** paints both halves at once. Shapes: drag; Shift keeps them square.
 - **Select, copy, paste:** with Select, tap a pixel or drag a box; hold Ctrl, Cmd or Shift (or turn on **＋ Add**, for
@@ -150,7 +152,8 @@ in GitHub…), with a message naming them. The site redeploys from it in a minut
 token also brings in drawings saved from another device that the site does not have yet. Unsaved changes stay in this
 browser until you save or revert them (the editor says so when you come back). Two devices editing the same sprite:
 the last save wins. A drawing with nothing visible is never saved (it would make the sprite vanish in the game): it
-stays a draft and the save says so; **Delete art** is how to remove a saved drawing.
+stays a draft and the save says so; **Delete art** is how to remove a saved drawing. A blank unsaved copy never hides a
+saved drawing: the editor drops it when it opens (0.26.1).
 
 ## The files
 `assets/pixelart/index.js` lists the files; each `assets/pixelart/<id>.js` holds one sprite as readable text:
