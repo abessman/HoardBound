@@ -61,6 +61,8 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   (7 px below zoom 0.55); above zoom 1.3 a 2× backing canvas preserves fine ink details. The cache is bounded
   to 64 MiB and 90 chunks. Places, markers, fog and labels are drawn every frame. Glyph placement uses the cell's seed;
   each glyph draws with its own seed and stable key, so swapping its art never moves another glyph.
+- The paper (0.21) is anchored to the world: the map's parchment pattern is translated with the camera and scaled
+  with zoom (clamped 0.5–1.6 texel per screen px at zoom 1.5), for the background, the fog's blank paper and the reveal.
 - Every symbol can be replaced by PNG art from a map art pack, with procedural fallback: see
   [art-and-sprites](art-and-sprites.md) and `docs/map-art/README.md`. Preview: `?scene=mappreview`.
 - The reveal wash (0.13): land the dragon uncovers washes in. The fog's blank paper over newly revealed cells

@@ -432,8 +432,9 @@
         // each glyph gets its own drawing-only random stream and a stable key (art-pack variant choice): placement above
         // uses cellRng; drawing never consumes it, so replacing one glyph's art cannot shift any other glyph
         let gi = 0;
-        const push = (yy, fn) => { const key = `${x},${y}:${gi++}`; glyphs.push({ y: yy, fn, key, rng: new HB.RNG(HB.hash32(`${st.seed}:v:${key}`)) }); };
         const mk = this.mark ? this.mark[i] : 0; // < 0 blighted by tyranny, > 0 flourishing under a protector
+        const tone = mk < 0 ? 'evil' : mk > 0 ? 'good' : null; // drawn art with good and evil tones uses them here
+        const push = (yy, fn) => { const key = `${x},${y}:${gi++}`; glyphs.push({ y: yy, fn, key, tone, rng: new HB.RNG(HB.hash32(`${st.seed}:v:${key}`)) }); };
         // a legendary peak is drawn every frame over the map (drawLandmarks): keep the ground under it clear
         const lz = legendZone(W, x, y);
         if (lz === 1) continue;
@@ -505,8 +506,8 @@
         }
       }
       glyphs.sort((a, b) => a.y - b.y);
-      for (const gl of glyphs) gl.fn(g, gl.rng, gl.key);
-      A.lineScale = 1;
+      for (const gl of glyphs) { A.tone = gl.tone; gl.fn(g, gl.rng, gl.key); }
+      A.tone = null; A.lineScale = 1;
       return c;
     }
 
@@ -517,7 +518,10 @@
       const lod = cam.zoom < 0.55 ? 1 : 0;
       const cp = lod === 0 ? CELL : LOD1_CELL;
       const m = MARGIN;
-      HB.parchment.fill(ctx, 0, 0, HB.W, HB.H);
+      // the paper is anchored to the world, so the ink sits on it and moves with it (panels keep their own paper)
+      const paper = this.paper || (this.paper = ctx.createPattern(HB.parchment.tile, 'repeat'));
+      if (paper.setTransform) { const o = this.worldToScreen(0, 0), ps = HB.clamp(cam.zoom / 1.5, 0.5, 1.6); paper.setTransform(new DOMMatrix([ps, 0, 0, ps, o.x, o.y])); }
+      ctx.fillStyle = paper; ctx.fillRect(0, 0, HB.W, HB.H);
       // an art pack finished loading an image (or changed): chunks drawn with the old art (or its fallback) are redrawn,
       // a few per frame, showing the old ones meanwhile (no blank flash); the wash rebuilds itself on a new revision
       if (HB.mapAssets && this._artRev !== HB.mapAssets.revision) this._artRev = HB.mapAssets.revision;
@@ -678,7 +682,7 @@
         const rid = W.region[i];
         const storm = rid >= 0 && W.regions[rid].tier > dragonTier;
         ctx.globalAlpha = a;
-        ctx.fillStyle = HB.parchment.pattern;
+        ctx.fillStyle = this.paper || HB.parchment.pattern;
         ctx.fillRect(p.x - 1, p.y - 1, z * step + 2, z * step + 2);
         ctx.fillStyle = storm ? 'rgba(90,80,70,0.22)' : 'rgba(255,250,235,0.22)';
         ctx.fillRect(p.x - 1, p.y - 1, z * step + 2, z * step + 2);
@@ -687,7 +691,7 @@
       // at the wet edge (cell by cell in the far views, where the fill above already fades)
       if (RW && step === 1 && RW.active()) {
         ctx.globalAlpha = 1;
-        RW.draw(ctx, this.t, (x, y) => this.worldToScreen(x, y), (i) => st.know.revealed[i] && !RW.revealing(i), (g, x, y, w, h) => { g.fillStyle = HB.parchment.pattern; g.fillRect(x, y, w, h); g.fillStyle = 'rgba(255,250,235,0.22)'; g.fillRect(x, y, w, h); });
+        RW.draw(ctx, this.t, (x, y) => this.worldToScreen(x, y), (i) => st.know.revealed[i] && !RW.revealing(i), (g, x, y, w, h) => { g.fillStyle = this.paper || HB.parchment.pattern; g.fillRect(x, y, w, h); g.fillStyle = 'rgba(255,250,235,0.22)'; g.fillRect(x, y, w, h); });
       }
       // pass 2: cloud puffs on the boundary + sparse interior puffs
       const puffR = z * 0.75 * step;

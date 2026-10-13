@@ -471,7 +471,7 @@
   const wrap = (name, req) => {
     A[name] = function () {
       const m = MA();
-      if (m && m.entries.size) { const q = req.apply(null, arguments), p = q && m.draw(arguments[0], q.ids, q.x, q.y, q.param, q); if (p) { if (q.after) q.after(p); return; } }
+      if (m && m.entries.size) { const q = req.apply(null, arguments); if (q && A.tone) q.tone = A.tone; const p = q && m.draw(arguments[0], q.ids, q.x, q.y, q.param, q); if (p) { if (q.after) q.after(p); return; } }
       return P[name].apply(A, arguments);
     };
   };
@@ -495,7 +495,8 @@
   };
   wrap('mountain', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.big ? [MTN + '.peak', MTN + '.snow', MTN] : o.small ? (o.snow ? [MTN + '.small.snow', MTN + '.small', MTN + '.snow', MTN] : [MTN + '.small', MTN]) : o.snow ? [MTN + '.snow', MTN] : [MTN], x, y, param: w, paramY: h, key: o.key, after: o.pennant ? pennantAfter(ctx, x, h) : null }));
   wrap('landmarkPeak', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.landmark.peak'], x, y, param: w, paramY: h, key }));
-  wrap('mountainJagged', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.deep ? ['map.terrain.mountain.jagged.deep', 'map.terrain.mountain.jagged'] : ['map.terrain.mountain.jagged'], x, y, param: w, paramY: h, key: o.key }));
+  // a pack without the tyrant's mountains uses its own mountain (in the evil tone when it has one) rather than the ink
+  wrap('mountainJagged', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.deep ? ['map.terrain.mountain.jagged.deep', 'map.terrain.mountain.jagged', MTN] : ['map.terrain.mountain.jagged', MTN], x, y, param: w, paramY: h, key: o.key }));
   wrap('hill', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.terrain.hill'], x, y, param: w, paramY: h, key }));
   simple('treeRound', 'map.terrain.tree.round'); simple('treePine', 'map.terrain.tree.pine');
   simple('treeBare', 'map.terrain.tree.bare'); simple('treeBurned', 'map.terrain.tree.burned');

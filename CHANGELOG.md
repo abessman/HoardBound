@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.21.0 — 2026-10-13 · Ink on paper, see-through pixels, good and evil tones
+- **The map's parchment moves with the map.** Dragging used to slide the ink over a paper that stayed still, so the
+  drawing seemed to float above it. The paper now moves and scales with the map, so the drawing sits on it like ink.
+- **Pixel editor: parchment under the drawing.** Tick *parchment under* to see a drawing on the map's own paper, at map
+  scale. The eyedropper picks the parchment's colour where nothing is drawn, so colours can be matched to the paper.
+- **Pixel editor: select like a spreadsheet.** With Select, tap a pixel or drag a box. Hold Ctrl, Cmd or Shift, or turn
+  on **＋ Add** (for the iPad), to add more. **Select drawn** takes every drawn pixel. Copy, cut, move, flip and
+  delete work on any selection shape.
+- **Pixel editor: opacity.** The opacity slider makes the selected pixels see-through, so the parchment shows through
+  and a sprite blends into the map. The pixels are truly see-through (not mixed with today's paper colour), so they
+  stay right if the parchment or a territory wash changes.
+- **Good and evil tones.** Show **Normal / Good / Evil** to see a drawing as the game tints it in a kind or a cruel
+  setting. The shift is automatic (warmer and golden for good, darker and ash-red for evil); sliders adjust it for
+  that drawing, and **Automatic** goes back. The game uses it for drawn dragons by their deeds, the lair's art by its
+  dragon, and map symbols in a protector's or a tyrant's land. Until you draw the tyrant's mountains, your mountain
+  stands in for them in the evil tone.
+
 ## 0.20.0 — 2026-10-13 · Mountains of every size, a legendary peak, crop and anchor
 - **Small and large mountains.** Mountain ranges now mix three sizes. Small mountains, a clear step smaller, usually
   gather round the large mountains of the high peaks and along the edges of a range (two or three to a cell), and now

@@ -109,6 +109,8 @@
         out.img = img; out.ready = true; MA.bump();
       }, () => { out.failed = true; MA.warn(`${where}: could not load ${src}`); MA.bump(); });
       if (typeof v.occlusionMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.occlusionMask) ? v.occlusionMask : base + v.occlusionMask, (m) => { out.maskCanvas = MA.colourise(m, out.rect, PAPER, 1); MA.bump(); }, () => MA.warn(`${where}: could not load occlusionMask`));
+      // good and evil tones (the editor's pixel pack): the same picture recoloured, used in a protector's or tyrant's land
+      if (v.tones && typeof v.tones === 'object') { out.toneImg = {}; for (const k of ['good', 'evil']) if (typeof v.tones[k] === 'string') MA.loadImage(out, v.tones[k], (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) { out.toneImg[k] = img; MA.bump(); } }, () => {}); }
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
       return out;
     },
@@ -213,6 +215,7 @@
         ctx.drawImage(img, 0, 0, img.width, img.height, dx, dy, dw, dh);
       }
       else if (shrink > 2.5 && v.sampling !== 'pixel') { const m = MA.mip(v, shrink); ctx.drawImage(m, 0, 0, m.width, m.height, dx, dy, dw, dh); }
+      else if (o.tone && v.toneImg && v.toneImg[o.tone]) ctx.drawImage(v.toneImg[o.tone], 0, 0, v.sw, v.sh, dx, dy, dw, dh);
       else ctx.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, dx, dy, dw, dh);
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
       if (HB.mapInk && v.decor) HB.mapInk.decorate(ctx, v.decor, x, y, param, o);

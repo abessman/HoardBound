@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.20.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.21.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -53,17 +53,17 @@ Working decisions by Claude (not confirmed by the owner):
   captives, construction and light stay generated on top.
 - Editor picture behind: per sprite in IndexedDB (not in GitHub). Undo history ≥ 20 steps (≤ 120).
 
-## Next project: the owner's asks of 2026-10-13 (0.21, being built)
-- The map's parchment stays still while the ink pans over it ("floats on top"): the paper texture must move with
-  the map, like ink on paper.
-- Editor: parchment under the drawing (through the transparency) to judge it as on the map; the eyedropper picks
-  parchment colours.
-- Editor: Excel-style selection (click a pixel or drag a box; Ctrl adds), then lower the selected pixels' opacity so
-  the parchment shows through. Owner leaned to real transparency over baking in the parchment colour (so a parchment
-  change carries through); Claude agrees.
-- Editor: a toggle to see each sprite's good and evil variant; the colour shift automatic but adjustable.
-- Mountains: small and large are just variety; generation should know that small mountains usually go round large
-  ones ("certain features should have certain behaviors"). Legendary = its own large sprite, like a castle (done).
+## Latest: the owner's asks of 2026-10-13 (0.21, built)
+- The map's paper now moves and scales with the map (was still while the ink panned: "floats on top").
+- Editor: parchment under the drawing (eyedropper picks it); spreadsheet selection (tap/drag, Ctrl/Cmd/Shift or ＋ Add,
+  Select drawn); opacity slider for the selection; Show Normal/Good/Evil with an adjustable automatic tint.
+Working decisions by Claude (not confirmed by the owner):
+- Opacity is real transparency (`#rrggbbaa` palette colours), not baked with the paper: the owner leaned that way so a
+  parchment change carries through; washes and fog show through too. The editor shows layers merged as the game does.
+- Tones: good = hue +6, colour +15%, light +8%, 12% toward #e2c75c; evil = hue −12, colour −40%, light −18%, 20%
+  toward #4a1c1c (`HB.pixelArt.TONES`). Used for drawn dragons (alignment ≤ −30 / ≥ 30), lair art (its dragon's),
+  map symbols on blighted or flourishing cells. Raid sprites untinted. Jagged mountains fall back to the pack's mountain.
+- Paper texel = zoom / 1.5 screen px (clamped 0.5–1.6); the editor's underlay uses the same scale for map symbols.
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
@@ -73,6 +73,7 @@ Working decisions by Claude (not confirmed by the owner):
 4. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
+- Are the automatic good and evil tints right? Should raid sprites (villagers, knights) take tones too, and from what?
 - Converter: are the defaults close for your drawings (pencil vs ink, paper colour)? Want a dithering option?
 - Is the lair dragon big enough? Should it sit (folded wings, curled tail) rather than stand on the pile?
 - With a sleeping chamber built, should the dragon sleep there instead of on the hoard?

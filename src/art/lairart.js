@@ -176,7 +176,8 @@
   function drawChamber(g, st, t, o = {}) {
     const chamber = levelOf(st, 'chamber'), rng = new HB.RNG(HB.hash32('lairpile' + st.seed));
     g.imageSmoothingEnabled = false;
-    g.drawImage(HB.art.frame('lair.chamber', chamber), 0, 0);
+    const tone = HB.art.toneOf(st.dragon.alignment || 0); // drawn lair art takes its dragon's good or evil tone
+    g.drawImage(HB.art.frame('lair.chamber', chamber, undefined, '', tone), 0, 0);
     const { total, glow } = glowOf(st), cx = W / 2, floor = FLOOR + 6;
     // the hoard lights its own cave
     if (total > 0) {
@@ -199,7 +200,7 @@
     const pile = pileSize(st, 150, 64, 1.6);
     if (pile.w) drawPile(g, st, cx, floor, pile.w, pile.h, 2, rng);
     const spec = HB.dragonArt.specOf(st), id = `lair.dragon.${spec.tier}.${o.asleep ? 'sleep' : 'perch'}`;
-    const ds = HB.art.at(id, t, spec, HB.dragonArt.specKey(spec));
+    const ds = HB.art.at(id, t, spec, HB.dragonArt.specKey(spec), tone);
     // on top of the pile; a big dragon on a tall pile settles into it rather than leave the picture
     const seatY = Math.max(Math.round(floor - (pile.h ? pile.h * 0.86 : 0)), ds.anchorY + 4);
     px.blit(g, ds, Math.round(cx - ds.anchorX), Math.round(seatY - ds.anchorY));
@@ -329,7 +330,8 @@
   /** draw the rooms view into g (345×194). Returns the rooms with their state, for labels and taps. */
   function drawRooms(g, st, t) {
     g.imageSmoothingEnabled = false;
-    g.drawImage(HB.art.frame('lair.hill', 0), 0, 0);
+    const tone = HB.art.toneOf(st.dragon.alignment || 0);
+    g.drawImage(HB.art.frame('lair.hill', 0, undefined, '', tone), 0, 0);
     const T = TUNNEL, out = [];
     // the main passage from the mouth to the deeper rooms, and the shafts to built rooms
     const carve = (x, y, w, h) => { g.fillStyle = '#140d11'; g.fillRect(x, y, w, h); g.fillStyle = '#3a2a33'; g.fillRect(x + 1, y + 1, w - 2, h - 2); g.fillStyle = '#4f3a46'; g.fillRect(x + 1, y + h - 2, w - 2, 1); };
@@ -341,7 +343,7 @@
       if (rm.feature) { drawFeature(g, st, t, rm, s); out.push(Object.assign({}, rm, s)); continue; }
       if (s.built) {
         const n = HB.art.frames(`lair.room.${rm.id}`), k = ROOM_ART[rm.id] && ROOM_ART[rm.id].base0 ? s.level : Math.max(0, s.level - 1);
-        g.drawImage(HB.art.frame(`lair.room.${rm.id}`, Math.min(k, n - 1)), rm.x, rm.y);
+        g.drawImage(HB.art.frame(`lair.room.${rm.id}`, Math.min(k, n - 1), undefined, '', tone), rm.x, rm.y);
       } else if (s.building) {
         pocketOutline(g, rm, true);
         const b = s.building, k = HB.clamp(b.progress, 0, 1); g.fillStyle = '#3a2a33'; g.fillRect(rm.x + 3, rm.y + rm.h - 4 - Math.round((rm.h - 8) * k), Math.round((rm.w - 6) * k), Math.round((rm.h - 8) * k));

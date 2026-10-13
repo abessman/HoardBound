@@ -200,10 +200,10 @@
     fps(id) { const m = sprites.overrideMeta.get(id), e = art.entries.get(id); return (m && m.fps) || (e && e.fps) || 2; },
     /** frame k (wrapped) of an art id: the editor's drawing when there is one, else the generated frame.
      *  opts go to gen; optsKey must change whenever opts change the drawing (it is part of the cache key). */
-    frame(id, k = 0, opts, optsKey = '') {
+    frame(id, k = 0, opts, optsKey = '', tone = null) {
       const n = art.frames(id); k = ((Math.floor(k) % n) + n) % n;
-      const ov = sprites.overrides.get(`${id}.${k}`) || (k === 0 ? sprites.overrides.get(id) : null);
-      const key = `art|${id}|${k}|${ov ? 'ov' : optsKey}`;
+      const ov = (tone && sprites.overrides.get(`${id}.${k}.${tone}`)) || sprites.overrides.get(`${id}.${k}`) || (k === 0 ? sprites.overrides.get(id) : null);
+      const key = `art|${id}|${k}|${ov ? 'ov' + (tone || '') : optsKey}`;
       let c = sprites.cache.get(key);
       if (c) return c;
       if (ov) { c = px.create(ov.w, ov.h); c.ctx.drawImage(ov.image, ov.x, ov.y, ov.w, ov.h, 0, 0, ov.w, ov.h); c.anchorX = ov.ax || 0; c.anchorY = ov.ay || 0; }
@@ -213,6 +213,8 @@
       return c;
     },
     /** the frame to show at time t (seconds) */
-    at(id, t, opts, optsKey) { return art.frame(id, Math.floor(t * art.fps(id)), opts, optsKey); },
+    at(id, t, opts, optsKey, tone) { return art.frame(id, Math.floor(t * art.fps(id)), opts, optsKey, tone); },
+    /** the tone drawn art takes for a dragon of this alignment (−100 cruel … 100 kind): 'evil', 'good' or null */
+    toneOf(alignment) { return alignment <= -30 ? 'evil' : alignment >= 30 ? 'good' : null; },
   };
 })();

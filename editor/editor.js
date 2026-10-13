@@ -50,9 +50,14 @@
   // Documents: one per sprite id. frames are Uint8Arrays of palette indices (255 = transparent)
   // =====================================================================================================
   const docs = new Map(), saved = new Map(), deleted = new Set();
-  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, refs: [], ghosts: [] };
+  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, paper: false, addSel: false, tone: '', refs: [], ghosts: [] };
+  try { S.paper = localStorage.getItem('hb.editor.paper') === '1'; } catch (e) { /* private mode */ }
   const hexOf = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
   const rgbOf = (hex) => { const v = PA.hex(hex); return v ? [v[0], v[1], v[2]] : [0, 0, 0]; };
+  const rgbaOf = (hex) => PA.hex(hex) || [0, 0, 0, 255];
+  const HEX = /^#[0-9a-f]{6}([0-9a-f]{2})?$/;
+  /** a swatch's CSS background: a see-through colour over a small checker */
+  const swatchBg = (hex) => hex && hex.length > 7 ? `linear-gradient(${hex}, ${hex}), repeating-conic-gradient(#ccc 0% 25%, #fff 0% 50%) 50% / 8px 8px` : hex;
   // A document has layers (bottom first), each with the same frames: [{ name, hidden, frames: [Uint8Array] }].
   // doc.frames is the active layer's frames (the drawing tools work on it); useLayer keeps the two in step.
   const blank = (d) => new Uint8Array(d.w * d.h).fill(CLEAR);
@@ -62,7 +67,7 @@
     const w = def.w | 0, h = def.h | 0;
     const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
-    const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, undo: [], redo: [] };
+    const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
     useLayer(doc, layers.length - 1); return doc;
   }
   /** the picture the game shows for frame k: visible layers merged, the topmost pixel wins (active: a stand-in for the active layer's frame) */
@@ -79,6 +84,7 @@
     const used = new Set(); for (const l of doc.layers) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
     const keep = [...used].sort((a, b) => a - b), remap = new Map(keep.map((v, i) => [v, i]));
     def.palette = keep.map(i => doc.palette[i]);
+    if (doc.tones && Object.keys(doc.tones).length) def.tones = JSON.parse(JSON.stringify(doc.tones)); // good and evil tones, when adjusted
     const enc = (frames) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : AL[remap.get(v)]; } return s; }) }));
     // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
     const L = doc.layers;
@@ -109,9 +115,10 @@
   const dirtyIds = () => [...docs.values()].filter(isDirty).map(d => d.id);
   /** the palette index for a colour, adding it if new; with tol, an existing colour that close is reused (imports) */
   function color(doc, hex, tol = 0) {
-    hex = hex.toLowerCase(); const i = doc.palette.indexOf(hex); if (i >= 0) return i;
-    const [r, g, b] = rgbOf(hex); let best = 0, bd = Infinity;
-    doc.palette.forEach((p, k) => { const q = rgbOf(p), d = (q[0] - r) ** 2 + (q[1] - g) ** 2 + (q[2] - b) ** 2; if (d < bd) { bd = d; best = k; } });
+    hex = hex.toLowerCase(); if (hex.length === 9 && hex.endsWith('ff')) hex = hex.slice(0, 7);
+    const i = doc.palette.indexOf(hex); if (i >= 0) return i;
+    const [r, g, b, a] = rgbaOf(hex); let best = 0, bd = Infinity;
+    doc.palette.forEach((p, k) => { const q = rgbaOf(p), d = (q[0] - r) ** 2 + (q[1] - g) ** 2 + (q[2] - b) ** 2 + (q[3] - a) ** 2; if (d < bd) { bd = d; best = k; } });
     if (bd <= tol * tol) return best;
     if (doc.palette.length < AL.length) { doc.palette.push(hex); return doc.palette.length - 1; }
     return best; // full (62 colours): the nearest existing one
@@ -161,8 +168,8 @@
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
   const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, frames: l.frames.map(f => f.slice()) }));
-  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale }; }
-  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d._rev = (d._rev || 0) + 1; }
+  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, tones: d.tones ? JSON.stringify(d.tones) : null }; }
+  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
   const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length * d.layers.length))));
   /** change every layer's frames (frame structure, size, shifting), keeping doc.frames on the active layer */
@@ -192,11 +199,21 @@
     const st = [[x, y]];
     while (st.length) { const [px, py] = st.pop(); if (px < 0 || py < 0 || px >= d.w || py >= d.h || f[py * d.w + px] !== from) continue; f[py * d.w + px] = v; st.push([px + 1, py], [px - 1, py], [px, py + 1], [px, py - 1]); }
   }
-  // selection and floating pixels (a paste, or a selection lifted to move)
-  function region(f, r) { const d = D(), out = new Uint8Array(r.w * r.h).fill(CLEAR); for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) { const X = r.x + x, Y = r.y + y; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h) out[y * r.w + x] = f[Y * d.w + X]; } return out; }
-  function clearRegion(f, r) { const d = D(); for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (x >= 0 && y >= 0 && x < d.w && y < d.h) f[y * d.w + x] = CLEAR; }
+  // selection and floating pixels (a paste, or a selection lifted to move). A selection is a box, with a mask when it
+  // is not the whole box (pixels added with Ctrl, Cmd, Shift or the Add button, as in a spreadsheet)
+  const selHas = (r, x, y) => !!r && x >= r.x && y >= r.y && x < r.x + r.w && y < r.y + r.h && (!r.mask || r.mask[(y - r.y) * r.w + x - r.x] === 1);
+  function unionSel(a, b) {
+    if (!a) return b;
+    const x0 = Math.min(a.x, b.x), y0 = Math.min(a.y, b.y), w = Math.max(a.x + a.w, b.x + b.w) - x0, h = Math.max(a.y + a.h, b.y + b.h) - y0, m = new Uint8Array(w * h);
+    for (const r of [a, b]) for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) if (!r.mask || r.mask[y * r.w + x]) m[(r.y + y - y0) * w + r.x + x - x0] = 1;
+    return { x: x0, y: y0, w, h, mask: m };
+  }
+  function region(f, r) { const d = D(), out = new Uint8Array(r.w * r.h).fill(CLEAR); for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) { const X = r.x + x, Y = r.y + y; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h && (!r.mask || r.mask[y * r.w + x])) out[y * r.w + x] = f[Y * d.w + X]; } return out; }
+  function clearRegion(f, r) { const d = D(); for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) if (x >= 0 && y >= 0 && x < d.w && y < d.h && selHas(r, x, y)) f[y * d.w + x] = CLEAR; }
   function lift() { if (S.float || !S.sel) return; pushUndo(); S.float = Object.assign({}, S.sel, { data: region(F(), S.sel) }); clearRegion(F(), S.sel); }
-  function commitFloat() { const fl = S.float; if (!fl) return; const d = D(), f = F(); for (let y = 0; y < fl.h; y++) for (let x = 0; x < fl.w; x++) { const v = fl.data[y * fl.w + x], X = fl.x + x, Y = fl.y + y; if (v !== CLEAR && X >= 0 && Y >= 0 && X < d.w && Y < d.h) f[Y * d.w + X] = v; } S.sel = { x: fl.x, y: fl.y, w: fl.w, h: fl.h }; S.float = null; changed(); }
+  function commitFloat() { const fl = S.float; if (!fl) return; const d = D(), f = F(); for (let y = 0; y < fl.h; y++) for (let x = 0; x < fl.w; x++) { const v = fl.data[y * fl.w + x], X = fl.x + x, Y = fl.y + y; if (v !== CLEAR && X >= 0 && Y >= 0 && X < d.w && Y < d.h) f[Y * d.w + X] = v; } S.sel = { x: fl.x, y: fl.y, w: fl.w, h: fl.h, mask: fl.mask || null }; S.float = null; changed(); }
+  /** select every drawn pixel of this frame on the layer you draw on */
+  function selectDrawn() { const d = D(); if (!d) return; commitFloat(); const f = F(), m = new Uint8Array(d.w * d.h); let n = 0; for (let i = 0; i < f.length; i++) if (f[i] !== CLEAR) { m[i] = 1; n++; } if (!n) { toast('Nothing drawn on this layer in this frame'); return; } S.sel = { x: 0, y: 0, w: d.w, h: d.h, mask: m }; setTool('select'); syncAlpha(); draw(); }
   function dropFloat() { if (S.float) { S.float = null; } }
   function copy(cut) {
     const src = S.float || (S.sel && Object.assign({}, S.sel, { data: region(F(), S.sel) }));
@@ -216,9 +233,9 @@
   function flip(vertical) {
     const d = D();
     const fl = (data, w, h) => { const o = new Uint8Array(w * h); for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) o[y * w + x] = vertical ? data[(h - 1 - y) * w + x] : data[y * w + (w - 1 - x)]; return o; };
-    if (S.float) { S.float.data = fl(S.float.data, S.float.w, S.float.h); changed(); return; }
+    if (S.float) { S.float.data = fl(S.float.data, S.float.w, S.float.h); if (S.float.mask) S.float.mask = fl(S.float.mask, S.float.w, S.float.h); changed(); return; }
     pushUndo();
-    if (S.sel) { const r = region(F(), S.sel), f2 = fl(r, S.sel.w, S.sel.h); clearRegion(F(), S.sel); for (let y = 0; y < S.sel.h; y++) for (let x = 0; x < S.sel.w; x++) { const X = S.sel.x + x, Y = S.sel.y + y; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h) F()[Y * d.w + X] = f2[y * S.sel.w + x]; } }
+    if (S.sel) { const sl = S.sel, r = region(F(), sl), f2 = fl(r, sl.w, sl.h), m2 = sl.mask ? fl(sl.mask, sl.w, sl.h) : null; clearRegion(F(), sl); for (let y = 0; y < sl.h; y++) for (let x = 0; x < sl.w; x++) { const X = sl.x + x, Y = sl.y + y; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h && (!m2 || m2[y * sl.w + x])) F()[Y * d.w + X] = f2[y * sl.w + x]; } sl.mask = m2; }
     else d.frames[S.frame] = fl(F(), d.w, d.h);
     changed();
   }
@@ -259,8 +276,8 @@
   // =====================================================================================================
   const cv = $('canvas'), ctx = cv.getContext('2d'), stage = $('stage');
   function frameCanvas(doc, f, alpha = 1) {
-    const c = document.createElement('canvas'); c.width = doc.w; c.height = doc.h; const g = c.getContext('2d'), img = g.createImageData(doc.w, doc.h), Dd = img.data, pal = doc.palette.map(rgbOf);
-    for (let i = 0; i < f.length; i++) { const v = f[i]; if (v === CLEAR || !pal[v]) continue; const o = i * 4; Dd[o] = pal[v][0]; Dd[o + 1] = pal[v][1]; Dd[o + 2] = pal[v][2]; Dd[o + 3] = 255 * alpha; }
+    const c = document.createElement('canvas'); c.width = doc.w; c.height = doc.h; const g = c.getContext('2d'), img = g.createImageData(doc.w, doc.h), Dd = img.data, pal = doc.palette.map(rgbaOf);
+    for (let i = 0; i < f.length; i++) { const v = f[i]; if (v === CLEAR || !pal[v]) continue; const o = i * 4; Dd[o] = pal[v][0]; Dd[o + 1] = pal[v][1]; Dd[o + 2] = pal[v][2]; Dd[o + 3] = pal[v][3] * alpha; }
     g.putImageData(img, 0, 0); return c;
   }
   function fit() {
@@ -275,17 +292,23 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, r.width, r.height); ctx.imageSmoothingEnabled = false;
     if (!d) return;
     const z = S.zoom, X = S.ox, Y = S.oy, W = d.w * z, H = d.h * z;
-    // transparency checker
+    // the map's parchment under the drawing (as the game shows it on the map), or a transparency checker
     ctx.save(); ctx.beginPath(); ctx.rect(X, Y, W, H); ctx.clip();
-    const cs = Math.max(4, z); for (let y = 0; y < d.h * z; y += cs) for (let x = 0; x < d.w * z; x += cs) { ctx.fillStyle = ((x / cs + y / cs) & 1) ? '#efe6d2' : '#fbf6ea'; ctx.fillRect(X + x, Y + y, cs, cs); }
+    const pp = S.paper && paperPattern();
+    if (pp) { const k = z / paperTexel(d); pp.setTransform(new DOMMatrix([k, 0, 0, k, X, Y])); ctx.fillStyle = pp; ctx.fillRect(X, Y, W, H); }
+    else { const cs = Math.max(4, z); for (let y = 0; y < d.h * z; y += cs) for (let x = 0; x < d.w * z; x += cs) { ctx.fillStyle = ((x / cs + y / cs) & 1) ? '#efe6d2' : '#fbf6ea'; ctx.fillRect(X + x, Y + y, cs, cs); } }
     // your picture, the game's drawing behind (to trace), the previous frame (onion skin), the frame, floating pixels
     const ri = curRef(); if (ri && !ri.front) drawRef(ri, X, Y, z);
     if (S.ref && S.ghosts.length) { ctx.globalAlpha = 0.32; ctx.imageSmoothingEnabled = d.kind === 'map'; ctx.drawImage(S.ghosts[Math.min(S.frame, S.ghosts.length - 1)], X, Y, W, H); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
     if (S.onion && S.frame > 0) { ctx.globalAlpha = 0.25; ctx.drawImage(frameCanvas(d, flat(d, S.frame - 1)), X, Y, W, H); ctx.globalAlpha = 1; }
-    // the layers, bottom first; the active one drawn faintly if it is hidden, so drawing on it is never invisible
-    d.layers.forEach((l, i) => { if (l.hidden && i !== d.layer) return; if (l.hidden) ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(d, l.frames[S.frame]), X, Y, W, H); ctx.globalAlpha = 1; });
+    // the visible layers merged as the game merges them (the topmost pixel wins, so a see-through pixel shows what is
+    // under the sprite, not the layer below); the active layer drawn faintly if it is hidden, so drawing on it is never invisible
+    // (Show Good or Evil: in the colours the game gives it in a kind or a cruel setting; you still draw the normal colours)
+    const shown = S.tone ? { w: d.w, h: d.h, palette: PA.tonedPalette(d, S.tone) } : d;
+    ctx.drawImage(frameCanvas(shown, flat(d, S.frame)), X, Y, W, H);
+    if (d.layers[d.layer].hidden) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
     if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
-    if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: d.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
+    if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: shown.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
     if (ri && ri.front) drawRef(ri, X, Y, z);
     if (CV.open && CV.canvas && $('cv-show').checked) { ctx.drawImage(CV.canvas, X, Y, W, H); if (ri && CV.key !== convKey(d, ri, cvOpts())) scheduleConvert(); }
     ctx.restore();
@@ -293,7 +316,21 @@
     if (S.grid && z >= 6) { ctx.strokeStyle = 'rgba(60,40,20,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = 0; x <= d.w; x++) { ctx.moveTo(X + x * z + 0.5, Y); ctx.lineTo(X + x * z + 0.5, Y + H); } for (let y = 0; y <= d.h; y++) { ctx.moveTo(X, Y + y * z + 0.5); ctx.lineTo(X + W, Y + y * z + 0.5); } ctx.stroke(); }
     ctx.strokeStyle = 'rgba(60,40,20,0.5)'; ctx.strokeRect(X - 0.5, Y - 0.5, W + 1, H + 1);
     // selection marquee
-    const s = S.float || S.sel; if (s) { ctx.save(); ctx.setLineDash([4, 3]); ctx.lineDashOffset = -(performance.now() / 60) % 7; ctx.strokeStyle = '#1d4f91'; ctx.lineWidth = 1.5; ctx.strokeRect(X + s.x * z + 0.5, Y + s.y * z + 0.5, s.w * z - 1, s.h * z - 1); ctx.restore(); }
+    const s = S.float || S.sel;
+    if (s) {
+      ctx.save(); ctx.setLineDash([4, 3]); ctx.lineDashOffset = -(performance.now() / 60) % 7; ctx.strokeStyle = '#1d4f91'; ctx.lineWidth = 1.5;
+      if (!s.mask) ctx.strokeRect(X + s.x * z + 0.5, Y + s.y * z + 0.5, s.w * z - 1, s.h * z - 1);
+      else { // the outline of the selected pixels: every edge between a selected pixel and one that is not
+        ctx.beginPath();
+        for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+          if (!s.mask[y * s.w + x]) continue; const px = X + (s.x + x) * z, py = Y + (s.y + y) * z, on = (i, j) => i >= 0 && j >= 0 && i < s.w && j < s.h && s.mask[j * s.w + i];
+          if (!on(x, y - 1)) { ctx.moveTo(px, py + 0.5); ctx.lineTo(px + z, py + 0.5); } if (!on(x, y + 1)) { ctx.moveTo(px, py + z - 0.5); ctx.lineTo(px + z, py + z - 0.5); }
+          if (!on(x - 1, y)) { ctx.moveTo(px + 0.5, py); ctx.lineTo(px + 0.5, py + z); } if (!on(x + 1, y)) { ctx.moveTo(px + z - 0.5, py); ctx.lineTo(px + z - 0.5, py + z); }
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
     // anchor
     const ax = X + d.anchor[0] * z, ay = Y + d.anchor[1] * z; ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(ax - 7, ay); ctx.lineTo(ax + 7, ay); ctx.moveTo(ax, ay - 7); ctx.lineTo(ax, ay + 7); ctx.stroke();
     // the pixels the next touch changes: the brush (pencil, eraser, mirrored too) or the one pixel the other tools use
@@ -366,9 +403,10 @@
       pushUndo(); d.anchor = [Math.max(0, Math.min(d.w, p[0])), Math.max(0, Math.min(d.h, p[1]))]; changed(); return;
     }
     if (t === 'select') {
-      if (S.float && inside(p, S.float)) { stroke = { t: 'drag', from: p, ox: S.float.x, oy: S.float.y }; return; }
-      if (S.sel && inside(p, S.sel)) { lift(); stroke = { t: 'drag', from: p, ox: S.float.x, oy: S.float.y }; return; }
-      commitFloat(); S.sel = null; stroke = { t: 'select', from: p }; S.sel = { x: p[0], y: p[1], w: 1, h: 1 }; draw(); return;
+      const add = S.addSel || e.ctrlKey || e.metaKey || e.shiftKey;
+      if (!add && S.float && selHas(S.float, p[0], p[1])) { stroke = { t: 'drag', from: p, ox: S.float.x, oy: S.float.y }; return; }
+      if (!add && S.sel && selHas(S.sel, p[0], p[1])) { lift(); stroke = { t: 'drag', from: p, ox: S.float.x, oy: S.float.y }; return; }
+      commitFloat(); const base = add ? S.sel : null; stroke = { t: 'select', from: p, base }; S.sel = unionSel(base, { x: p[0], y: p[1], w: 1, h: 1 }); draw(); return;
     }
     if (t === 'move') {
       if (!S.float && S.sel) lift();
@@ -380,17 +418,17 @@
   function toolMove(p, e) {
     const st = stroke;
     if (st.t === 'pencil' || st.t === 'eraser') { for (const [x, y] of linePts(st.last[0], st.last[1], p[0], p[1])) dab(x, y, st.t === 'eraser' ? CLEAR : S.color); st.last = p; changed(false, true); return; }
-    if (st.t === 'select') { const a = st.from; S.sel = { x: Math.min(a[0], p[0]), y: Math.min(a[1], p[1]), w: Math.abs(p[0] - a[0]) + 1, h: Math.abs(p[1] - a[1]) + 1 }; draw(); return; }
+    if (st.t === 'select') { const a = st.from, r = { x: Math.min(a[0], p[0]), y: Math.min(a[1], p[1]), w: Math.abs(p[0] - a[0]) + 1, h: Math.abs(p[1] - a[1]) + 1 }; S.sel = unionSel(st.base, r); draw(); return; }
     if (st.t === 'drag') { S.float.x = st.ox + p[0] - st.from[0]; S.float.y = st.oy + p[1] - st.from[1]; draw(); return; }
     if (st.t === 'shape') { let b = p; if (e.shiftKey && S.tool !== 'line') { const a = S.shape.a, m = Math.max(Math.abs(p[0] - a[0]), Math.abs(p[1] - a[1])); b = [a[0] + Math.sign(p[0] - a[0] || 1) * m, a[1] + Math.sign(p[1] - a[1] || 1) * m]; } S.shape.b = b; draw(); }
   }
   function toolUp(p) {
     const st = stroke; stroke = null;
     if (st.t === 'shape') { pushUndo(); for (const [x, y] of shapePts(S.tool, S.shape.a, S.shape.b)) setPx(F(), x, y, S.color); S.shape = null; changed(); return; }
-    if (st.t === 'select') { draw(); return; }
+    if (st.t === 'select') { syncAlpha(); draw(); return; }
     changed();
   }
-  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = flat(d, S.frame)[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
+  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = flat(d, S.frame)[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) || (S.paper ? paperColor(d, p) : null) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
   const DRAWING = ['pencil', 'fill', 'line', 'rect', 'rectf', 'ellipse', 'ellipsef'];
 
   // =====================================================================================================
@@ -616,11 +654,11 @@
   }
   const colourUsed = (d, i) => d.layers.some(l => l.frames.some(f => f.includes(i)));
   function startWheelChange() {
-    const d = D(); WH.old = S.color !== CLEAR ? d.palette[S.color] || null : null; WH.undone = false;
+    const d = D(); WH.old = S.color !== CLEAR ? d.palette[S.color] || null : null; WH.undone = false; WH.alpha = WH.old ? WH.old.slice(7, 9) : '';
     WH.target = S.color !== CLEAR && ($('chk-recolor').checked || !colourUsed(d, S.color)) ? S.color : null;
   }
   function applyWheel(done) {
-    const d = D(); if (!d) return; const hex = wheelHex(), everywhere = $('chk-recolor').checked && WH.target !== null;
+    const d = D(); if (!d) return; const hex = wheelHex() + (WH.alpha || ''), everywhere = $('chk-recolor').checked && WH.target !== null;
     if (everywhere && !WH.undone) { pushUndo(); WH.undone = true; }
     if (WH.target === null) { if (d.palette.length >= AL.length) S.color = color(d, hex); else { d.palette.push(hex); WH.target = S.color = d.palette.length - 1; } }
     else { d.palette[WH.target] = hex; S.color = WH.target; }
@@ -629,7 +667,7 @@
   }
   function endWheelChange() { if (WH.undone) changed(); WH.undone = false; $('old-swatch').style.background = WH.old || 'transparent'; }
   /** set the wheel to a colour and apply it, as one change (typed hex, the old-colour swatch) */
-  function wheelTo(hex) { if (!D() || !/^#[0-9a-f]{6}$/.test(hex)) return; const [h, s, v] = rgbToHsv(...rgbOf(hex)); if (s > 0 && v > 0) WH.h = h; if (v > 0) WH.s = s; WH.v = v; startWheelChange(); applyWheel(true); endWheelChange(); }
+  function wheelTo(hex) { if (!D() || !HEX.test(hex)) return; const [h, s, v] = rgbToHsv(...rgbOf(hex)); if (s > 0 && v > 0) WH.h = h; if (v > 0) WH.s = s; WH.v = v; startWheelChange(); WH.alpha = hex.slice(7, 9); applyWheel(true); endWheelChange(); }
   for (const [id, which] of [['wheel', 'disc'], ['vbar', 'bar']]) {
     const el = $(id);
     const move = (e) => {
@@ -643,9 +681,89 @@
     const end = () => { if (WH.drag !== which) return; WH.drag = null; endWheelChange(); };
     el.addEventListener('pointerup', end); el.addEventListener('pointercancel', end);
   }
-  $('in-hex').addEventListener('change', (e) => { let v = e.target.value.trim().toLowerCase(); if (/^[0-9a-f]{6}$/.test(v)) v = '#' + v; if (/^#[0-9a-f]{6}$/.test(v)) wheelTo(v); else { toast('Type a colour as #rrggbb'); syncWheel(); } });
+  $('in-hex').addEventListener('change', (e) => { let v = e.target.value.trim().toLowerCase(); if (/^[0-9a-f]{6}([0-9a-f]{2})?$/.test(v)) v = '#' + v; if (HEX.test(v)) wheelTo(v); else { toast('Type a colour as #rrggbb (or #rrggbbaa: the last two say how solid, 00–ff)'); syncWheel(); } });
   $('in-hex').addEventListener('keydown', (e) => { if (e.key === 'Enter') e.target.blur(); });
   $('old-swatch').onclick = () => { if (WH.old) wheelTo(WH.old); };
+
+  // =====================================================================================================
+  // The map's parchment under the drawing (the same paper the map is drawn on), and its colours for the eyedropper
+  // =====================================================================================================
+  let paperPat = null; const paperCache = { key: '', c: null };
+  function paperPattern() {
+    if (paperPat) return paperPat;
+    try { if (!HB.parchment.tile) { HB.app = HB.app || {}; if (!HB.app.ctx) HB.app.ctx = document.createElement('canvas').getContext('2d'); HB.parchment.init(); } paperPat = ctx.createPattern(HB.parchment.tile, 'repeat'); } catch (e) { paperPat = null; }
+    return paperPat;
+  }
+  /** the paper's grain in sprite pixels: on the map one paper texel is about zoom / 1.5 screen px and a map symbol's
+   *  pixel scale × zoom (src/views/mapview.js), so a texel is 1 / (1.5 × scale) pixels */
+  const paperTexel = (d) => 1 / (1.5 * (d.kind === 'map' ? d.scale || 1 : 1));
+  /** the parchment's colour under pixel p (averaged over the pixel) */
+  function paperColor(d, p) {
+    const pp = paperPattern(); if (!pp) return null;
+    const key = `${d.w}x${d.h}@${paperTexel(d)}`;
+    if (paperCache.key !== key) {
+      const big = document.createElement('canvas'); big.width = d.w * 4; big.height = d.h * 4; const bg = big.getContext('2d'), k = 4 / paperTexel(d);
+      pp.setTransform(new DOMMatrix([k, 0, 0, k, 0, 0])); bg.fillStyle = pp; bg.fillRect(0, 0, big.width, big.height);
+      const c = document.createElement('canvas'); c.width = d.w; c.height = d.h; const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(big, 0, 0, d.w, d.h);
+      paperCache.key = key; paperCache.c = g.getImageData(0, 0, d.w, d.h).data;
+    }
+    const o = (p[1] * d.w + p[0]) * 4, D2 = paperCache.c; return hexOf(D2[o], D2[o + 1], D2[o + 2]);
+  }
+
+  // =====================================================================================================
+  // See-through pixels: the selected pixels' opacity, so the parchment (or whatever the sprite is drawn on) shows
+  // through. Stored as #rrggbbaa colours, so a later change to the paper shows through too.
+  // =====================================================================================================
+  const OP = { live: null };
+  /** the slider shows the opacity of the selection's first drawn pixel */
+  function syncAlpha() {
+    const d = D(), sl = S.sel; let a = 255;
+    if (d && sl) { const f = F(); outer: for (let y = 0; y < sl.h; y++) for (let x = 0; x < sl.w; x++) { const X = sl.x + x, Y = sl.y + y; if (!selHas(sl, X, Y) || X >= d.w || Y >= d.h) continue; const v = f[Y * d.w + X]; if (v !== CLEAR) { a = rgbaOf(d.palette[v])[3]; break outer; } } }
+    $('in-alpha').value = String(Math.round(a / 2.55)); $('alpha-v').textContent = Math.round(a / 2.55) + '%';
+  }
+  function setAlpha(pct, done) {
+    const d = D(); if (!d) return;
+    if (!OP.live) {
+      commitFloat(); const sl = S.sel; if (!sl) { toast('Select pixels first (⬚ Select: tap a pixel or drag a box; Ctrl, Shift or ＋ Add adds more), or Select drawn'); syncAlpha(); return; }
+      pushUndo(); OP.live = { frame: F().slice(), palette: d.palette.slice(), sel: sl };
+    }
+    const L = OP.live, f = F(), a = Math.round(HB.clamp(pct, 0, 100) * 2.55), aa = a >= 255 ? '' : a.toString(16).padStart(2, '0');
+    d.palette = L.palette.slice(); f.set(L.frame); let full = false;
+    const map = new Map();
+    for (let y = 0; y < L.sel.h; y++) for (let x = 0; x < L.sel.w; x++) {
+      const X = L.sel.x + x, Y = L.sel.y + y; if (X >= d.w || Y >= d.h || !selHas(L.sel, X, Y)) continue;
+      const i = Y * d.w + X, v = L.frame[i]; if (v === CLEAR) continue;
+      if (!map.has(v)) { const hex = L.palette[v].slice(0, 7) + aa, n0 = d.palette.length, k = color(d, hex); if (d.palette[k] !== hex.toLowerCase() && hex.length > 7 && n0 >= AL.length) full = true; map.set(v, k); }
+      f[i] = map.get(v);
+    }
+    $('alpha-v').textContent = Math.round(a / 2.55) + '%';
+    if (done) { OP.live = null; if (full) toast('This sprite has 62 colours: some pixels took the nearest colour. Delete unused colours by saving, or use fewer.'); renderColors(); changed(); }
+    else changed(false, true);
+  }
+  // =====================================================================================================
+  // Good and evil: how the game tints this drawing in a kind or a cruel setting. Automatic (HB.pixelArt.TONES) unless
+  // adjusted here; adjustments are saved in the sprite's file (tones).
+  // =====================================================================================================
+  const TN = { live: false, keys: ['hue', 'sat', 'light', 'mix'] };
+  function renderTone() {
+    const d = D(); document.querySelectorAll('#tone-row [data-tone]').forEach(b => b.classList.toggle('on', b.dataset.tone === S.tone));
+    $('tone-ctl').hidden = !S.tone || !d; if (!S.tone || !d) return;
+    const t = PA.tone(d, S.tone); for (const k of TN.keys) $('tn-' + k).value = String(t[k]); $('tn-tint').value = t.tint;
+    $('tn-auto').disabled = !(d.tones && d.tones[S.tone]);
+  }
+  function toneEdit(key, value, done) {
+    const d = D(); if (!d || !S.tone) return;
+    if (!TN.live) { pushUndo(); TN.live = true; }
+    d.tones = d.tones || {}; d.tones[S.tone] = Object.assign(PA.tone(d, S.tone), { [key]: value });
+    if (done) { TN.live = false; renderTone(); changed(); } else changed(false, true);
+  }
+  document.querySelectorAll('#tone-row [data-tone]').forEach(b => { b.onclick = () => { S.tone = b.dataset.tone; renderTone(); draw(); }; });
+  for (const k of TN.keys) { $('tn-' + k).addEventListener('input', (e) => toneEdit(k, +e.target.value, false)); $('tn-' + k).addEventListener('change', (e) => toneEdit(k, +e.target.value, true)); }
+  $('tn-tint').addEventListener('input', (e) => toneEdit('tint', e.target.value, false)); $('tn-tint').addEventListener('change', (e) => toneEdit('tint', e.target.value, true));
+  $('tn-auto').onclick = () => { const d = D(); if (!d || !d.tones || !d.tones[S.tone]) return; pushUndo(); delete d.tones[S.tone]; if (!Object.keys(d.tones).length) d.tones = null; renderTone(); changed(); };
+
+  $('in-alpha').addEventListener('input', (e) => setAlpha(+e.target.value, false));
+  $('in-alpha').addEventListener('change', (e) => setAlpha(+e.target.value, true));
 
   // =====================================================================================================
   // Saved palettes: named sets of colours you like (map, map good, map evil…) in assets/pixelart/palettes.js,
@@ -654,7 +772,7 @@
   const PAL_DRAFT = 'hb.editor.palettes';
   const PAL = { list: [], savedText: null, sel: 0, removing: false };
   const palettesText = (list) => `/* Saved colour palettes for the pixel editor (editor/index.html). Written by the editor; safe to edit by hand. */\nHB.pixelArt && HB.pixelArt.palettes([\n${list.map(p => ' ' + JSON.stringify({ name: p.name, colors: p.colors })).join(',\n')}\n]);\n`;
-  const cleanPalettes = (list) => (Array.isArray(list) ? list : []).filter(p => p && typeof p.name === 'string').map(p => ({ name: p.name.slice(0, 40), colors: (Array.isArray(p.colors) ? p.colors : []).map(c => String(c).toLowerCase()).filter(c => /^#[0-9a-f]{6}$/.test(c)).slice(0, 64) }));
+  const cleanPalettes = (list) => (Array.isArray(list) ? list : []).filter(p => p && typeof p.name === 'string').map(p => ({ name: p.name.slice(0, 40), colors: (Array.isArray(p.colors) ? p.colors : []).map(c => String(c).toLowerCase()).filter(c => HEX.test(c)).slice(0, 64) }));
   const palDirty = () => palettesText(PAL.list) !== PAL.savedText;
   function palettesEdited() { try { if (palDirty()) localStorage.setItem(PAL_DRAFT, JSON.stringify(PAL.list)); else localStorage.removeItem(PAL_DRAFT); } catch (e) { /* private mode */ } renderPalettes(); status(); }
   function renderPalettes() {
@@ -664,7 +782,7 @@
     PAL.sel = HB.clamp(PAL.sel, 0, Math.max(0, PAL.list.length - 1)); if (PAL.list.length) sel.value = String(PAL.sel);
     const p = PAL.list[PAL.sel], box = $('pal-swatches'); box.innerHTML = ''; box.classList.toggle('removing', PAL.removing && !!p);
     if (p) p.colors.forEach((hex, ci) => {
-      const sw = document.createElement('div'); sw.className = 'sw'; sw.style.background = hex; sw.title = PAL.removing ? `Take ${hex} out of “${p.name}”` : `${hex}: draw with it`;
+      const sw = document.createElement('div'); sw.className = 'sw'; sw.style.background = swatchBg(hex); sw.title = PAL.removing ? `Take ${hex} out of “${p.name}”` : `${hex}: draw with it`;
       sw.onclick = () => { if (PAL.removing) { p.colors.splice(ci, 1); palettesEdited(); return; } const d = D(); if (!d) return; S.color = color(d, hex); renderColors(); };
       box.appendChild(sw);
     });
@@ -691,8 +809,8 @@
   function renderColors() {
     const d = D(), pal = $('palette'); pal.innerHTML = '';
     const clear = document.createElement('div'); clear.className = 'sw clear' + (S.color === CLEAR ? ' cur' : ''); clear.title = 'Transparent'; clear.onclick = () => { S.color = CLEAR; renderColors(); }; pal.appendChild(clear);
-    if (d) d.palette.forEach((hex, i) => { const s = document.createElement('div'); s.className = 'sw' + (S.color === i ? ' cur' : ''); s.style.background = hex; s.title = hex; s.onclick = () => { S.color = i; renderColors(); }; pal.appendChild(s); });
-    $('cur-swatch').style.background = S.color === CLEAR || !d ? 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 10px 10px' : d.palette[S.color];
+    if (d) d.palette.forEach((hex, i) => { const s = document.createElement('div'); s.className = 'sw' + (S.color === i ? ' cur' : ''); s.style.background = swatchBg(hex); s.title = hex.length > 7 ? `${hex} (${Math.round(rgbaOf(hex)[3] / 2.55)}% solid)` : hex; s.onclick = () => { S.color = i; renderColors(); }; pal.appendChild(s); });
+    $('cur-swatch').style.background = S.color === CLEAR || !d ? 'repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 10px 10px' : swatchBg(d.palette[S.color]);
     if (!WH.fromWheel) syncWheel();
   }
   function renderGamePalette() {
@@ -806,7 +924,7 @@
     if (doc.fresh) S.ref = true;
     $('chk-ref').checked = S.ref;
     loadRefImg(item.id);
-    fit(); renderColors(); renderFrames(); renderLayers(); renderInfo(); renderUndo(); renderList(); draw();
+    fit(); renderColors(); renderFrames(); renderLayers(); renderInfo(); renderTone(); renderUndo(); renderList(); syncAlpha(); draw();
     try { localStorage.setItem('hb.editor.last', item.id); } catch (e) { /* private mode */ }
   }
 
@@ -969,6 +1087,10 @@
   $('chk-onion').onchange = (e) => { S.onion = e.target.checked; draw(); };
   $('chk-ref').onchange = (e) => { S.ref = e.target.checked; renderFrames(); draw(); };
   $('chk-grid').onchange = (e) => { S.grid = e.target.checked; draw(); };
+  $('chk-paper').checked = S.paper;
+  $('chk-paper').onchange = (e) => { S.paper = e.target.checked; try { localStorage.setItem('hb.editor.paper', S.paper ? '1' : '0'); } catch (err) { /* private mode */ } draw(); };
+  $('btn-seladd').onclick = () => { S.addSel = !S.addSel; $('btn-seladd').classList.toggle('on', S.addSel); if (S.addSel) { setTool('select'); toast('Each tap or box now adds to the selection; tap ＋ Add again to start fresh selections'); } };
+  $('btn-seldrawn').onclick = () => selectDrawn();
   $('zoom-in').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.5); };
   $('zoom-out').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.5); };
   $('zoom-fit').onclick = () => { fit(); draw(); };
@@ -1065,6 +1187,6 @@
     status(); requestAnimationFrame(previewLoop);
     if (restored) toast(`${restored} unsaved change${restored === 1 ? '' : 's'} restored from this browser`, 4000);
     syncFromGitHub();
-    window.PIXEL_EDITOR = { S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
+    window.PIXEL_EDITOR = { selectDrawn, setAlpha, renderTone, S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
   })();
 })();

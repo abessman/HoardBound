@@ -29,6 +29,18 @@
     <div id="info">
       <div id="title"></div>
       <div id="note" class="muted small"></div>
+      <div class="row small wrap" id="tone-row">
+        <span title="The game tints drawn art in a kind or a cruel setting: the dragon by its deeds, the lair by its dragon, map symbols in a protector's or a tyrant's land">Show</span>
+        <button data-tone="" class="on" title="The drawing as drawn">Normal</button><button data-tone="good" title="As the game shows it in a kind setting">Good</button><button data-tone="evil" title="As the game shows it in a cruel setting">Evil</button>
+        <span id="tone-ctl" class="row wrap" hidden>
+          <label title="Turn every colour round the colour wheel">hue <input type="range" id="tn-hue" min="-60" max="60"></label>
+          <label title="Richer or greyer colours">colour <input type="range" id="tn-sat" min="-100" max="100"></label>
+          <label title="Lighter or darker">light <input type="range" id="tn-light" min="-60" max="60"></label>
+          <label title="A colour everything leans toward">tint <input type="color" id="tn-tint"></label>
+          <label title="How far everything leans toward the tint">tint strength <input type="range" id="tn-mix" min="0" max="60"></label>
+          <button id="tn-auto" title="Back to the game's automatic shift for this tone">Automatic</button>
+        </span>
+      </div>
       <div class="row small wrap" id="size-row">
         <label>W <input id="in-w" type="number" min="1" max="512"></label>
         <label>H <input id="in-h" type="number" min="1" max="512"></label>
@@ -72,9 +84,14 @@
       <button id="btn-flipv" title="Flip the selection (or the frame) upside down">Flip ↕</button>
       <button id="btn-clear" title="Clear this frame">Clear</button>
       <span class="sep"></span>
+      <button id="btn-seladd" title="Add to the selection: each tap or box with Select adds to what is selected (with a keyboard: hold Ctrl, Cmd or Shift)">＋ Add</button>
+      <button id="btn-seldrawn" title="Select every drawn pixel of this frame on the layer you draw on">Select drawn</button>
+      <label title="Opacity of the selected pixels: lower lets the parchment (or whatever the sprite is drawn on) show through">opacity <input type="range" id="in-alpha" min="0" max="100" value="100"> <b id="alpha-v">100%</b></label>
+      <span class="sep"></span>
       <label><input type="checkbox" id="chk-onion" checked> onion skin</label>
       <label title="The game's current drawing, faintly behind yours, to trace or size against"><input type="checkbox" id="chk-ref"> game art behind</label>
       <label><input type="checkbox" id="chk-grid" checked> grid</label>
+      <label title="The map's parchment under the drawing, at map scale, to see how it sits on the map; the eyedropper picks its colours where nothing is drawn"><input type="checkbox" id="chk-paper"> parchment under</label>
       <span class="sep"></span>
       <button id="btn-refimg" title="Load your own picture behind the pixels, to draw over it (kept in this browser for this sprite)">Image behind…</button>
       <input type="file" id="in-refimg" accept="image/*" hidden>

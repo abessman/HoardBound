@@ -29,8 +29,19 @@ commit by hand.
   or sprites, **From game art** to start from the game's current drawing.
 - **Tools:** pencil, eraser, fill, eyedropper (or hold Alt), select a box, move, line, rectangle, filled box, ellipse,
   filled disc, anchor. Brush 1–3 px; **mirror** paints both halves at once. Shapes: drag; Shift keeps them square.
-- **Select, copy, paste:** drag a box with Select; drag inside it to move those pixels; Copy / Cut / Paste / Delete /
-  Flip. A paste floats until you tap elsewhere or press Enter, so you can drag it into place first.
+- **Select, copy, paste:** with Select, tap a pixel or drag a box; hold Ctrl, Cmd or Shift (or turn on **＋ Add**, for
+  the iPad) to add more pixels or boxes; **Select drawn** takes every drawn pixel of this frame on your layer. Drag
+  inside the selection to move those pixels; Copy / Cut / Paste / Delete / Flip work on any selection shape. A paste
+  floats until you tap elsewhere or press Enter, so you can drag it into place first.
+- **Opacity:** the slider sets how solid the selected pixels are (100% solid, lower lets what is under the sprite show
+  through, such as the map's parchment). Each see-through colour is its own colour (`#rrggbbaa`, also typeable in
+  the colour box), so the sprite's colours list shows it over a checker. They stay see-through in the game, so a
+  later change to the paper or a territory wash shows through as well. Layers: the game shows the topmost pixel,
+  so a see-through pixel shows what is under the sprite, not the layer below (the editor shows it the same way).
+- **Good and evil:** **Show Normal / Good / Evil** displays the drawing as the game tints it in a kind or a cruel
+  setting (you still draw in the normal colours). The tint is automatic; with Good or Evil shown, the sliders adjust
+  it for this drawing (hue, colour, light, a tint colour and its strength), saved in the sprite's file; **Automatic**
+  goes back to the game's own shift.
 - **Colour wheel:** drag around the dial for the colour, towards the edge for a stronger one, and on the bar beside it
   for lighter or darker; or type a code (`#3366cc`). It changes the colour you draw with: a colour nothing is drawn in
   yet changes as you drag (no pile of in-between colours); a colour already in the drawing is left alone and you get a
@@ -42,7 +53,8 @@ commit by hand.
   colour in it to draw with it; **Use all** puts them all in this sprite's colours; **Rename**, **Delete**. Palettes are
   saved to GitHub with your next **Save to GitHub** (in `assets/pixelart/palettes.js`), so every device has them.
 - **Helpers:** onion skin (the previous frame, faint), game art behind (the current drawing, faint, to trace or size
-  against), grid, zoom (pinch, wheel, − Fit +), pan with two fingers or Space + drag.
+  against), **parchment under** (the map's own paper behind the drawing at map scale; the eyedropper then picks the
+  paper's colour where nothing is drawn, to match colours to it), grid, zoom (pinch, wheel, − Fit +), pan with two fingers or Space + drag.
 - **Your own picture behind:** **Image behind…** loads any picture (a sketch, a photo of a drawing) behind the pixels
   to draw over. Set its opacity and size, **Move it** (then drag on the canvas), show it **On top** of the pixels, or
   remove it (✕). The eyedropper picks its colours where a pixel is still empty. Each sprite keeps its own picture in
@@ -93,8 +105,11 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   chamber behind it (345×194, frame 1 the bare cave, then one frame per Treasure Chamber level); `lair.hill` is the
   zoomed-out backdrop and `lair.room.<name>` each room (one frame per level). The hoard, trophies, torch flames,
   workers and light are drawn on top, so leave room for them.
-- **Dragon** (`dragon.<tier>.<pose>`): frame k replaces that pose's frame k for every breed and alignment (the game's
-  colour changes by breed and deed are not applied to drawn art yet). The anchor ⊕ marks the body centre: the
+- **Good and evil tones** (0.21): drawn dragons take the evil tone from alignment −30 down and the good tone from 30 up;
+  the lair's pictures take their dragon's; map symbols take them in a tyrant's or a protector's land (the blighted or
+  flourishing cells near your rule). Raid sprites are not tinted yet.
+- **Dragon** (`dragon.<tier>.<pose>`): frame k replaces that pose's frame k for every breed (breed colours are not
+  applied to drawn art yet; the good and evil tones are). The anchor ⊕ marks the body centre: the
   game places and rotates the dragon around it. Size tiers 0–3 are hatchling to ancient; keep each tier's canvas
   size close to the game's (the editor starts from it).
 - **Raid sprites** (people, animals, treasure, props): the first frame replaces the sprite. The game always stands a
@@ -137,7 +152,8 @@ HB.pixelArt && HB.pixelArt.add({
 });
 ```
 A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "name": "sketch", "hidden": true, ... }]`
-(bottom layer first) instead of `"frames"`; the game merges the visible ones.
+(bottom layer first) instead of `"frames"`; the game merges the visible ones. A palette colour may carry opacity
+(`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tones (hue, sat, light, tint, mix).
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and
 `flip` (may be mirrored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from
 `file://` too (`src/art/pixelart.js`). Safe to edit by hand; the editor rewrites a file when you save that sprite.

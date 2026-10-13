@@ -50,18 +50,39 @@
     applyDrafts() {
       try { const d = JSON.parse(localStorage.getItem(DRAFTS) || '{}'); for (const id in d) { if (d[id] === null) PA.entries.delete(id); else PA.add(d[id]); } } catch (e) { /* no drafts */ }
     },
-    /** a definition's frames as canvases (cached on the definition) */
-    canvases(def) {
-      if (def._canvases) return def._canvases;
-      const pal = (def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
-      def._canvases = (def.frames || []).map((f) => {
+    /** a definition's frames as canvases (cached on the definition); tone 'good' or 'evil' shifts the colours */
+    canvases(def, tone) {
+      const cache = tone ? (def._toned = def._toned || {}) : null;
+      if (tone ? cache[tone] : def._canvases) return tone ? cache[tone] : def._canvases;
+      const pal = (tone ? PA.tonedPalette(def, tone) : def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
+      const list = (def.frames || []).map((f) => {
         const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h);
         const g = c.getContext('2d'), img = g.createImageData(c.width, c.height), D = img.data;
         (f.rows || []).forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const i = ALPHABET.indexOf(row[x]); if (i < 0 || !pal[i]) continue; const o = (y * w + x) * 4; D[o] = pal[i][0]; D[o + 1] = pal[i][1]; D[o + 2] = pal[i][2]; D[o + 3] = pal[i][3]; } });
         g.putImageData(img, 0, 0); return c;
       });
-      return def._canvases;
+      if (tone) cache[tone] = list; else def._canvases = list;
+      return list;
     },
+    // ---- good and evil tones: drawn art shown in a kind or cruel setting (the dragon by its deeds, the lair by its
+    // dragon, map symbols in a protector's or tyrant's land) gets a colour shift, automatic unless the drawing sets
+    // its own (def.tones = { good: {...}, evil: {...} }, adjusted in the editor)
+    TONES: { good: { hue: 6, sat: 15, light: 8, tint: '#e2c75c', mix: 12 }, evil: { hue: -12, sat: -40, light: -18, tint: '#4a1c1c', mix: 20 } },
+    tone(def, which) { return Object.assign({}, PA.TONES[which], def && def.tones && def.tones[which]); },
+    /** a colour shifted by a tone's hue (degrees), saturation and lightness (percent) and mixed toward its tint */
+    shiftHex(h, t) {
+      const c = hex(h); if (!c) return h;
+      let [r, g, b] = [c[0] / 255, c[1] / 255, c[2] / 255];
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let H = 0, S = 0, L = (mx + mn) / 2;
+      if (mx !== mn) { const d = mx - mn; S = L > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); H = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; H *= 60; }
+      H = (H + (t.hue || 0) + 720) % 360; S = Math.min(1, Math.max(0, S * (1 + (t.sat || 0) / 100)));
+      const lt = (t.light || 0) / 100; L = Math.min(1, Math.max(0, lt >= 0 ? L + (1 - L) * lt : L * (1 + lt)));
+      const q = L < 0.5 ? L * (1 + S) : L + S - L * S, p = 2 * L - q, f = (u) => { u = (u + 1) % 1; return u < 1 / 6 ? p + (q - p) * 6 * u : u < 0.5 ? q : u < 2 / 3 ? p + (q - p) * (2 / 3 - u) * 6 : p; };
+      const tc = hex(t.tint) || [0, 0, 0], m = Math.min(1, Math.max(0, (t.mix || 0) / 100));
+      const out = [f(H / 360 + 1 / 3), f(H / 360), f(H / 360 - 1 / 3)].map((v, i) => Math.round((v * 255) * (1 - m) + tc[i] * m));
+      return '#' + out.map(v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
+    },
+    tonedPalette(def, which) { const t = PA.tone(def, which); return (def.palette || []).map(c => PA.shiftHex(c, t)); },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
       const ov = HB.sprites.overrides;
@@ -71,6 +92,7 @@
         if (def.kind === 'sprite') ov.set(def.id, Object.assign({ image: fr[0] }, base));
         else if (def.kind === 'dragon' || def.kind === 'anim') {
           fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
+          for (const tn of ['good', 'evil']) PA.canvases(def, tn).forEach((c, k) => ov.set(`${def.id}.${k}.${tn}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
           HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps });
         }
       }
@@ -85,11 +107,12 @@
       for (const def of PA.entries.values()) {
         if (def.kind !== 'map') continue;
         const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(def.id) : 1), a = def.anchor || [def.w / 2, def.h], variants = [];
+        const toned = { good: PA.canvases(def, 'good'), evil: PA.canvases(def, 'evil') };
         PA.canvases(def).forEach((c, i) => {
           const b = PA.frameBox(def, i); if (!b) return;
           const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
-          const cut = document.createElement('canvas'); cut.width = w; cut.height = h; cut.getContext('2d').drawImage(c, -x0, -y0);
-          variants.push({ id: 'v' + (i + 1), src: cut.toDataURL('image/png'), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip });
+          const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
+          variants.push({ id: 'v' + (i + 1), src: cut(c), tones: { good: cut(toned.good[i]), evil: cut(toned.evil[i]) }, sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip });
         });
         if (variants.length) assets[def.id] = { variants };
       }

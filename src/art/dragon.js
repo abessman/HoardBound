@@ -187,7 +187,8 @@
       if (c) return c;
       // a drawing from the pixel editor with fewer frames than asked for loops its own frames
       const drawn = HB.sprites.overrideMeta.get(`dragon.${spec.tier}.${pose}`);
-      const ov = HB.sprites.overrides.get(`dragon.${spec.tier}.${pose}.${drawn ? frame % drawn.frames : frame}`);
+      const fk = `dragon.${spec.tier}.${pose}.${drawn ? frame % drawn.frames : frame}`, tone = HB.art.toneOf(spec.alignment || 0);
+      const ov = (tone && HB.sprites.overrides.get(`${fk}.${tone}`)) || HB.sprites.overrides.get(fk);
       if (ov) { c = px.create(ov.w, ov.h); c.ctx.drawImage(ov.image, ov.x, ov.y, ov.w, ov.h, 0, 0, ov.w, ov.h); c.anchorX = ov.ax || ov.w / 2; c.anchorY = ov.ay || ov.h / 2; c.bodyLength = ov.bodyLength || SIZES[spec.tier] || 16; }
       else c = render(Object.assign({}, spec, { alignment: Math.round((spec.alignment || 0) / 10) * 10 }), pose, frame);
       HB.sprites.cache.set(key, c);
