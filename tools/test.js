@@ -662,12 +662,19 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
     if (!(Number.isInteger(def.w) && Number.isInteger(def.h) && def.w >= 1 && def.h >= 1 && def.w <= 512 && def.h <= 512)) p.push('w and h are whole numbers 1–512');
     if (!(Array.isArray(def.anchor) && def.anchor.length === 2 && def.anchor.every(n) && def.anchor[0] >= 0 && def.anchor[1] >= 0 && def.anchor[0] <= def.w && def.anchor[1] <= def.h)) p.push('anchor is [x, y] inside the canvas');
     if (!(Array.isArray(def.palette) && def.palette.length <= AL.length && def.palette.every(c => /^#[0-9a-f]{6}([0-9a-f]{2})?$/i.test(c)))) p.push('palette is up to 62 #rrggbb colours');
-    if (!(Array.isArray(def.frames) && def.frames.length >= 1)) p.push('at least one frame');
-    else def.frames.forEach((f, k) => { const rows = f && f.rows; if (!Array.isArray(rows) || rows.length !== def.h) p.push(`frame ${k + 1}: ${def.h} rows`); else rows.forEach((r, y) => { if (typeof r !== 'string' || r.length !== def.w) p.push(`frame ${k + 1} row ${y}: ${def.w} characters`); else for (const ch of r) if (ch !== '.' && !(AL.indexOf(ch) >= 0 && AL.indexOf(ch) < def.palette.length)) { p.push(`frame ${k + 1} row ${y}: '${ch}' is not a palette index`); break; } }); });
+    const frames = (list, where) => {
+      if (!(Array.isArray(list) && list.length >= 1)) { p.push(where + 'at least one frame'); return; }
+      list.forEach((f, k) => { const rows = f && f.rows; if (!Array.isArray(rows) || rows.length !== def.h) p.push(`${where}frame ${k + 1}: ${def.h} rows`); else rows.forEach((r, y) => { if (typeof r !== 'string' || r.length !== def.w) p.push(`${where}frame ${k + 1} row ${y}: ${def.w} characters`); else for (const ch of r) if (ch !== '.' && !(AL.indexOf(ch) >= 0 && AL.indexOf(ch) < def.palette.length)) { p.push(`${where}frame ${k + 1} row ${y}: '${ch}' is not a palette index`); break; } }); });
+    };
+    // a layered drawing has layers (each with frames) instead of frames
+    if (Array.isArray(def.layers)) { if (!def.layers.length) p.push('layers is empty'); def.layers.forEach((l, i) => { if (!l || typeof l.name !== 'string') p.push(`layer ${i + 1} needs a name`); frames(l && l.frames, `layer ${(l && l.name) || i + 1}: `); }); }
+    else frames(def.frames, '');
     return p;
   };
   const good = { id: 'map.place.village', kind: 'map', w: 3, h: 2, anchor: [1, 2], palette: ['#2b1a0e', '#c04040'], frames: [{ rows: ['.0.', '010'] }], scale: 1 };
   ok(!problems(good).length && !problems(Object.assign({}, good, { id: 'lair.room.forge', kind: 'anim' })).length, 'a well-formed sprite (and a lair picture) passes the file check');
+  const layered = Object.assign({}, good, { frames: undefined, layers: [{ name: 'lines', frames: [{ rows: ['.0.', '0.0'] }] }, { name: 'sketch', hidden: true, frames: [{ rows: ['111', '111'] }] }] });
+  ok(!problems(layered).length && problems(Object.assign({}, layered, { layers: [{ name: 'lines', frames: [{ rows: ['.0'] }] }] })).length, 'a layered drawing passes; a layer with the wrong size is caught');
   ok(problems(Object.assign({}, good, { frames: [{ rows: ['.0.', '012'] }] })).some(e => /not a palette index/.test(e)) && problems(Object.assign({}, good, { id: 'dragon.4.fly', kind: 'dragon' })).length && problems(Object.assign({}, good, { w: 4 })).some(e => /4 characters/.test(e)), 'a bad palette index, dragon id or row width is caught');
   const idx = read(fs.readFileSync(path.join(dir, 'index.js'), 'utf8'));
   ok(Array.isArray(idx.files) && idx.files.every(f => fs.existsSync(path.join(dir, f))), 'assets/pixelart/index.js lists files that exist');

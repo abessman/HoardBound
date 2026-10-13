@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.18.0 — 2026-10-13 · Layers and picture to pixels
+- **Layers in the pixel editor.** Give a sprite a few named layers (say a sketch, the lines and the colours), draw on
+  one at a time, show or hide them, reorder, rename, merge down or delete them. They are saved with the sprite, so
+  they are all there next time, on any device. The game shows the visible layers merged; hidden layers stay out of the
+  game. Frames belong to every layer, and copying a frame copies all its layers.
+- **Picture → pixels.** "Convert to pixels…" turns your picture into pixel art on the sprite's grid, right where the
+  picture sits behind the pixels. Sliders tune it while you watch: how dark counts as ink and how much ink makes a
+  line pixel, removing the paper, how many colours (or snap to the sprite's or the game's colours), colour boost, and
+  an outline around the shape. Apply puts the result in a new layer to touch up by hand.
+
 ## 0.17.1 — 2026-10-13
 - **Pixel Editor button** on the title screen and in Settings (so also from the in-game menu). It opens the editor in
   a new tab; where the browser does not allow that, it saves your campaign and opens the editor in the same tab.

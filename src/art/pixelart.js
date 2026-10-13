@@ -2,6 +2,8 @@
  *   index.js    HB.pixelArt.index([...file names])            (written by the editor)
  *   <id>.js     HB.pixelArt.add({ id, kind, w, h, anchor, palette, frames: [{ rows: [...] }] })
  * A row is one character per pixel: '.' is transparent, otherwise ALPHABET[i] is palette[i].
+ * A drawing with layers stores layers: [{ name, hidden?, frames: [{ rows }] }] (bottom first) instead of frames; the
+ * game flattens the visible ones (a pixel comes from the topmost layer that has one; hidden layers stay out).
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
@@ -18,7 +20,16 @@
   const PA = HB.pixelArt = {
     ALPHABET, DRAFTS, files: [], entries: new Map(), loaded: null, base: 'assets/pixelart/',
     index(list) { PA.files = Array.isArray(list) ? list.filter(f => typeof f === 'string' && /^[\w.~-]+\.js$/.test(f)) : []; },
-    add(def) { if (def && typeof def.id === 'string') PA.entries.set(def.id, def); },
+    add(def) { if (def && typeof def.id === 'string') { if (Array.isArray(def.layers) && !def.frames) def.frames = PA.flatten(def); PA.entries.set(def.id, def); } },
+    /** a layered drawing's visible layers merged into frames (the topmost pixel wins) */
+    flatten(def) {
+      const layers = def.layers.filter(l => l && !l.hidden && Array.isArray(l.frames)), n = Math.max(0, ...def.layers.map(l => (l && l.frames ? l.frames.length : 0))), w = def.w | 0, h = def.h | 0;
+      return Array.from({ length: Math.max(1, n) }, (_, k) => ({ rows: Array.from({ length: h }, (_, y) => {
+        let row = '';
+        for (let x = 0; x < w; x++) { let ch = '.'; for (let i = layers.length - 1; i >= 0; i--) { const f = layers[i].frames[k], c = f && f.rows && f.rows[y] ? f.rows[y][x] : '.'; if (c && c !== '.') { ch = c; break; } } row += ch; }
+        return row;
+      }) }));
+    },
     /** the file a sprite id is stored in ('|' and other odd characters become '~') */
     fileOf(id) { return id.replace(/[^\w.-]/g, '~') + '.js'; },
     script(src) { return new Promise((ok) => { const s = document.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); document.head.appendChild(s); }); },

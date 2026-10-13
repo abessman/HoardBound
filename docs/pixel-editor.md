@@ -39,7 +39,24 @@ commit by hand.
   to draw over. Set its opacity and size, **Move it** (then drag on the canvas), show it **On top** of the pixels, or
   remove it (✕). The eyedropper picks its colours where a pixel is still empty. Each sprite keeps its own picture in
   this browser (not saved to GitHub).
-- **Preview:** ▶ Play runs the animation at its game speed (fps is saved with the sprite), at 1–4× over a raid,
+- **Layers** (right side): give a sprite a few named layers, for example a sketch, the lines and the colours. You
+  draw on the highlighted one; tap a layer to switch, ◉ / ◌ to show or hide it, **+ New**, **Dup**, ▲ ▼ to reorder,
+  **Rename**, **Merge down**, **Delete** (all undoable). Frames belong to every layer: adding, duplicating, deleting or
+  moving a frame does it in all of them, and **Copy frame / Paste frame** carry every layer. The layers are saved in
+  the sprite's file, so they are all there next time, on any device. The game shows the visible layers merged (a pixel
+  comes from the topmost layer that has one); **hidden layers stay out of the game**, so a hidden sketch layer is safe.
+- **Picture → pixels:** **Convert to pixels…** turns your picture into pixel art on this sprite's grid, exactly where
+  the picture sits behind the pixels (size and move it first with the Image behind controls; set the canvas size with
+  **Resize**). With no picture yet it asks for one. Each pixel looks at the part of the picture under it:
+  - **Dark lines** sets how dark counts as ink, and **Line pickup** how much of a pixel must be ink to become a line
+    pixel (lower keeps thin lines, higher only bold ones). Lines take the **Line colour**.
+  - **Remove background** drops the paper (the colour of the picture's corners) within that tolerance (0 keeps it).
+  - **Colours** is how many colours the rest is reduced to; **Palette** can instead snap to this sprite's colours or
+    the game's. **Colour boost** makes the colours richer (pixel art likes them strong). **Outline the shape** adds a
+    line around the outside.
+  - The preview updates as you move a slider (untick *preview* to compare with the picture). **Apply** puts the
+    result in a new layer called "converted" (or replaces this layer's frame); touch it up by hand, or undo and try
+    other settings. ⇆ moves the panel to the other side. (fps is saved with the sprite), at 1–4× over a raid,
   parchment, dark or checker background. **Sample map** shows your map symbols scattered over parchment at map zoom.
 - **Dragons in game ↗ / Lair in game ↗ / Map in game ↗** open the game's dragon sheet, a test campaign's lair (the
   right dragon size, the rooms view for room art, asleep for the sleeping pose) or the map preview, with your unsaved
@@ -92,6 +109,8 @@ HB.pixelArt && HB.pixelArt.add({
  ]
 });
 ```
+A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "name": "sketch", "hidden": true, ... }]`
+(bottom layer first) instead of `"frames"`; the game merges the visible ones.
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and
 `flip` (may be mirrored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from
 `file://` too (`src/art/pixelart.js`). Safe to edit by hand; the editor rewrites a file when you save that sprite.

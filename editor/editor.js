@@ -40,25 +40,45 @@
   const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, refs: [], ghosts: [] };
   const hexOf = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
   const rgbOf = (hex) => { const v = PA.hex(hex); return v ? [v[0], v[1], v[2]] : [0, 0, 0]; };
+  // A document has layers (bottom first), each with the same frames: [{ name, hidden, frames: [Uint8Array] }].
+  // doc.frames is the active layer's frames (the drawing tools work on it); useLayer keeps the two in step.
+  const blank = (d) => new Uint8Array(d.w * d.h).fill(CLEAR);
+  function decodeFrames(list, w, h) { return (list && list.length ? list : [{ rows: [] }]).map((f) => { const a = new Uint8Array(w * h).fill(CLEAR); ((f && f.rows) || []).forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const i = AL.indexOf(row[x]); if (i >= 0) a[y * w + x] = i; } }); return a; }); }
+  function useLayer(d, i) { d.layer = HB.clamp(i, 0, d.layers.length - 1); d.frames = d.layers[d.layer].frames; }
   function fromDef(def) {
-    const w = def.w | 0, h = def.h | 0, frames = (def.frames || [{ rows: [] }]).map((f) => { const a = new Uint8Array(w * h).fill(CLEAR); (f.rows || []).forEach((row, y) => { for (let x = 0; x < Math.min(w, row.length); x++) { const i = AL.indexOf(row[x]); if (i >= 0) a[y * w + x] = i; } }); return a; });
-    return { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), frames, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, undo: [], redo: [] };
+    const w = def.w | 0, h = def.h | 0;
+    const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
+    const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
+    const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, undo: [], redo: [] };
+    useLayer(doc, layers.length - 1); return doc;
+  }
+  /** the picture the game shows for frame k: visible layers merged, the topmost pixel wins (active: a stand-in for the active layer's frame) */
+  function flat(d, k, active) {
+    const out = new Uint8Array(d.w * d.h).fill(CLEAR);
+    d.layers.forEach((l, i) => { if (l.hidden) return; const f = i === d.layer && active ? active : l.frames[k]; if (!f) return; for (let j = 0; j < out.length; j++) if (f[j] !== CLEAR) out[j] = f[j]; });
+    return out;
   }
   function toDef(doc) {
     const def = { id: doc.id, kind: doc.kind, w: doc.w, h: doc.h, anchor: doc.anchor.slice(), fps: doc.fps };
     if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.flip = true; }
     if (doc.kind === 'dragon' && doc.bodyLength) def.bodyLength = doc.bodyLength;
     // keep only colours in use, in order
-    const used = new Set(); for (const f of doc.frames) for (const v of f) if (v !== CLEAR) used.add(v);
+    const used = new Set(); for (const l of doc.layers) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
     const keep = [...used].sort((a, b) => a - b), remap = new Map(keep.map((v, i) => [v, i]));
     def.palette = keep.map(i => doc.palette[i]);
-    def.frames = doc.frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : AL[remap.get(v)]; } return s; }) }));
+    const enc = (frames) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : AL[remap.get(v)]; } return s; }) }));
+    // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
+    const L = doc.layers;
+    if (L.length === 1 && !L[0].hidden && L[0].name === 'Layer 1') def.frames = enc(L[0].frames);
+    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, { frames: enc(l.frames) }));
     return def;
   }
   /** the file for one sprite: JSON with one field per line and each frame's rows as a grid (easy to read and diff) */
+  const framesText = (v, ind) => `[\n${v.map(f => `${ind} { "rows": [\n${f.rows.map(r => ind + '  ' + JSON.stringify(r)).join(',\n')}\n${ind} ] }`).join(',\n')}\n${ind}]`;
   const fileText = (def) => {
-    const fields = Object.entries(def).map(([k, v]) => k !== 'frames' ? ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`
-      : ` "frames": [\n${v.map(f => `  { "rows": [\n${f.rows.map(r => '   ' + JSON.stringify(r)).join(',\n')}\n  ] }`).join(',\n')}\n ]`);
+    const fields = Object.entries(def).map(([k, v]) => k === 'frames' ? ` "frames": ${framesText(v, ' ')}`
+      : k === 'layers' ? ` "layers": [\n${v.map(l => `  { "name": ${JSON.stringify(l.name)},${l.hidden ? ' "hidden": true,' : ''} "frames": ${framesText(l.frames, '   ')} }`).join(',\n')}\n ]`
+        : ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     return `/* HoardBound pixel art: ${def.id}. Made with the pixel editor (editor/index.html); safe to edit by hand: '.' is clear, other characters index the palette. */\nHB.pixelArt && HB.pixelArt.add({\n${fields.join(',\n')}\n});\n`;
   };
   const indexText = (files) => `/* Pixel art made with the editor (editor/index.html): the list of sprite files in this folder. Written by the editor. */\nHB.pixelArt && HB.pixelArt.index(${JSON.stringify(files, null, 1)});\n`;
@@ -113,21 +133,24 @@
   }
   /** a new sprite: the game's size and anchor, blank frames, the game's drawing shown faintly behind (From game art copies it) */
   function newDoc(item) {
-    const doc = { id: item.id, kind: item.kind, w: 16, h: 16, anchor: [8, 16], palette: [item.kind === 'map' ? '#2b1a0e' : '#2a1c22'], frames: [], fps: item.fps, scale: 1, flip: item.kind === 'map' && item.id.startsWith('map.terrain'), bodyLength: null, undo: [], redo: [], fresh: true };
+    const doc = { id: item.id, kind: item.kind, w: 16, h: 16, anchor: [8, 16], palette: [item.kind === 'map' ? '#2b1a0e' : '#2a1c22'], layers: [], fps: item.fps, scale: 1, flip: item.kind === 'map' && item.id.startsWith('map.terrain'), bodyLength: null, undo: [], redo: [], fresh: true };
     const art = gameArt(item, null);
     if (art) { doc.w = art.w; doc.h = art.h; doc.anchor = art.anchor.slice(); doc.bodyLength = art.bodyLength || null; }
-    doc.frames = Array.from({ length: Math.max(1, item.frames) }, () => new Uint8Array(doc.w * doc.h).fill(CLEAR));
-    return doc;
+    doc.layers = [{ name: 'Layer 1', hidden: false, frames: Array.from({ length: Math.max(1, item.frames) }, () => blank(doc)) }];
+    useLayer(doc, 0); return doc;
   }
 
   // =====================================================================================================
   // Editing primitives (with undo)
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
-  function snapshot() { const d = D(); return { frames: d.frames.map(f => f.slice()), w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale }; }
-  function restore(s) { const d = D(); d.frames = s.frames.map(f => f.slice()); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); S.frame = Math.min(s.frame, d.frames.length - 1); if (s.palette) { d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; } d._rev = (d._rev || 0) + 1; }
+  const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, frames: l.frames.map(f => f.slice()) }));
+  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale }; }
+  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d._rev = (d._rev || 0) + 1; }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
-  const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length))));
+  const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length * d.layers.length))));
+  /** change every layer's frames (frame structure, size, shifting), keeping doc.frames on the active layer */
+  function eachLayer(d, fn) { for (const l of d.layers) l.frames = fn(l.frames, l); useLayer(d, d.layer); }
   function pushUndo() { const d = D(); d.undo.push(snapshot()); while (d.undo.length > undoCap(d)) d.undo.shift(); d.redoKept = d.redo; d.redo = []; d.fresh = false; }
   /** take back the step just pushed (the first finger of a two- or three-finger tap), keeping what could be redone */
   function dropLastStep() { const d = D(); restore(d.undo.pop()); if (d.redoKept) d.redo = d.redoKept; d.redoKept = null; }
@@ -184,12 +207,12 @@
   function resize(w, h) {
     const d = D(); w = Math.max(1, Math.min(512, w | 0)); h = Math.max(1, Math.min(512, h | 0)); if (w === d.w && h === d.h) return;
     pushUndo(); commitFloat();
-    d.frames = d.frames.map(f => { const o = new Uint8Array(w * h).fill(CLEAR); for (let y = 0; y < Math.min(h, d.h); y++) for (let x = 0; x < Math.min(w, d.w); x++) o[y * w + x] = f[y * d.w + x]; return o; });
+    eachLayer(d, fr => fr.map(f => { const o = new Uint8Array(w * h).fill(CLEAR); for (let y = 0; y < Math.min(h, d.h); y++) for (let x = 0; x < Math.min(w, d.w); x++) o[y * w + x] = f[y * d.w + x]; return o; }));
     d.w = w; d.h = h; d.anchor = d.kind === 'sprite' ? [w >> 1, h] : [Math.min(d.anchor[0], w), Math.min(d.anchor[1], h)]; S.sel = null; fit(); changed(true);
   }
   function shiftAll(dx, dy) {
     const d = D(); pushUndo(); commitFloat();
-    d.frames = d.frames.map(f => { const o = new Uint8Array(d.w * d.h).fill(CLEAR); for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const X = x - dx, Y = y - dy; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h) o[y * d.w + x] = f[Y * d.w + X]; } return o; });
+    eachLayer(d, fr => fr.map(f => { const o = new Uint8Array(d.w * d.h).fill(CLEAR); for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const X = x - dx, Y = y - dy; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h) o[y * d.w + x] = f[Y * d.w + X]; } return o; }));
     changed(true);
   }
 
@@ -220,11 +243,13 @@
     // your picture, the game's drawing behind (to trace), the previous frame (onion skin), the frame, floating pixels
     const ri = curRef(); if (ri && !ri.front) drawRef(ri, X, Y, z);
     if (S.ref && S.ghosts.length) { ctx.globalAlpha = 0.32; ctx.imageSmoothingEnabled = d.kind === 'map'; ctx.drawImage(S.ghosts[Math.min(S.frame, S.ghosts.length - 1)], X, Y, W, H); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
-    if (S.onion && S.frame > 0) { ctx.globalAlpha = 0.25; ctx.drawImage(frameCanvas(d, d.frames[S.frame - 1]), X, Y, W, H); ctx.globalAlpha = 1; }
-    ctx.drawImage(frameCanvas(d, F()), X, Y, W, H);
+    if (S.onion && S.frame > 0) { ctx.globalAlpha = 0.25; ctx.drawImage(frameCanvas(d, flat(d, S.frame - 1)), X, Y, W, H); ctx.globalAlpha = 1; }
+    // the layers, bottom first; the active one drawn faintly if it is hidden, so drawing on it is never invisible
+    d.layers.forEach((l, i) => { if (l.hidden && i !== d.layer) return; if (l.hidden) ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(d, l.frames[S.frame]), X, Y, W, H); ctx.globalAlpha = 1; });
     if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
     if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: d.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
     if (ri && ri.front) drawRef(ri, X, Y, z);
+    if (CV.open && CV.canvas && $('cv-show').checked) { ctx.drawImage(CV.canvas, X, Y, W, H); if (ri && CV.key !== convKey(d, ri, cvOpts())) scheduleConvert(); }
     ctx.restore();
     // grid
     if (S.grid && z >= 6) { ctx.strokeStyle = 'rgba(60,40,20,0.12)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = 0; x <= d.w; x++) { ctx.moveTo(X + x * z + 0.5, Y); ctx.lineTo(X + x * z + 0.5, Y + H); } for (let y = 0; y <= d.h; y++) { ctx.moveTo(X, Y + y * z + 0.5); ctx.lineTo(X + W, Y + y * z + 0.5); } ctx.stroke(); }
@@ -320,7 +345,7 @@
     if (st.t === 'select') { draw(); return; }
     changed();
   }
-  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = F()[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
+  function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return; const v = flat(d, S.frame)[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
   const DRAWING = ['pencil', 'fill', 'line', 'rect', 'rectf', 'ellipse', 'ellipsef'];
 
   // =====================================================================================================
@@ -334,7 +359,7 @@
   const curRef = () => (S.item && refImgs.get(S.item.id)) || null;
   function saveRef(id) { const r = refImgs.get(id); if (r) idbDo('readwrite', st => st.put({ blob: r.blob, fit: r.fit, scale: r.scale, x: r.x, y: r.y, opacity: r.opacity, front: !!r.front }, id)); }
   async function loadRefImg(id) {
-    S.refMove = false; renderRefCtl();
+    S.refMove = false; renderRefCtl(); if (CV.open) closeConvert();
     if (refImgs.has(id)) return;
     const v = await idbDo('readonly', st => st.get(id)); if (!v || !v.blob) return;
     try { const img = await blobImage(v.blob); refImgs.set(id, Object.assign({}, v, { img })); if (S.item && S.item.id === id) { renderRefCtl(); draw(); } } catch (e) { /* unreadable */ }
@@ -359,7 +384,8 @@
     try {
       const img = await blobImage(f), fit = Math.min(d.w / img.width, d.h / img.height);
       refImgs.set(d.id, { img, blob: f, fit, scale: fit, x: (d.w - img.width * fit) / 2, y: (d.h - img.height * fit) / 2, opacity: 0.5, front: false });
-      saveRef(d.id); renderRefCtl(); draw(); toast('Your picture is behind the pixels: draw over it. The eyedropper picks its colours where a pixel is empty.', 5000);
+      saveRef(d.id); renderRefCtl(); draw();
+      if (CV.openAfterLoad) { CV.openAfterLoad = false; openConvert(); } else toast('Your picture is behind the pixels: draw over it. The eyedropper picks its colours where a pixel is empty.', 5000);
     } catch (err) { toast('Could not read that image'); }
   };
   $('in-refop').oninput = (e) => { const r = curRef(); if (!r) return; r.opacity = +e.target.value / 100; draw(); };
@@ -368,6 +394,125 @@
   $('btn-refmove').onclick = () => { S.refMove = !S.refMove; renderRefCtl(); if (S.refMove) toast('Drag on the canvas to move your picture; tap Move it again to draw'); };
   $('btn-reffront').onclick = () => { const r = curRef(); if (!r) return; r.front = !r.front; saveRef(S.item.id); renderRefCtl(); draw(); };
   $('btn-refdel').onclick = () => { if (!S.item) return; refImgs.delete(S.item.id); idbDo('readwrite', st => st.delete(S.item.id)); S.refMove = false; renderRefCtl(); draw(); };
+
+  // =====================================================================================================
+  // Picture → pixels: your picture, where it sits on the grid, turned into pixel art and tuned with sliders.
+  // Each grid pixel looks at the part of the picture under it (k×k samples): enough dark ink makes it a line pixel,
+  // paper-coloured samples make it clear, otherwise it takes the average colour; colours are then reduced.
+  // =====================================================================================================
+  const CV = { open: false, grid: null, canvas: null, key: '', raf: 0, openAfterLoad: false };
+  const cvOpts = () => ({ n: +$('cv-n').value, pal: $('cv-pal').value, dark: +$('cv-dark').value, cover: +$('cv-cover').value, bg: +$('cv-bg').value, sat: +$('cv-sat').value / 100, line: $('cv-line').value.toLowerCase(), outline: $('cv-outline').checked });
+  const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
+  const cdist2 = (a, b) => 2 * (a[0] - b[0]) ** 2 + 4 * (a[1] - b[1]) ** 2 + 3 * (a[2] - b[2]) ** 2; // green counts most, as for the eye
+  const boost = (c, k) => { const m = (c[0] + c[1] + c[2]) / 3; return c.map(v => HB.clamp(Math.round(m + (v - m) * k), 0, 255)); };
+  /** the picture sampled k×k times under every grid pixel, where it sits (kept until it moves or the canvas changes) */
+  function samples(d, ri) {
+    const k = HB.clamp(Math.floor(Math.sqrt(1.6e6 / (d.w * d.h))), 2, 10), key = [d.w, d.h, ri.x, ri.y, ri.scale, k].join(',');
+    if (ri.cvs && ri.cvs.key === key) return ri.cvs;
+    const c = document.createElement('canvas'); c.width = d.w * k; c.height = d.h * k;
+    const g = c.getContext('2d'); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.drawImage(ri.img, ri.x * k, ri.y * k, ri.img.width * ri.scale * k, ri.img.height * ri.scale * k);
+    // worked out once per placement, so moving a slider only compares numbers: brightness and distance from the paper
+    const data = g.getImageData(0, 0, c.width, c.height).data, N = c.width * c.height, lum = new Uint8Array(N), pd = new Uint16Array(N).fill(65535), paper = paperOf(ri);
+    for (let i = 0, o = 0; i < N; i++, o += 4) {
+      if (data[o + 3] < 128) { lum[i] = 255; pd[i] = 0; continue; } // see-through: treated as paper
+      const R = data[o], G = data[o + 1], B = data[o + 2]; lum[i] = Math.round(luma(R, G, B));
+      if (paper) pd[i] = Math.min(65535, Math.round(Math.sqrt((2 * (R - paper[0]) ** 2 + 4 * (G - paper[1]) ** 2 + 3 * (B - paper[2]) ** 2) / 9)));
+    }
+    return (ri.cvs = { key, k, W: c.width, data, lum, pd });
+  }
+  /** the paper's colour: the picture's corners, averaged over those that agree (null if they are see-through) */
+  function paperOf(ri) {
+    if (ri.paper !== undefined) return ri.paper;
+    const w = Math.min(ri.img.width, 400), h = Math.max(1, Math.round(ri.img.height * w / ri.img.width)), c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.drawImage(ri.img, 0, 0, w, h);
+    const sz = Math.max(1, Math.min(6, w >> 2, h >> 2)), pts = [[0, 0], [w - sz, 0], [0, h - sz], [w - sz, h - sz]].map(([x, y]) => { const px = g.getImageData(x, y, sz, sz).data, n = px.length / 4, t = [0, 0, 0, 0]; for (let i = 0; i < px.length; i++) t[i % 4] += px[i]; return t.map(v => v / n); });
+    const solid = pts.filter(q => q[3] > 128); if (!solid.length) return (ri.paper = null);
+    const best = solid.map(q => [q, solid.filter(r => cdist2(q, r) < 2400).length]).sort((a, b) => b[1] - a[1])[0][0], near = solid.filter(r => cdist2(best, r) < 2400);
+    return (ri.paper = [0, 1, 2].map(i => near.reduce((t, r) => t + r[i], 0) / near.length));
+  }
+  /** n representative colours: median cut over the (weighted) colours, then two k-means passes */
+  function reduceColours(cols, n) {
+    const buckets = new Map();
+    for (const c of cols) { const key = (c[0] >> 3) << 10 | (c[1] >> 3) << 5 | (c[2] >> 3), b = buckets.get(key); if (b) { b[0] += c[0]; b[1] += c[1]; b[2] += c[2]; b[3]++; } else buckets.set(key, [c[0], c[1], c[2], 1]); }
+    const pts = [...buckets.values()].map(b => [b[0] / b[3], b[1] / b[3], b[2] / b[3], b[3]]);
+    if (pts.length <= n) return pts.map(p => p.slice(0, 3));
+    let boxes = [pts];
+    const range = (bx, i) => { let lo = 255, hi = 0; for (const p of bx) { if (p[i] < lo) lo = p[i]; if (p[i] > hi) hi = p[i]; } return hi - lo; };
+    while (boxes.length < n) {
+      let bi = -1, bs = -1, ch = 0;
+      boxes.forEach((bx, i) => { if (bx.length < 2) return; for (let c = 0; c < 3; c++) { const sc = range(bx, c) * Math.sqrt(bx.reduce((t, p) => t + p[3], 0)); if (sc > bs) { bs = sc; bi = i; ch = c; } } });
+      if (bi < 0) break;
+      const bx = boxes[bi].sort((a, b) => a[ch] - b[ch]), total = bx.reduce((t, p) => t + p[3], 0); let acc = 0, cut = 1;
+      for (let i = 0; i < bx.length - 1; i++) { acc += bx[i][3]; if (acc >= total / 2) { cut = i + 1; break; } }
+      boxes.splice(bi, 1, bx.slice(0, cut), bx.slice(cut));
+    }
+    let cen = boxes.map(bx => { const t = [0, 0, 0, 0]; for (const p of bx) { t[0] += p[0] * p[3]; t[1] += p[1] * p[3]; t[2] += p[2] * p[3]; t[3] += p[3]; } return [t[0] / t[3], t[1] / t[3], t[2] / t[3]]; });
+    for (let it = 0; it < 2; it++) {
+      const sum = cen.map(() => [0, 0, 0, 0]);
+      for (const p of pts) { let bi = 0, bd = Infinity; cen.forEach((c, i) => { const dd = cdist2(p, c); if (dd < bd) { bd = dd; bi = i; } }); sum[bi][0] += p[0] * p[3]; sum[bi][1] += p[1] * p[3]; sum[bi][2] += p[2] * p[3]; sum[bi][3] += p[3]; }
+      cen = cen.map((c, i) => sum[i][3] ? [sum[i][0] / sum[i][3], sum[i][1] / sum[i][3], sum[i][2] / sum[i][3]] : c);
+    }
+    return cen;
+  }
+  /** the converted picture: '#rrggbb' or null for every grid pixel */
+  function convertPicture(d, ri, o) {
+    const sm = samples(d, ri), k = sm.k, data = sm.data, lum = sm.lum, pd = sm.pd, W2 = sm.W;
+    const darkCut = o.dark * 1.8, tol = o.bg > 0 ? o.bg * 0.7 : -1, need = o.cover / 100, cells = new Array(d.w * d.h).fill(null), cols = [], colAt = [];
+    for (let cy = 0; cy < d.h; cy++) for (let cx = 0; cx < d.w; cx++) {
+      let n = 0, clear = 0, dark = 0, r = 0, g = 0, b = 0, cn = 0;
+      for (let sy = 0; sy < k; sy++) {
+        let si = (cy * k + sy) * W2 + cx * k;
+        for (let sx = 0; sx < k; sx++, si++) {
+          n++;
+          if (pd[si] <= tol || data[si * 4 + 3] < 128) { clear++; continue; }
+          if (lum[si] < darkCut) { dark++; continue; }
+          r += data[si * 4]; g += data[si * 4 + 1]; b += data[si * 4 + 2]; cn++;
+        }
+      }
+      const i = cy * d.w + cx;
+      if (dark / n >= need && dark > 0) cells[i] = 'L';
+      else if (cn >= n * 0.35) { cols.push(boost([r / cn, g / cn, b / cn], o.sat)); colAt.push(i); }
+    }
+    // the colours to use: the picture's own (reduced), this sprite's, or the game's
+    const cand = o.pal === 'sprite' ? d.palette.map(rgbOf) : o.pal === 'game' ? [...new Set(Object.values(HB.px_palette || {}).map(h => String(h).toLowerCase()))].filter(h => /^#[0-9a-f]{6}$/.test(h)).map(rgbOf) : reduceColours(cols, o.n);
+    const hexes = cand.map(c => hexOf(...c.map(v => HB.clamp(Math.round(v), 0, 255))));
+    cols.forEach((c, j) => { let bi = 0, bd = Infinity; cand.forEach((q, qi) => { const dd = cdist2(c, q); if (dd < bd) { bd = dd; bi = qi; } }); cells[colAt[j]] = hexes[bi]; });
+    // an outline around the shape, on the clear pixels next to it
+    if (o.outline) { const add = []; for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const i = y * d.w + x; if (cells[i]) continue; if ((x > 0 && cells[i - 1] && cells[i - 1] !== 'L') || (x < d.w - 1 && cells[i + 1] && cells[i + 1] !== 'L') || (y > 0 && cells[i - d.w] && cells[i - d.w] !== 'L') || (y < d.h - 1 && cells[i + d.w] && cells[i + d.w] !== 'L')) add.push(i); } for (const i of add) cells[i] = 'L'; }
+    return cells.map(v => v === 'L' ? o.line : v);
+  }
+  function runConvert() {
+    CV.raf = 0; const d = D(), ri = curRef(); if (!CV.open || !d || !ri) return;
+    const o = cvOpts(); CV.key = convKey(d, ri, o);
+    CV.grid = convertPicture(d, ri, o);
+    const c = CV.canvas && CV.canvas.width === d.w && CV.canvas.height === d.h ? CV.canvas : document.createElement('canvas'); c.width = d.w; c.height = d.h;
+    const g = c.getContext('2d'), img = g.createImageData(d.w, d.h);
+    CV.grid.forEach((hex, i) => { if (!hex) return; const v = rgbOf(hex), q = i * 4; img.data[q] = v[0]; img.data[q + 1] = v[1]; img.data[q + 2] = v[2]; img.data[q + 3] = 255; });
+    g.putImageData(img, 0, 0); CV.canvas = c;
+    const used = new Set(CV.grid.filter(Boolean)); $('cv-n-v').textContent = o.pal === 'free' ? `${o.n} (+ line)` : `${used.size} used`;
+    draw();
+  }
+  const convKey = (d, ri, o) => [d.id, d.w, d.h, ri.x, ri.y, ri.scale, JSON.stringify(o)].join('|');
+  function scheduleConvert() { if (CV.open && !CV.raf) CV.raf = requestAnimationFrame(runConvert); }
+  function openConvert() {
+    if (!D()) return;
+    if (!curRef()) { CV.openAfterLoad = true; $('in-refimg').click(); toast('Choose a picture to convert'); return; }
+    CV.open = true; $('conv').hidden = false; labelConvert(); runConvert();
+  }
+  function closeConvert() { CV.open = false; CV.grid = null; $('conv').hidden = true; draw(); }
+  function labelConvert() { $('cv-dark-v').textContent = $('cv-dark').value; $('cv-cover-v').textContent = $('cv-cover').value + '%'; $('cv-bg-v').textContent = +$('cv-bg').value ? $('cv-bg').value : 'off'; $('cv-sat-v').textContent = $('cv-sat').value + '%'; }
+  document.querySelectorAll('#conv input, #conv select').forEach(el => { el.addEventListener('input', () => { labelConvert(); if (el.id === 'cv-show') draw(); else scheduleConvert(); }); el.addEventListener('change', () => { if (el.id === 'cv-show') draw(); else scheduleConvert(); }); });
+  $('btn-convert').onclick = openConvert;
+  $('cv-cancel').onclick = closeConvert;
+  $('cv-side').onclick = () => $('conv').classList.toggle('left');
+  $('cv-apply').onclick = () => {
+    const d = D(); if (!d || !CV.grid) return; commitFloat(); pushUndo();
+    if ($('cv-into').value === 'new') { d.layers.splice(d.layer + 1, 0, { name: 'converted', hidden: false, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layer + 1); }
+    const f = blank(d), map = new Map(); CV.grid.forEach((hex, i) => { if (!hex) return; if (!map.has(hex)) map.set(hex, color(d, hex)); f[i] = map.get(hex); });
+    d.frames[S.frame] = f; closeConvert(); renderColors(); changed();
+    toast($('cv-into').value === 'new' ? 'Converted into a new layer, “converted”: touch it up, hide your picture, or undo to try again' : 'Converted into this layer');
+  };
 
   // =====================================================================================================
   // Panels
@@ -384,12 +529,44 @@
     const gp = $('gamepal'); gp.innerHTML = ''; const seen = new Set();
     for (const [name, hex] of Object.entries(HB.px_palette || {})) { const h = String(hex).toLowerCase(); if (!/^#[0-9a-f]{6}$/.test(h) || seen.has(h)) continue; seen.add(h); const s = document.createElement('div'); s.className = 'sw'; s.style.background = h; s.title = `${name} ${h}`; s.onclick = () => { if (!D()) return; S.color = color(D(), h); renderColors(); }; gp.appendChild(s); }
   }
+  /** the layer list, top layer first (as it stacks) */
+  function renderLayers() {
+    const d = D(), box = $('layers'); box.innerHTML = ''; if (!d) return;
+    for (let i = d.layers.length - 1; i >= 0; i--) {
+      const l = d.layers[i], el = document.createElement('div'); el.className = 'ly' + (i === d.layer ? ' cur' : '') + (l.hidden ? ' off' : '');
+      const eye = document.createElement('button'); eye.className = 'eye'; eye.textContent = l.hidden ? '◌' : '◉'; eye.title = l.hidden ? 'Hidden (left out of the game): tap to show' : 'Shown: tap to hide';
+      eye.onclick = (e) => { e.stopPropagation(); pushUndo(); l.hidden = !l.hidden; changed(); };
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = l.name;
+      el.append(eye, nm); el.onclick = () => selectLayer(i); el.ondblclick = () => { selectLayer(i); renameLayer(); };
+      box.appendChild(el);
+    }
+    $('ly-merge').disabled = d.layer === 0; $('ly-del').disabled = d.layers.length < 2;
+    $('ly-up').disabled = d.layer >= d.layers.length - 1; $('ly-down').disabled = d.layer === 0;
+  }
+  function selectLayer(i) { const d = D(); if (!d || i === d.layer) return; commitFloat(); S.sel = null; useLayer(d, i); renderLayers(); draw(); }
+  function renameLayer() {
+    const d = D(); if (!d) return; const l = d.layers[d.layer];
+    const v = (prompt('Name this layer', l.name) || '').trim().slice(0, 40); if (!v || v === l.name) return;
+    pushUndo(); l.name = v; changed();
+  }
+  $('ly-add').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.splice(d.layer + 1, 0, { name: `Layer ${d.layers.length + 1}`, hidden: false, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layer + 1); changed(); };
+  $('ly-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); const l = d.layers[d.layer]; d.layers.splice(d.layer + 1, 0, { name: `${l.name} copy`, hidden: l.hidden, frames: l.frames.map(f => f.slice()) }); useLayer(d, d.layer + 1); changed(); };
+  const moveLayer = (dir) => { const d = D(), j = d ? d.layer + dir : -1; if (!d || j < 0 || j >= d.layers.length) return; commitFloat(); pushUndo(); [d.layers[d.layer], d.layers[j]] = [d.layers[j], d.layers[d.layer]]; useLayer(d, j); changed(); };
+  $('ly-up').onclick = () => moveLayer(1); $('ly-down').onclick = () => moveLayer(-1);
+  $('ly-rename').onclick = renameLayer;
+  $('ly-merge').onclick = () => {
+    const d = D(); if (!d || d.layer === 0) return; commitFloat(); pushUndo();
+    const top = d.layers[d.layer], below = d.layers[d.layer - 1];
+    below.frames.forEach((f, k) => { const t = top.frames[k]; for (let i = 0; i < f.length; i++) if (t[i] !== CLEAR) f[i] = t[i]; });
+    d.layers.splice(d.layer, 1); useLayer(d, d.layer - 1); changed(); toast(`Merged “${top.name}” into “${below.name}”`);
+  };
+  $('ly-del').onclick = () => { const d = D(); if (!d || d.layers.length < 2) return; commitFloat(); pushUndo(); const l = d.layers.splice(d.layer, 1)[0]; useLayer(d, Math.min(d.layer, d.layers.length - 1)); changed(); toast(`Deleted “${l.name}” (Undo brings it back)`); };
   function renderFrames() {
     const d = D(), box = $('frames'); box.innerHTML = ''; if (!d) return;
     const label = d.kind === 'map' ? 'variant' : 'frame', fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
-    d.frames.forEach((f, k) => {
+    d.frames.forEach((_, k) => {
       const el = document.createElement('div'); el.className = 'fr' + (k === S.frame ? ' cur' : '');
-      let c = frameCanvas(d, f);
+      const f = flat(d, k); let c = frameCanvas(d, f);
       if (S.ref && S.ghosts.length && f.every(v => v === CLEAR)) { const g = document.createElement('canvas'); g.width = Math.max(1, Math.round(d.w * sc)); g.height = Math.max(1, Math.round(d.h * sc)); const x = g.getContext('2d'); x.globalAlpha = 0.3; x.drawImage(S.ghosts[Math.min(k, S.ghosts.length - 1)], 0, 0, g.width, g.height); c = g; }
       c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
       const cap = document.createElement('div'); const it = S.item, unused = it && k >= it.frames && (it.kind === 'dragon' || it.kind === 'sprite' || (it.entry && it.entry.framesAre === 'levels'));
@@ -436,7 +613,7 @@
     if (D()) { D().fresh = false; D()._rev = (D()._rev || 0) + 1; }
     draw();
     if (light) return; // mid-stroke: the rest refreshes on release
-    renderFrames(); renderInfo(); renderUndo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
+    renderFrames(); renderLayers(); renderInfo(); renderUndo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
     void structure;
   }
   function setRefs(art) { S.refs = art ? art.canvases : []; S.ghosts = art ? art.ghosts : []; }
@@ -448,7 +625,7 @@
     if (doc.fresh) S.ref = true;
     $('chk-ref').checked = S.ref;
     loadRefImg(item.id);
-    fit(); renderColors(); renderFrames(); renderInfo(); renderUndo(); renderList(); draw();
+    fit(); renderColors(); renderFrames(); renderLayers(); renderInfo(); renderUndo(); renderList(); draw();
     try { localStorage.setItem('hb.editor.last', item.id); } catch (e) { /* private mode */ }
   }
 
@@ -476,7 +653,7 @@
     const kind = $('in-bg').value, W = pv.width, H = pv.height; bg(kind);
     // big pictures (the lair's) shrink to fit the preview; backdrops (anchor at the corner) are centred
     const sc = Math.min(+$('in-pscale').value, W * 0.96 / d.w, H * 0.96 / d.h), backdrop = d.anchor[0] === 0 && d.anchor[1] === 0;
-    const n = d.frames.length, k = S.playing ? Math.floor(S.playT * (d.fps || 2)) % n : S.frame, c = frameCanvas(d, k === S.frame && S.float ? withFloat() : d.frames[k]);
+    const n = d.frames.length, k = S.playing ? Math.floor(S.playT * (d.fps || 2)) % n : S.frame, c = frameCanvas(d, flat(d, k, k === S.frame && S.float ? withFloat() : null));
     const gy = kind === 'raid' ? Math.round(H * 0.72) : Math.round(H * 0.6);
     const ax = backdrop ? (W - d.w * sc) / 2 : W / 2 - d.anchor[0] * sc, ay = backdrop ? (H - d.h * sc) / 2 : (d.kind === 'dragon' ? Math.round(H * 0.42) : Math.min(gy, H - 4 - (d.h - d.anchor[1]) * sc)) - d.anchor[1] * sc;
     pg.drawImage(c, Math.round(ax), Math.round(ay), Math.round(d.w * sc), Math.round(d.h * sc));
@@ -497,7 +674,7 @@
       spots.push({ d, x: x + R.range(-0.3, 0.3) * step, y: y + R.range(-0.25, 0.25) * step, k: R.int(64), fl: d.flip && R.chance(0.5) });
     }
     spots.sort((a, b) => a.y - b.y);
-    for (const p of spots) { const d = p.d, c = frameCanvas(d, d.frames[p.k % d.frames.length]), s = d.scale * z; pg.save(); pg.translate(Math.round(p.x), Math.round(p.y)); if (p.fl) pg.scale(-1, 1); pg.drawImage(c, -d.anchor[0] * s, -d.anchor[1] * s, d.w * s, d.h * s); pg.restore(); }
+    for (const p of spots) { const d = p.d, c = frameCanvas(d, flat(d, p.k % d.frames.length)), s = d.scale * z; pg.save(); pg.translate(Math.round(p.x), Math.round(p.y)); if (p.fl) pg.scale(-1, 1); pg.drawImage(c, -d.anchor[0] * s, -d.anchor[1] * s, d.w * s, d.h * s); pg.restore(); }
     pg.fillStyle = 'rgba(43,26,14,0.6)'; pg.font = '11px system-ui'; pg.fillText(`map zoom ${z} · ${maps.length} symbol${maps.length === 1 ? '' : 's'} drawn`, 6, 14);
   }
 
@@ -593,7 +770,7 @@
   $('in-brush').onchange = (e) => { S.brush = +e.target.value; };
   $('chk-mirror').onchange = (e) => { S.mirror = e.target.checked; };
   $('in-color').oninput = (e) => { if (!D()) return; S.color = color(D(), e.target.value); renderColors(); };
-  $('btn-recolor').onclick = () => { const d = D(); if (!d || S.color === CLEAR) return; pushUndo(); const hex = $('in-color').value.toLowerCase(), was = d.palette[S.color]; const other = d.palette.indexOf(hex); if (other >= 0 && other !== S.color) { for (const f of d.frames) for (let i = 0; i < f.length; i++) if (f[i] === S.color) f[i] = other; S.color = other; } else d.palette[S.color] = hex; renderColors(); changed(); toast(`${was} → ${hex}`); };
+  $('btn-recolor').onclick = () => { const d = D(); if (!d || S.color === CLEAR) return; pushUndo(); const hex = $('in-color').value.toLowerCase(), was = d.palette[S.color]; const other = d.palette.indexOf(hex); if (other >= 0 && other !== S.color) { for (const l of d.layers) for (const f of l.frames) for (let i = 0; i < f.length; i++) if (f[i] === S.color) f[i] = other; S.color = other; } else d.palette[S.color] = hex; renderColors(); changed(); toast(`${was} → ${hex}`); };
   $('btn-undo').onclick = undo; $('btn-redo').onclick = redo;
   $('btn-copy').onclick = () => copy(false); $('btn-cut').onclick = () => copy(true); $('btn-paste').onclick = paste; $('btn-del').onclick = deleteSel;
   $('btn-flip').onclick = () => flip(false); $('btn-flipv').onclick = () => flip(true);
@@ -604,13 +781,25 @@
   $('zoom-in').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.5); };
   $('zoom-out').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.5); };
   $('zoom-fit').onclick = () => { fit(); draw(); };
-  $('fr-add').onclick = () => { const d = D(); if (!d) return; pushUndo(); commitFloat(); d.frames.splice(S.frame + 1, 0, new Uint8Array(d.w * d.h).fill(CLEAR)); S.frame++; changed(true); };
-  $('fr-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.frames.splice(S.frame + 1, 0, F().slice()); S.frame++; changed(true); };
-  $('fr-del').onclick = () => { const d = D(); if (!d || d.frames.length < 2) { toast('A sprite keeps at least one frame'); return; } pushUndo(); S.float = null; d.frames.splice(S.frame, 1); S.frame = Math.max(0, S.frame - 1); changed(true); };
-  const moveFrame = (dir) => { const d = D(), j = S.frame + dir; if (!d || j < 0 || j >= d.frames.length) return; pushUndo(); commitFloat(); [d.frames[S.frame], d.frames[j]] = [d.frames[j], d.frames[S.frame]]; S.frame = j; changed(true); };
+  // frames belong to every layer: adding, duplicating, deleting and moving a frame does it in all of them
+  $('fr-add').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); eachLayer(d, fr => { fr.splice(S.frame + 1, 0, blank(d)); return fr; }); S.frame++; changed(true); };
+  $('fr-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); eachLayer(d, fr => { fr.splice(S.frame + 1, 0, fr[S.frame].slice()); return fr; }); S.frame++; changed(true); };
+  $('fr-del').onclick = () => { const d = D(); if (!d || d.frames.length < 2) { toast('A sprite keeps at least one frame'); return; } pushUndo(); S.float = null; eachLayer(d, fr => { fr.splice(S.frame, 1); return fr; }); S.frame = Math.max(0, S.frame - 1); changed(true); };
+  const moveFrame = (dir) => { const d = D(), j = S.frame + dir; if (!d || j < 0 || j >= d.frames.length) return; commitFloat(); pushUndo(); eachLayer(d, fr => { [fr[S.frame], fr[j]] = [fr[j], fr[S.frame]]; return fr; }); S.frame = j; changed(true); };
   $('fr-left').onclick = () => moveFrame(-1); $('fr-right').onclick = () => moveFrame(1);
-  $('fr-copy').onclick = () => { if (!D()) return; commitFloat(); S.frameClip = { data: F().slice(), w: D().w, h: D().h, colors: D().palette.slice() }; toast('Frame copied'); };
-  $('fr-paste').onclick = () => { const d = D(), c = S.frameClip; if (!d || !c) { toast('Copy a frame first'); return; } pushUndo(); S.float = null; const m = remapClip(c), f = new Uint8Array(d.w * d.h).fill(CLEAR); for (let y = 0; y < Math.min(c.h, d.h); y++) for (let x = 0; x < Math.min(c.w, d.w); x++) f[y * d.w + x] = m[y * c.w + x]; d.frames[S.frame] = f; changed(); };
+  // a copied frame keeps its layers; pasting puts each into the layer at the same place (adding layers if needed)
+  $('fr-copy').onclick = () => { const d = D(); if (!d) return; commitFloat(); S.frameClip = { layers: d.layers.map(l => ({ name: l.name, data: l.frames[S.frame].slice() })), w: d.w, h: d.h, colors: d.palette.slice() }; toast(d.layers.length > 1 ? `Frame copied (${d.layers.length} layers)` : 'Frame copied'); };
+  $('fr-paste').onclick = () => {
+    const d = D(), c = S.frameClip; if (!d || !c) { toast('Copy a frame first'); return; }
+    pushUndo(); S.float = null;
+    c.layers.forEach((cl, i) => {
+      if (!d.layers[i]) d.layers.push({ name: cl.name, hidden: false, frames: d.frames.map(() => blank(d)) });
+      const m = remapClip({ data: cl.data, colors: c.colors }), f = blank(d);
+      for (let y = 0; y < Math.min(c.h, d.h); y++) for (let x = 0; x < Math.min(c.w, d.w); x++) f[y * d.w + x] = m[y * c.w + x];
+      d.layers[i].frames[S.frame] = f;
+    });
+    useLayer(d, d.layer); renderLayers(); changed();
+  };
   $('fr-ref').onclick = () => { const d = D(); if (!d || !S.refs.length) return; pushUndo(); const rc = S.refs[Math.min(S.frame, S.refs.length - 1)]; d.frames[S.frame] = quantize(d, rc, d.w, d.h); renderColors(); changed(); };
   $('btn-resize').onclick = () => resize(+$('in-w').value, +$('in-h').value);
   document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => { if (!D()) return; const [dx, dy] = b.dataset.shift.split(',').map(Number); shiftAll(dx, dy); });
@@ -635,7 +824,7 @@
   $('btn-save').onclick = saveToGitHub;
   $('btn-settings').onclick = openSettings;
   $('btn-download').onclick = () => { const d = D(); if (!d) return; commitFloat(); download(PA.fileOf(d.id), new Blob([fileText(toDef(d))], { type: 'text/javascript' })); };
-  $('btn-png').onclick = () => { const d = D(); if (!d) return; commitFloat(); const c = document.createElement('canvas'); c.width = d.w * d.frames.length; c.height = d.h; d.frames.forEach((f, k) => c.getContext('2d').drawImage(frameCanvas(d, f), k * d.w, 0)); c.toBlob(b => download(d.id.replace(/[^\w.-]/g, '~') + '.png', b)); };
+  $('btn-png').onclick = () => { const d = D(); if (!d) return; commitFloat(); const c = document.createElement('canvas'); c.width = d.w * d.frames.length; c.height = d.h; d.frames.forEach((_, k) => c.getContext('2d').drawImage(frameCanvas(d, flat(d, k)), k * d.w, 0)); c.toBlob(b => download(d.id.replace(/[^\w.-]/g, '~') + '.png', b)); };
   $('search').oninput = renderList; $('only-mine').onchange = renderList;
   const keys = { space: false };
   window.addEventListener('keydown', (e) => {
@@ -677,6 +866,6 @@
     status(); requestAnimationFrame(previewLoop);
     if (restored) toast(`${restored} unsaved change${restored === 1 ? '' : 's'} restored from this browser`, 4000);
     syncFromGitHub();
-    window.PIXEL_EDITOR = { S, docs, saved, deleted, catalog, open, syncFromGitHub, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
+    window.PIXEL_EDITOR = { S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
   })();
 })();

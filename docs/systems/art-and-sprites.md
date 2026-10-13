@@ -91,6 +91,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   (0.17) → `<id>.<k>` for any other registered picture, with the drawing's frame count and fps; `map` → the `pixel` map
   art pack (`HB.pixelArt.mapPack()`, built in memory by `HB.mapAssets.use('pixel')`; frames are variants, pixel
   sampling, `logicalSize = size × scale`).
+- Layers (0.18): a file may hold `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`;
+  `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins), so everything downstream is unchanged.
 - `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
   "in game" buttons use it. `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
 

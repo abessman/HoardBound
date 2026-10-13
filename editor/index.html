@@ -73,6 +73,7 @@
       <span class="sep"></span>
       <button id="btn-refimg" title="Load your own picture behind the pixels, to draw over it (kept in this browser for this sprite)">Image behind…</button>
       <input type="file" id="in-refimg" accept="image/*" hidden>
+      <button id="btn-convert" title="Turn your picture into pixel art on this grid (where it sits behind the pixels), with sliders to tune it">Convert to pixels…</button>
       <span id="refimg-ctl" class="row" hidden>
         <label title="How strongly your picture shows">opacity <input type="range" id="in-refop" min="5" max="100" value="50"></label>
         <label title="Size of your picture (100 = fits the canvas)">size <input type="range" id="in-refsc" min="10" max="400" value="100"></label>
@@ -83,7 +84,21 @@
       <span class="grow"></span>
       <button id="zoom-out" title="Zoom out (or pinch)">−</button><button id="zoom-fit" title="Fit">Fit</button><button id="zoom-in" title="Zoom in (or pinch)">+</button>
     </div>
-    <div id="stage"><canvas id="canvas"></canvas></div>
+    <div id="stage"><canvas id="canvas"></canvas>
+      <div id="conv" class="panel" hidden>
+        <div class="row"><b>Picture → pixels</b><span class="grow"></span><label class="small"><input type="checkbox" id="cv-show" checked> preview</label><button id="cv-side" title="Move this panel to the other side">⇆</button></div>
+        <div class="small muted">Uses your picture where it sits on the grid: move and size it with the Image behind controls.</div>
+        <label class="col small">Colours <b id="cv-n-v"></b><input type="range" id="cv-n" min="2" max="32" value="10"></label>
+        <label class="col small">Palette <select id="cv-pal"><option value="free">Free: the picture's own colours</option><option value="sprite">This sprite's colours</option><option value="game">Game colours</option></select></label>
+        <label class="col small">Dark lines: how dark counts as a line <b id="cv-dark-v"></b><input type="range" id="cv-dark" min="0" max="100" value="35"></label>
+        <label class="col small">Line pickup: how much of a pixel must be line <b id="cv-cover-v"></b><input type="range" id="cv-cover" min="2" max="80" value="22"></label>
+        <label class="col small">Remove background (paper) <b id="cv-bg-v"></b><input type="range" id="cv-bg" min="0" max="100" value="30"></label>
+        <label class="col small">Colour boost <b id="cv-sat-v"></b><input type="range" id="cv-sat" min="50" max="200" value="120"></label>
+        <div class="row small wrap"><label>Line colour <input type="color" id="cv-line" value="#2a1c22"></label><label><input type="checkbox" id="cv-outline"> outline the shape</label></div>
+        <div class="row small"><label>Put it in <select id="cv-into"><option value="new">a new layer</option><option value="this">this layer (this frame)</option></select></label></div>
+        <div class="row"><button id="cv-cancel">Cancel</button><span class="grow"></span><button id="cv-apply" class="primary">Apply</button></div>
+      </div>
+    </div>
   </section>
   <aside id="side">
     <div class="panel">
@@ -107,6 +122,21 @@
       </div>
       <div class="row small"><label>Brush <select id="in-brush"><option>1</option><option>2</option><option>3</option></select></label>
         <label><input type="checkbox" id="chk-mirror"> mirror</label></div>
+    </div>
+    <div class="panel" id="layers-panel">
+      <div class="row small"><b>Layers</b><span class="grow"></span>
+        <button id="ly-add" title="A new empty layer above this one">+ New</button>
+        <button id="ly-dup" title="Duplicate this layer">Dup</button>
+        <button id="ly-up" title="Move this layer up">▲</button>
+        <button id="ly-down" title="Move this layer down">▼</button>
+      </div>
+      <div id="layers"></div>
+      <div class="row small">
+        <button id="ly-rename" title="Rename this layer">Rename</button>
+        <button id="ly-merge" title="Merge this layer into the one below it">Merge down</button>
+        <button id="ly-del" title="Delete this layer">Delete</button>
+      </div>
+      <div class="small muted">You draw on the highlighted layer. Hidden layers (◌) stay out of the game.</div>
     </div>
     <div class="panel">
       <div class="row">

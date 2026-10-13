@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.17.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.18.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -12,12 +12,21 @@ The owner plays at hoardbound.netlify.app on an iPad.
   sleep screen); zoom out to every room of the hill; the art registry `HB.art` feeds the editor's list; the editor
   gained a picture behind the pixels and visible undo/redo with finger taps. 0.17.1: a Pixel Editor button on the
   title screen and in Settings (`HB.openEditor`, new tab or same tab after an autosave).
-- 279 headless checks pass on both seeds (one more per drawn art file).
+- 0.18 (editor): named layers saved in the sprite file (`layers`, bottom first; the game merges visible ones, hidden
+  stay out), and a picture → pixels converter working from the image behind (ink threshold, line pickup, paper
+  removal, colour count or palette snap, colour boost, outline; live preview; applies into a new layer).
+- 280 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.17), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.18), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
+
+## Editor working decisions (0.18, not confirmed by the owner)
+- Layers: frames belong to every layer; Copy/Paste frame carry all layers; the eyedropper picks what is visible; a
+  hidden layer is left out of the game (eye = in game). A single plain "Layer 1" is saved as `frames` as before.
+- Converter defaults: 10 colours, dark lines 35 (luma < 63), line pickup 22%, paper removal 30 (the corners' colour),
+  colour boost 120%; result goes to a new layer "converted". Large pictures are sampled up to 10×10 per pixel.
 
 ## Current project: the lair and the owner's art (2026-10-12)
 Owner asked: new art should appear in the editor; a much larger, more detailed dragon in the lair, perched on its
@@ -44,6 +53,7 @@ Working decisions by Claude (not confirmed by the owner):
 4. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
+- Converter: are the defaults close for your drawings (pencil vs ink, paper colour)? Want a dithering option?
 - Is the lair dragon big enough? Should it sit (folded wings, curled tail) rather than stand on the pile?
 - With a sleeping chamber built, should the dragon sleep there instead of on the hoard?
 - Rooms view: is a hill cross-section the right picture, or a map of chambers, or room cards?
