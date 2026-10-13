@@ -8,7 +8,7 @@
     enter() {
       const S = HB.settings;
       const w = 520, x = (HB.W - w) / 2, y0 = 120;
-      this.x = x; this.y = y0; this.w = w; this.h = 470;
+      this.x = x; this.y = y0; this.w = w; this.h = 522;
       let y = y0 + 60;
       const row = (label, value, onChange, options, tooltip) => {
         const t = new HB.ui.Toggle({ x: x + 40, y, w: w - 80, label, value, onChange, tooltip });
@@ -25,6 +25,10 @@
       const packs = [{ label: 'Original ink', value: 'none' }].concat((HB.MAP_PACKS || []).map(p => ({ label: p.label || p.name, value: p.name })));
       if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Choose the map illustrations. Original ink restores the earlier artwork; your campaign stays the same.');
       y += 10;
+      // a dev tool for now: the owner draws the game's pixel art there (docs/pixel-editor.md)
+      this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 460, h: 40, label: 'Pixel editor', onClick: () => HB.openEditor(),
+        tooltip: 'Draw the game’s pixel art (the dragon, the lair, raid sprites, map symbols) and save it to the game. Opens in a new tab where the browser allows it.' }));
+      y += 52;
       this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 220, h: 40, label: 'Reset to defaults', onClick: () => { S.reset(); if (HB.mapAssets && HB.mapAssets.packName !== S.mapPack) HB.mapAssets.use(S.mapPack); HB.scenes.pop(this); HB.scenes.push(new SettingsScene({ inGame: this.inGame })); } }));
       this.ui.add(new HB.ui.Button({ x: x + w / 2 + 10, y, w: 220, h: 40, label: 'Back', primary: true, onClick: () => HB.scenes.pop(this) }));
       this.ui.onCancel = () => HB.scenes.pop(this);
@@ -38,4 +42,16 @@
     }
   }
   HB.SettingsScene = SettingsScene;
+
+  /** open the pixel editor (editor/index.html): in a new tab where the browser allows it, else in this one, after
+   *  saving the campaign in progress (the game's buttons act a frame after the tap, which some browsers treat as a popup) */
+  HB.openEditor = function () {
+    const url = 'editor/index.html';
+    let tab = null;
+    try { tab = window.open(url, '_blank'); } catch (e) { tab = null; }
+    if (tab) return;
+    const st = HB.flow && HB.flow.map && HB.flow.map.state;
+    if (st && HB.save) HB.save.autosave(st);
+    location.href = url;
+  };
 })();

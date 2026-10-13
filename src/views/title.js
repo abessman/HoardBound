@@ -15,6 +15,7 @@
       add('Continue', () => HB.save && HB.save.continueLatest(), { disabled: !hasSave, disabledReason: 'No saved worlds yet. Begin a new world.' });
       add('Load World', () => HB.save && HB.save.openLoadMenu(), { disabled: !hasSave, disabledReason: 'No saved worlds yet.' });
       add('Settings', () => HB.scenes.push(new HB.SettingsScene()));
+      add('Pixel Editor', () => HB.openEditor(), { size: 17, tooltip: 'Draw the game’s pixel art (the dragon, the lair, raid sprites, map symbols) and save it to the game.' });
       this.ui.focusFirst();
     }
     update(dt) { this.t += dt; this.ui.update(dt); }

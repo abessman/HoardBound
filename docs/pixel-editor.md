@@ -5,7 +5,8 @@ chamber, the rooms), the raid sprites, and map symbols. Your
 drawings are saved as small files in the repository (`assets/pixelart/`), so they are versioned like the code and
 anyone (or any Claude session) can edit them later. Nothing else is needed: no account but GitHub, no backend.
 
-Open it at **https://hoardbound.netlify.app/editor/** (or `editor/index.html` locally, even from `file://`).
+Open it from the game (**Pixel Editor** on the title screen, or Settings → **Pixel editor**), or at
+**https://hoardbound.netlify.app/editor/** (or `editor/index.html` locally, even from `file://`).
 Works with a mouse, a pen or a finger; the layout fits an iPad in landscape.
 
 ## First time: let it save to GitHub

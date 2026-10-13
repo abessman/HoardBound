@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.1 — 2026-10-13
+- **Pixel Editor button** on the title screen and in Settings (so also from the in-game menu). It opens the editor in
+  a new tab; where the browser does not allow that, it saves your campaign and opens the editor in the same tab.
+
 ## 0.17.0 — 2026-10-12 · The dragon at home
 - **A big, detailed view of your dragon in the lair.** The lair now opens on the hoard chamber with the dragon twice its
   raid size, sitting on its hoard and idling. The hoard is still generated from what is in it (size by how much room
