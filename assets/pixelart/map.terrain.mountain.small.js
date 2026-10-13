@@ -3,8 +3,8 @@ HB.pixelArt && HB.pixelArt.add({
  "id": "map.terrain.mountain.small",
  "kind": "map",
  "w": 32,
- "h": 16,
- "anchor": [5,8],
+ "h": 15,
+ "anchor": [16,15],
  "fps": 1,
  "scale": 1,
  "flip": true,
@@ -12,7 +12,6 @@ HB.pixelArt && HB.pixelArt.add({
  "layers": [
   { "name": "Layer 1", "frames": [
     { "rows": [
-     "................................",
      "................................",
      "................................",
      "................................",
@@ -46,13 +45,11 @@ HB.pixelArt && HB.pixelArt.add({
      "...ahiih323pfa...m8bnnt75sqs....",
      ".951igii2hh2hf..cknbbbn0744747s.",
      "a6daeggii22i3...klno.roo5775qckt",
-     "kf..ei22i2pd....c8o...lnljr..tc.",
-     "..................8............."
+     "kf..ei22i2pd....c8o...lnljr..tc."
     ] }
    ] },
   { "name": "lines", "frames": [
     { "rows": [
-     "................................",
      "................................",
      "................................",
      "................................",
