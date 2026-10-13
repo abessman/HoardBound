@@ -65,7 +65,8 @@
   function useLayer(d, i) { d.layer = HB.clamp(i, 0, d.layers.length - 1); d.frames = d.layers[d.layer].frames; }
   function fromDef(def) {
     const w = def.w | 0, h = def.h | 0;
-    const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
+    const pct = (v) => (v === undefined ? undefined : Math.max(0, Math.min(100, Math.round(+v) || 0)));
+    const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
     const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
     useLayer(doc, layers.length - 1); return doc;
@@ -88,15 +89,15 @@
     const enc = (frames) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : AL[remap.get(v)]; } return s; }) }));
     // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
     const L = doc.layers;
-    if (L.length === 1 && !L[0].hidden && L[0].name === 'Layer 1') def.frames = enc(L[0].frames);
-    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, { frames: enc(l.frames) }));
+    if (L.length === 1 && !L[0].hidden && L[0].name === 'Layer 1' && lyOp(L[0]) === 100 && lyWash(L[0]) === 100) def.frames = enc(L[0].frames);
+    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, lyOp(l) !== 100 ? { opacity: lyOp(l) } : {}, lyWash(l) !== 100 ? { wash: lyWash(l) } : {}, { frames: enc(l.frames) }));
     return def;
   }
   /** the file for one sprite: JSON with one field per line and each frame's rows as a grid (easy to read and diff) */
   const framesText = (v, ind) => `[\n${v.map(f => `${ind} { "rows": [\n${f.rows.map(r => ind + '  ' + JSON.stringify(r)).join(',\n')}\n${ind} ] }`).join(',\n')}\n${ind}]`;
   const fileText = (def) => {
     const fields = Object.entries(def).map(([k, v]) => k === 'frames' ? ` "frames": ${framesText(v, ' ')}`
-      : k === 'layers' ? ` "layers": [\n${v.map(l => `  { "name": ${JSON.stringify(l.name)},${l.hidden ? ' "hidden": true,' : ''} "frames": ${framesText(l.frames, '   ')} }`).join(',\n')}\n ]`
+      : k === 'layers' ? ` "layers": [\n${v.map(l => `  { "name": ${JSON.stringify(l.name)},${l.hidden ? ' "hidden": true,' : ''}${l.opacity !== undefined ? ` "opacity": ${l.opacity},` : ''}${l.wash !== undefined ? ` "wash": ${l.wash},` : ''} "frames": ${framesText(l.frames, '   ')} }`).join(',\n')}\n ]`
         : ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     return `/* HoardBound pixel art: ${def.id}. Made with the pixel editor (editor/index.html); safe to edit by hand: '.' is clear, other characters index the palette. */\nHB.pixelArt && HB.pixelArt.add({\n${fields.join(',\n')}\n});\n`;
   };
@@ -167,7 +168,8 @@
   // Editing primitives (with undo)
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
-  const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, frames: l.frames.map(f => f.slice()) }));
+  const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, frames: l.frames.map(f => f.slice()) }));
+  const lyOp = (l) => (l.opacity === undefined ? 100 : l.opacity), lyWash = (l) => (l.wash === undefined ? 100 : l.wash);
   function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, tones: d.tones ? JSON.stringify(d.tones) : null }; }
   function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
@@ -280,6 +282,15 @@
     for (let i = 0; i < f.length; i++) { const v = f[i]; if (v === CLEAR || !pal[v]) continue; const o = i * 4; Dd[o] = pal[v][0]; Dd[o + 1] = pal[v][1]; Dd[o + 2] = pal[v][2]; Dd[o + 3] = pal[v][3] * alpha; }
     g.putImageData(img, 0, 0); return c;
   }
+  /** frame k with the visible layers stacked (PA.composite), and its wash cut-out (null when every layer takes full wash) */
+  function composeFrame(d, k, palette) {
+    const layers = d.layers.filter(l => !l.hidden).map(l => { const f = l.frames[k]; return { at: (i) => (f[i] === CLEAR ? -1 : f[i]), op: lyOp(l) / 100, wash: lyWash(l) / 100 }; });
+    const r = PA.composite(d.w, d.h, layers, palette.map(rgbaOf));
+    const c = document.createElement('canvas'); c.width = d.w; c.height = d.h; const g = c.getContext('2d'), img = g.createImageData(d.w, d.h); img.data.set(r.rgba); g.putImageData(img, 0, 0);
+    let cut = null; if (r.cut) { cut = document.createElement('canvas'); cut.width = d.w; cut.height = d.h; const cg = cut.getContext('2d'), ci = cg.createImageData(d.w, d.h); for (let i = 0; i < r.cut.length; i++) ci.data[i * 4 + 3] = r.cut[i]; cg.putImageData(ci, 0, 0); }
+    return { canvas: c, cut };
+  }
+  let washC = null; const washBuf = (w, h) => { if (!washC) washC = document.createElement('canvas'); if (washC.width !== w || washC.height !== h) { washC.width = Math.max(1, w); washC.height = Math.max(1, h); } return washC; };
   function fit() {
     const d = D(); if (!d) return; const r = stage.getBoundingClientRect();
     S.zoom = Math.max(2, Math.floor(Math.min((r.width - 40) / d.w, (r.height - 40) / d.h)));
@@ -301,12 +312,21 @@
     const ri = curRef(); if (ri && !ri.front) drawRef(ri, X, Y, z);
     if (S.ref && S.ghosts.length) { ctx.globalAlpha = 0.32; ctx.imageSmoothingEnabled = d.kind === 'map'; ctx.drawImage(S.ghosts[Math.min(S.frame, S.ghosts.length - 1)], X, Y, W, H); ctx.imageSmoothingEnabled = false; ctx.globalAlpha = 1; }
     if (S.onion && S.frame > 0) { ctx.globalAlpha = 0.25; ctx.drawImage(frameCanvas(d, flat(d, S.frame - 1)), X, Y, W, H); ctx.globalAlpha = 1; }
-    // the visible layers merged as the game merges them (the topmost pixel wins, so a see-through pixel shows what is
-    // under the sprite, not the layer below); the active layer drawn faintly if it is hidden, so drawing on it is never invisible
+    // the visible layers stacked as the game stacks them (real transparency: colours' own and each layer's opacity); the
+    // active layer drawn faintly if it is hidden, so drawing on it is never invisible
     // (Show Good or Evil: in the colours the game gives it in a kind or a cruel setting; you still draw the normal colours)
-    const shown = S.tone ? { w: d.w, h: d.h, palette: PA.tonedPalette(d, S.tone) } : d;
-    ctx.drawImage(frameCanvas(shown, flat(d, S.frame)), X, Y, W, H);
+    const shown = S.tone ? { w: d.w, h: d.h, palette: PA.tonedPalette(d, S.tone) } : d, comp = composeFrame(d, S.frame, shown.palette);
+    ctx.drawImage(comp.canvas, X, Y, W, H);
     if (d.layers[d.layer].hidden) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
+    // with parchment under and Good or Evil shown: the territory wash as on the map, on the ground and, by each layer's
+    // wash setting, on the drawing
+    if (pp && S.tone) {
+      const wc = S.tone === 'good' ? [110, 140, 58, 0.3] : [176, 48, 16, 0.36]; // HB.mapWash's kind and cruel colours, a typical strength
+      const B = washBuf(Math.round(W), Math.round(H)), bg = B.getContext('2d'); bg.globalCompositeOperation = 'source-over'; bg.clearRect(0, 0, B.width, B.height);
+      bg.fillStyle = `rgba(${wc[0]},${wc[1]},${wc[2]},${wc[3]})`; bg.fillRect(0, 0, B.width, B.height);
+      if (comp.cut) { bg.globalCompositeOperation = 'destination-out'; bg.imageSmoothingEnabled = false; bg.drawImage(comp.cut, 0, 0, B.width, B.height); }
+      ctx.drawImage(B, X, Y, W, H);
+    }
     if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
     if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: shown.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
     if (ri && ri.front) drawRef(ri, X, Y, z);
@@ -828,6 +848,7 @@
       el.append(eye, nm); el.onclick = () => selectLayer(i); el.ondblclick = () => { selectLayer(i); renameLayer(); };
       box.appendChild(el);
     }
+    const cur = d.layers[d.layer]; $('ly-op').value = String(lyOp(cur)); $('ly-op-v').textContent = lyOp(cur) + '%'; $('ly-wash').value = String(lyWash(cur)); $('ly-wash-v').textContent = lyWash(cur) + '%';
     $('ly-merge').disabled = d.layer === 0; $('ly-del').disabled = d.layers.length < 2;
     $('ly-up').disabled = d.layer >= d.layers.length - 1; $('ly-down').disabled = d.layer === 0;
   }
@@ -838,9 +859,16 @@
     pushUndo(); l.name = v; changed();
   }
   $('ly-add').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.splice(d.layer + 1, 0, { name: `Layer ${d.layers.length + 1}`, hidden: false, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layer + 1); changed(); };
-  $('ly-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); const l = d.layers[d.layer]; d.layers.splice(d.layer + 1, 0, { name: `${l.name} copy`, hidden: l.hidden, frames: l.frames.map(f => f.slice()) }); useLayer(d, d.layer + 1); changed(); };
+  $('ly-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); const l = d.layers[d.layer]; d.layers.splice(d.layer + 1, 0, { name: `${l.name} copy`, hidden: l.hidden, opacity: l.opacity, wash: l.wash, frames: l.frames.map(f => f.slice()) }); useLayer(d, d.layer + 1); changed(); };
   const moveLayer = (dir) => { const d = D(), j = d ? d.layer + dir : -1; if (!d || j < 0 || j >= d.layers.length) return; commitFloat(); pushUndo(); [d.layers[d.layer], d.layers[j]] = [d.layers[j], d.layers[d.layer]]; useLayer(d, j); changed(); };
   $('ly-up').onclick = () => moveLayer(1); $('ly-down').onclick = () => moveLayer(-1);
+  // the layer's opacity and how much territory wash lands on it: live while dragging, one undo step per drag
+  const LY = { live: false };
+  for (const key of ['opacity', 'wash']) {
+    const el = $(key === 'opacity' ? 'ly-op' : 'ly-wash'), lab = $(key === 'opacity' ? 'ly-op-v' : 'ly-wash-v');
+    const set = (done) => { const d = D(); if (!d) return; if (!LY.live) { pushUndo(); LY.live = true; } const v = +el.value; d.layers[d.layer][key] = v === 100 ? undefined : v; lab.textContent = v + '%'; if (done) { LY.live = false; changed(); } else changed(false, true); };
+    el.addEventListener('input', () => set(false)); el.addEventListener('change', () => set(true));
+  }
   $('ly-rename').onclick = renameLayer;
   $('ly-merge').onclick = () => {
     const d = D(); if (!d || d.layer === 0) return; commitFloat(); pushUndo();

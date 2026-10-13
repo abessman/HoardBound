@@ -2,8 +2,10 @@
  *   index.js    HB.pixelArt.index([...file names])            (written by the editor)
  *   <id>.js     HB.pixelArt.add({ id, kind, w, h, anchor, palette, frames: [{ rows: [...] }] })
  * A row is one character per pixel: '.' is transparent, otherwise ALPHABET[i] is palette[i].
- * A drawing with layers stores layers: [{ name, hidden?, frames: [{ rows }] }] (bottom first) instead of frames; the
- * game flattens the visible ones (a pixel comes from the topmost layer that has one; hidden layers stay out).
+ * A drawing with layers stores layers: [{ name, hidden?, opacity?, wash?, frames: [{ rows }] }] (bottom first) instead
+ * of frames; the game stacks the visible ones (hidden layers stay out) with real transparency: a layer's opacity
+ * (0–100) and its colours' own (#rrggbbaa). wash (0–100, default 100) is how much of the map's territory watercolour
+ * lands on that layer's pixels; less leaves them clearer (map symbols only).
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
@@ -32,6 +34,24 @@
         return row;
       }) }));
     },
+    /** stack layers ({ at(i): palette index or -1, op: 0–1, wash: 0–1 }, bottom first) into RGBA pixels with real
+     *  transparency, and the wash cut-out (how much of the territory wash to take off each pixel; null when none) */
+    composite(w, h, layers, pal) {
+      const n = w * h, rgba = new Uint8ClampedArray(n * 4), cut = new Uint8ClampedArray(n); let any = false;
+      for (let i = 0; i < n; i++) {
+        let A = 0, R = 0, G = 0, B = 0, K = 0;
+        for (const L of layers) {
+          const v = L.at(i); if (v < 0) continue; const c = pal[v]; if (!c) continue;
+          const a = c[3] / 255 * L.op; if (a <= 0) continue; const ia = 1 - a;
+          R = c[0] * a + R * ia; G = c[1] * a + G * ia; B = c[2] * a + B * ia; K = (1 - L.wash) * a + K * ia; A = a + A * ia;
+        }
+        if (A > 0) { const o = i * 4; rgba[o] = R / A; rgba[o + 1] = G / A; rgba[o + 2] = B / A; rgba[o + 3] = A * 255; }
+        if (K > 0.004) { cut[i] = K * 255; any = true; }
+      }
+      return { rgba, cut: any ? cut : null };
+    },
+    layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
+    layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
     /** the file a sprite id is stored in ('|' and other odd characters become '~') */
     fileOf(id) { return id.replace(/[^\w.-]/g, '~') + '.js'; },
     script(src) { return new Promise((ok) => { const s = document.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); document.head.appendChild(s); }); },
@@ -50,11 +70,29 @@
     applyDrafts() {
       try { const d = JSON.parse(localStorage.getItem(DRAFTS) || '{}'); for (const id in d) { if (d[id] === null) PA.entries.delete(id); else PA.add(d[id]); } } catch (e) { /* no drafts */ }
     },
-    /** a definition's frames as canvases (cached on the definition); tone 'good' or 'evil' shifts the colours */
+    /** a definition's frames as canvases (cached on the definition); tone 'good' or 'evil' shifts the colours. A layered
+     *  drawing is stacked with real transparency (PA.composite), which also gives its wash cut-outs (PA.cuts). */
     canvases(def, tone) {
       const cache = tone ? (def._toned = def._toned || {}) : null;
       if (tone ? cache[tone] : def._canvases) return tone ? cache[tone] : def._canvases;
       const pal = (tone ? PA.tonedPalette(def, tone) : def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
+      const vis = Array.isArray(def.layers) ? def.layers.filter(l => l && !l.hidden && Array.isArray(l.frames)) : null;
+      if (vis && vis.length) {
+        const cuts = [];
+        const list = (def.frames || []).map((_, k) => {
+          const layers = vis.map((l) => {
+            const idx = new Int16Array(w * h).fill(-1), rows = (l.frames[k] && l.frames[k].rows) || [];
+            rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) idx[y * w + x] = ALPHABET.indexOf(row[x]); });
+            return { at: (i) => idx[i], op: PA.layerOpacity(l), wash: PA.layerWash(l) };
+          });
+          const r = PA.composite(w, h, layers, pal), c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h);
+          const g = c.getContext('2d'), img = g.createImageData(c.width, c.height); img.data.set(r.rgba); g.putImageData(img, 0, 0);
+          if (!tone) { let m = null; if (r.cut) { m = document.createElement('canvas'); m.width = c.width; m.height = c.height; const mg = m.getContext('2d'), mi = mg.createImageData(c.width, c.height); for (let i = 0; i < r.cut.length; i++) mi.data[i * 4 + 3] = r.cut[i]; mg.putImageData(mi, 0, 0); } cuts.push(m); }
+          return c;
+        });
+        if (tone) cache[tone] = list; else { def._canvases = list; def._cuts = cuts.some(Boolean) ? cuts : null; }
+        return list;
+      }
       const list = (def.frames || []).map((f) => {
         const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h);
         const g = c.getContext('2d'), img = g.createImageData(c.width, c.height), D = img.data;
@@ -82,6 +120,8 @@
       const out = [f(H / 360 + 1 / 3), f(H / 360), f(H / 360 - 1 / 3)].map((v, i) => Math.round((v * 255) * (1 - m) + tc[i] * m));
       return '#' + out.map(v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
     },
+    /** the wash cut-outs of a layered drawing's frames (canvases whose alpha is how much territory wash to take off), or null */
+    cuts(def) { PA.canvases(def); return def._cuts || null; },
     tonedPalette(def, which) { const t = PA.tone(def, which); return (def.palette || []).map(c => PA.shiftHex(c, t)); },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
@@ -112,7 +152,9 @@
           const b = PA.frameBox(def, i); if (!b) return;
           const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
           const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
-          variants.push({ id: 'v' + (i + 1), src: cut(c), tones: { good: cut(toned.good[i]), evil: cut(toned.evil[i]) }, sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip });
+          const wc = PA.cuts(def), v = { id: 'v' + (i + 1), src: cut(c), tones: { good: cut(toned.good[i]), evil: cut(toned.evil[i]) }, sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip };
+          if (wc && wc[i]) v.washCut = cut(wc[i]); // less territory wash on this symbol (its layers' wash setting)
+          variants.push(v);
         });
         if (variants.length) assets[def.id] = { variants };
       }

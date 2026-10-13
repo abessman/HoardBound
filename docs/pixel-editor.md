@@ -36,8 +36,7 @@ commit by hand.
 - **Opacity:** the slider sets how solid the selected pixels are (100% solid, lower lets what is under the sprite show
   through, such as the map's parchment). Each see-through colour is its own colour (`#rrggbbaa`, also typeable in
   the colour box), so the sprite's colours list shows it over a checker. They stay see-through in the game, so a
-  later change to the paper or a territory wash shows through as well. Layers: the game shows the topmost pixel,
-  so a see-through pixel shows what is under the sprite, not the layer below (the editor shows it the same way).
+  later change to the paper or a territory wash shows through as well.
 - **Good and evil:** **Show Normal / Good / Evil** displays the drawing as the game tints it in a kind or a cruel
   setting (you still draw in the normal colours). The tint is automatic; with Good or Evil shown, the sliders adjust
   it for this drawing (hue, colour, light, a tint colour and its strength), saved in the sprite's file; **Automatic**
@@ -63,8 +62,11 @@ commit by hand.
   draw on the highlighted one; tap a layer to switch, ◉ / ◌ to show or hide it, **+ New**, **Dup**, ▲ ▼ to reorder,
   **Rename**, **Merge down**, **Delete** (all undoable). Frames belong to every layer: adding, duplicating, deleting or
   moving a frame does it in all of them, and **Copy frame / Paste frame** carry every layer. The layers are saved in
-  the sprite's file, so they are all there next time, on any device. The game shows the visible layers merged (a pixel
-  comes from the topmost layer that has one); **hidden layers stay out of the game**, so a hidden sketch layer is safe.
+  the sprite's file, so they are all there next time, on any device. The game stacks the visible layers with real
+  transparency, as the editor shows them; **hidden layers stay out of the game**, so a hidden sketch layer is safe.
+  Each layer has a **Layer opacity** and, for map symbols, **Wash on this layer**: how much of the map's territory
+  watercolour (kind green, cruel rust) lands on its pixels. The ground keeps its wash; lower keeps the drawing clearer.
+  With *parchment under* and Good or Evil shown, the editor shows the wash on the paper and on the drawing.
 - **Picture → pixels:** **Convert to pixels…** turns your picture into pixel art on this sprite's grid, exactly where
   the picture sits behind the pixels (size and move it first with the Image behind controls; set the canvas size with
   **Resize**). With no picture yet it asks for one. Each pixel looks at the part of the picture under it:
@@ -152,7 +154,8 @@ HB.pixelArt && HB.pixelArt.add({
 });
 ```
 A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "name": "sketch", "hidden": true, ... }]`
-(bottom layer first) instead of `"frames"`; the game merges the visible ones. A palette colour may carry opacity
+(bottom layer first) instead of `"frames"`; the game stacks the visible ones. A layer may add `"opacity"` and `"wash"`
+(0–100; 100 when left out). A palette colour may carry opacity
 (`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tones (hue, sat, light, tint, mix).
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and
 `flip` (may be mirrored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from

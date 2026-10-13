@@ -669,7 +669,7 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
     };
     // a layered drawing has layers (each with frames) instead of frames
     if (def.tones !== undefined) { const t = def.tones; if (!t || typeof t !== 'object' || Object.keys(t).some(k => k !== 'good' && k !== 'evil') || Object.values(t).some(o => !o || typeof o !== 'object' || ['hue', 'sat', 'light', 'mix'].some(k => o[k] !== undefined && !n(o[k])) || (o.tint !== undefined && !/^#[0-9a-f]{6}$/i.test(o.tint)))) p.push('tones is { good?, evil? } of numbers hue, sat, light, mix and a #rrggbb tint'); }
-    if (Array.isArray(def.layers)) { if (!def.layers.length) p.push('layers is empty'); def.layers.forEach((l, i) => { if (!l || typeof l.name !== 'string') p.push(`layer ${i + 1} needs a name`); frames(l && l.frames, `layer ${(l && l.name) || i + 1}: `); }); }
+    if (Array.isArray(def.layers)) { if (!def.layers.length) p.push('layers is empty'); def.layers.forEach((l, i) => { if (!l || typeof l.name !== 'string') p.push(`layer ${i + 1} needs a name`); for (const k of ['opacity', 'wash']) if (l && l[k] !== undefined && !(n(l[k]) && l[k] >= 0 && l[k] <= 100)) p.push(`layer ${i + 1}: ${k} is 0–100`); frames(l && l.frames, `layer ${(l && l.name) || i + 1}: `); }); }
     else frames(def.frames, '');
     return p;
   };
@@ -678,6 +678,7 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
   const layered = Object.assign({}, good, { frames: undefined, layers: [{ name: 'lines', frames: [{ rows: ['.0.', '0.0'] }] }, { name: 'sketch', hidden: true, frames: [{ rows: ['111', '111'] }] }] });
   ok(!problems(layered).length && problems(Object.assign({}, layered, { layers: [{ name: 'lines', frames: [{ rows: ['.0'] }] }] })).length, 'a layered drawing passes; a layer with the wrong size is caught');
   ok(!problems(Object.assign({}, good, { palette: ['#2b1a0e80', '#c04040'], tones: { evil: { hue: -12, sat: -60, light: -18, tint: '#4a1c1c', mix: 20 } } })).length && problems(Object.assign({}, good, { tones: { wicked: {} } })).length, 'see-through colours and good/evil tones pass; a misspelt tone is caught');
+  ok(!problems(Object.assign({}, layered, { layers: [{ name: 'lines', opacity: 60, wash: 20, frames: [{ rows: ['.0.', '0.0'] }] }] })).length && problems(Object.assign({}, layered, { layers: [{ name: 'lines', wash: 140, frames: [{ rows: ['.0.', '0.0'] }] }] })).length, 'a layer\'s opacity and wash (0–100) pass; out of range is caught');
   ok(problems(Object.assign({}, good, { frames: [{ rows: ['.0.', '012'] }] })).some(e => /not a palette index/.test(e)) && problems(Object.assign({}, good, { id: 'dragon.4.fly', kind: 'dragon' })).length && problems(Object.assign({}, good, { w: 4 })).some(e => /4 characters/.test(e)), 'a bad palette index, dragon id or row width is caught');
   const idx = read(fs.readFileSync(path.join(dir, 'index.js'), 'utf8'));
   ok(Array.isArray(idx.files) && idx.files.every(f => fs.existsSync(path.join(dir, f))), 'assets/pixelart/index.js lists files that exist');

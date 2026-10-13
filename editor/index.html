@@ -161,6 +161,8 @@
         <button id="ly-merge" title="Merge this layer into the one below it">Merge down</button>
         <button id="ly-del" title="Delete this layer">Delete</button>
       </div>
+      <label class="col small" title="How solid the whole layer is: lower lets what is under it show through (in the game too)">Layer opacity <b id="ly-op-v"></b><input type="range" id="ly-op" min="0" max="100" value="100"></label>
+      <label class="col small" title="Map symbols: how much of the map's territory watercolour (kind green, cruel rust) lands on this layer's pixels. The ground keeps its wash; lower keeps the drawing clearer. Shown here with parchment under and Good or Evil.">Wash on this layer <b id="ly-wash-v"></b><input type="range" id="ly-wash" min="0" max="100" value="100"></label>
       <div class="small muted">You draw on the highlighted layer. Hidden layers (◌) stay out of the game.</div>
     </div>
     <div class="panel" id="colour-panel">

@@ -35,7 +35,7 @@
       name = name || 'none';
       const request = MA._request = (MA._request || 0) + 1;
       MA._pending = name; // also cancel a pending pack when the original art is selected
-      MA.entries.clear(); MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
+      MA.entries.clear(); MA.hasCuts = false; MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
       if (name === 'none') return Promise.resolve(false);
       if (!/^[\w-]+$/.test(name)) { MA.warn(`bad pack name "${name}"`); return Promise.resolve(false); }
       MA._pending = name;
@@ -110,6 +110,8 @@
       }, () => { out.failed = true; MA.warn(`${where}: could not load ${src}`); MA.bump(); });
       if (typeof v.occlusionMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.occlusionMask) ? v.occlusionMask : base + v.occlusionMask, (m) => { out.maskCanvas = MA.colourise(m, out.rect, PAPER, 1); MA.bump(); }, () => MA.warn(`${where}: could not load occlusionMask`));
       // good and evil tones (the editor's pixel pack): the same picture recoloured, used in a protector's or tyrant's land
+      // a wash cut-out (the editor's layers set to less wash): the map takes that much territory wash off this symbol
+      if (typeof v.washCut === 'string') { MA.hasCuts = true; MA.loadImage(out, v.washCut, (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) { out.cutImg = img; MA.bump(); } }, () => {}); }
       if (v.tones && typeof v.tones === 'object') { out.toneImg = {}; for (const k of ['good', 'evil']) if (typeof v.tones[k] === 'string') MA.loadImage(out, v.tones[k], (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) { out.toneImg[k] = img; MA.bump(); } }, () => {}); }
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
       return out;
@@ -217,6 +219,8 @@
       else if (shrink > 2.5 && v.sampling !== 'pixel') { const m = MA.mip(v, shrink); ctx.drawImage(m, 0, 0, m.width, m.height, dx, dy, dw, dh); }
       else if (o.tone && v.toneImg && v.toneImg[o.tone]) ctx.drawImage(v.toneImg[o.tone], 0, 0, v.sw, v.sh, dx, dy, dw, dh);
       else ctx.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, dx, dy, dw, dh);
+      // the map chunk's wash cut-out layer (mapview): where this symbol keeps the territory wash off itself
+      if (v.cutImg && ctx.washCut && ctx.getTransform) { const cc = ctx.washCut; cc.setTransform(ctx.getTransform()); cc.imageSmoothingEnabled = false; cc.drawImage(v.cutImg, 0, 0, v.sw, v.sh, dx, dy, dw, dh); }
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
       if (HB.mapInk && v.decor) HB.mapInk.decorate(ctx, v.decor, x, y, param, o);
       ctx.restore();

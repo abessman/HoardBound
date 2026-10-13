@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.22.0 — 2026-10-13 · Wash and opacity per layer
+- **How much territory wash lands on a drawing.** On the map, your territory's watercolour (kind green, cruel rust) used
+  to cover every symbol in it. Each layer of a drawing now has **Wash on this layer** (in the Layers panel). The ground
+  keeps its wash as before, and a lower setting keeps that layer's pixels clearer, so a mountain can keep its own
+  colours in a washed land, or keep them only on its snowcap.
+- **Layer opacity.** Each layer has its own opacity, in the editor and in the game.
+- **Layers stack with real transparency.** A see-through pixel or layer now shows the layer below it, as in a paint
+  program, in the editor and in the game.
+- **Preview the wash in the editor:** with *parchment under* and **Good** or **Evil** shown, the drawing sits on the
+  map's paper with the kind or cruel wash over the ground and, by each layer's setting, over the drawing.
+
 ## 0.21.0 — 2026-10-13 · Ink on paper, see-through pixels, good and evil tones
 - **The map's parchment moves with the map.** Dragging used to slide the ink over a paper that stayed still, so the
   drawing seemed to float above it. The paper now moves and scales with the map, so the drawing sits on it like ink.

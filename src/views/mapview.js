@@ -78,7 +78,15 @@
         this.wash.update(inf.count ? inf.sources : [], { now: this.t, w: W.w, h: W.h, bloomIn: first, mask: (x, y) => { const i = y * W.w + x; return W.region[i] === rid && HB.isLand(W.terrain[i]); } });
         this.washInf = inf; this.washRev = rev; this.washReplay = false;
       }
-      this.wash.draw(ctx, (x, y) => this.worldToScreen(x, y), this.t);
+      // symbols drawn with less wash on them (the editor's layer setting): paint the wash aside, take it off them, lay it on
+      const cuts = this.drawn && this.drawn.length ? this.drawn : null;
+      if (!cuts) { this.wash.draw(ctx, (x, y) => this.worldToScreen(x, y), this.t); return; }
+      const B = this.washBuf || (this.washBuf = document.createElement('canvas')), tf = ctx.getTransform();
+      if (B.width !== ctx.canvas.width || B.height !== ctx.canvas.height) { B.width = ctx.canvas.width; B.height = ctx.canvas.height; }
+      const bg = B.getContext('2d'); bg.setTransform(1, 0, 0, 1, 0, 0); bg.clearRect(0, 0, B.width, B.height); bg.setTransform(tf);
+      this.wash.draw(bg, (x, y) => this.worldToScreen(x, y), this.t);
+      bg.save(); bg.globalCompositeOperation = 'destination-out'; bg.imageSmoothingEnabled = true; for (const d of cuts) bg.drawImage(d.cut, d.x, d.y, d.w, d.h); bg.restore();
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.drawImage(B, 0, 0); ctx.restore();
     }
     /** pennants showing what each settlement is to you; the settlement at your hill */
     drawDomainMarks(ctx, tl, br) {
@@ -317,10 +325,11 @@
       c = this.renderChunk(cx, cy, lod); c.artRev = this._artRev;
       this.chunks.set(key, c); if (fresh) this.chunkOrder.push(key);
       let bytes = 0;
-      for (const image of this.chunks.values()) bytes += image.width * image.height * 4;
+      const size = (image) => image.width * image.height * 4 * (image.washCut ? 2 : 1);
+      for (const image of this.chunks.values()) bytes += size(image);
       while (this.chunkOrder.length > this.maxChunks || bytes > this.maxChunkBytes) {
         const k = this.chunkOrder.shift(), old = this.chunks.get(k);
-        if (old) bytes -= old.width * old.height * 4;
+        if (old) bytes -= size(old);
         this.chunks.delete(k);
       }
       return c;
@@ -420,7 +429,9 @@
       }
       g.setLineDash([]); g.globalAlpha = 1;
       g.restore();
-      // --- terrain glyphs: gather per cell then draw sorted by y for overlap
+      // --- terrain glyphs: gather per cell then draw sorted by y for overlap. Art whose layers take less territory wash
+      // marks a cut-out canvas beside the chunk (MA.drawResolved draws into g.washCut); drawTerritory erases that much wash
+      if (HB.mapAssets && HB.mapAssets.hasCuts) { const cut = document.createElement('canvas'); cut.width = c.width; cut.height = c.height; g.washCut = cut.getContext('2d'); c.washCut = cut; }
       const glyphs = [];
       for (let y = y0; y < y0 + CHUNK; y++) for (let x = x0; x < x0 + CHUNK; x++) {
         if (x < 0 || y < 0 || x >= W.w || y >= W.h) continue;
@@ -507,7 +518,7 @@
       }
       glyphs.sort((a, b) => a.y - b.y);
       for (const gl of glyphs) { A.tone = gl.tone; gl.fn(g, gl.rng, gl.key); }
-      A.tone = null; A.lineScale = 1;
+      A.tone = null; A.lineScale = 1; g.washCut = null;
       return c;
     }
 
@@ -531,6 +542,7 @@
       const cy0 = Math.max(0, Math.floor(tl.y / CHUNK)), cy1 = Math.min(Math.ceil(W.h / CHUNK) - 1, Math.floor(br.y / CHUNK));
       const budget = { n: 3 };
       const scale = z / cp;
+      this.drawn = [];
       ctx.save();
       ctx.imageSmoothingEnabled = true;
       for (let cy = cy0; cy <= cy1; cy++) for (let cx = cx0; cx <= cx1; cx++) {
@@ -540,6 +552,7 @@
         if (!c) continue;
         const p = this.worldToScreen(cx * CHUNK - m, cy * CHUNK - m);
         ctx.drawImage(c, p.x, p.y, c.width / c.rasterScale * scale, c.height / c.rasterScale * scale);
+        if (c.washCut) this.drawn.push({ cut: c.washCut, x: p.x, y: p.y, w: c.width / c.rasterScale * scale, h: c.height / c.rasterScale * scale });
       }
       ctx.restore();
       if (this.showChunkEdges) this.drawChunkEdges(ctx, cx0, cx1, cy0, cy1);

@@ -100,8 +100,13 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The pixel pack gives each
   variant `tones` images; `mapassets` draws `toneImg[o.tone]` when the wrap sets `q.tone` from `HB.mapart.tone`, which
   the chunk renderer sets per glyph from the cell's domain mark. Jagged mountains fall back to the pack's mountain.
+- 0.22: layers stack with real transparency (`PA.composite`: colours' alpha × layer `opacity`); a layer's `wash`
+  (0–100) gives a cut-out (`PA.cuts`) that the pixel pack ships as `washCut`. `mapassets` draws it into the chunk's
+  `washCut` canvas (`g.washCut` while the chunk renders, only when `MA.hasCuts`); `drawTerritory` paints the wash into
+  a buffer, erases it through the visible chunks' cut-outs and lays it on, so the ground keeps its wash.
 - Layers (0.18): a file may hold `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`;
-  `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins), so everything downstream is unchanged.
+  `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins) for bookkeeping (crop boxes); pictures
+  are stacked with transparency (0.22, below).
 - `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
   "in game" buttons use it. `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
 

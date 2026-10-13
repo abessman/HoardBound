@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.21.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.22.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -25,16 +25,14 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.20), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.22), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
 - Layers: frames belong to every layer; Copy/Paste frame carry all layers; the eyedropper picks what is visible; a
   hidden layer is left out of the game (eye = in game). A single plain "Layer 1" is saved as `frames` as before.
-- Converter defaults: 10 colours, dark lines 35 (luma < 63), line pickup 22%, paper removal 30 (the corners' colour),
-  colour boost 120%. 0.18.1: Keep (lines and colours / lines only / colours only); Apply defaults to two new layers,
-  "lines" above "colours", the colour layer filled under the lines from neighbouring colours (up to 4 px).
-  Large pictures are sampled up to 10×10 per pixel.
+- Converter defaults: 10 colours, dark lines 35, line pickup 22%, paper removal 30, colour boost 120%; Apply makes
+  "lines" above "colours" layers (colours filled under the lines up to 4 px); pictures sampled up to 10×10 per pixel.
 
 ## Current project: the lair and the owner's art (2026-10-12)
 Owner asked: new art should appear in the editor; a much larger, more detailed dragon in the lair, perched on its
@@ -53,7 +51,7 @@ Working decisions by Claude (not confirmed by the owner):
   captives, construction and light stay generated on top.
 - Editor picture behind: per sprite in IndexedDB (not in GitHub). Undo history ≥ 20 steps (≤ 120).
 
-## Latest: the owner's asks of 2026-10-13 (0.21, built)
+## Latest: the owner's asks of 2026-10-13 (0.21–0.22, built)
 - The map's paper now moves and scales with the map (was still while the ink panned: "floats on top").
 - Editor: parchment under the drawing (eyedropper picks it); spreadsheet selection (tap/drag, Ctrl/Cmd/Shift or ＋ Add,
   Select drawn); opacity slider for the selection; Show Normal/Good/Evil with an adjustable automatic tint.
@@ -64,6 +62,10 @@ Working decisions by Claude (not confirmed by the owner):
   toward #4a1c1c (`HB.pixelArt.TONES`). Used for drawn dragons (alignment ≤ −30 / ≥ 30), lair art (its dragon's),
   map symbols on blighted or flourishing cells. Raid sprites untinted. Jagged mountains fall back to the pack's mountain.
 - Paper texel = zoom / 1.5 screen px (clamped 0.5–1.6); the editor's underlay uses the same scale for map symbols.
+- 0.22 (owner: wash settable per sprite, by layer; transparency by layer): layers have opacity and wash (0–100,
+  default 100); layers now stack with real transparency (was topmost pixel wins). The wash cut-out works for pixel-pack
+  map symbols only (chunks carry a `washCut` canvas when any art uses it); places and landmarks are drawn over the
+  wash and never washed. The editor previews the wash as a flat colour (kind 30%, cruel 36%), not the watercolour.
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
