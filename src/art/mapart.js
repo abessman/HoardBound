@@ -499,7 +499,9 @@
   wrap('mountainJagged', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.deep ? ['map.terrain.mountain.jagged.deep', 'map.terrain.mountain.jagged', MTN] : ['map.terrain.mountain.jagged', MTN], x, y, param: w, paramY: h, key: o.key }));
   wrap('hill', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.terrain.hill'], x, y, param: w, paramY: h, key }));
   simple('treeRound', 'map.terrain.tree.round'); simple('treePine', 'map.terrain.tree.pine');
-  simple('treeBare', 'map.terrain.tree.bare'); simple('treeBurned', 'map.terrain.tree.burned');
+  // a tyrant's bare and burned trees: a pack without them uses its broadleaf tree (its evil version in such a land)
+  wrap('treeBare', (ctx, x, y, s, rng, key) => ({ ids: ['map.terrain.tree.bare', 'map.terrain.tree.round'], x, y, param: s, key }));
+  wrap('treeBurned', (ctx, x, y, s, rng, key) => ({ ids: ['map.terrain.tree.burned', 'map.terrain.tree.round'], x, y, param: s, key }));
   simple('grassTuft', 'map.terrain.grass'); simple('swampTuft', 'map.terrain.swamp'); simple('dune', 'map.terrain.dune'); simple('snowDots', 'map.terrain.snow');
   simple('field', 'map.terrain.field'); simple('ash', 'map.terrain.ash');
   wrap('blossom', (ctx, x, y, s, key) => ({ ids: ['map.terrain.blossom'], x, y, param: s, key }));

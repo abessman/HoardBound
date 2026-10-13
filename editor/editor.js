@@ -28,13 +28,23 @@
     'map.landmark.peak': ['Map · landmarks', 'Legendary peak', 'One per region, on its highest mountain: about 3 cells across, drawn over the range with small mountains round it (big pieces like this have no terrain size limit). Until drawn: three of your mountains with a gold pennant.'],
   };
   const NAME_ORDER = Object.keys(MAP_NAMES);
+  // the tyrant's mountains and trees are the evil versions of the mountain and the broadleaf tree now (Version: Evil)
+  const FOLDED = ['map.terrain.mountain.jagged', 'map.terrain.mountain.jagged.deep', 'map.terrain.tree.burned', 'map.terrain.tree.bare'];
+  // separate drawings of one sprite: '<id>#n' more variants (map symbols), '<id>@good' / '<id>@evil' its own versions
+  const pid = (id) => PA.parseId(id), idOf = (b, n, t) => PA.idOf(b, n, t);
+  const baseOf = (item) => item.baseItem || item;
+  /** the editor entry for a variant n and version tone of a catalog item */
+  function itemFor(base, n, tone) {
+    const id = idOf(base.id, n, tone); if (id === base.id) return base;
+    return Object.assign({}, base, { id, label: base.label + (n > 1 ? ` · variant ${n}` : '') + (tone ? ` · ${tone}` : ''), baseItem: base, n, tone });
+  }
   let catalog = [];
   function buildCatalog() {
     catalog = [];
     for (const e of HB.art.list()) catalog.push({ id: e.id, kind: e.kind, group: e.group, label: e.label, frames: e.frames, fps: e.fps, entry: e });
-    if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) { const n = MAP_NAMES[rec.id]; catalog.push({ id: rec.id, kind: 'map', group: n ? n[0] : MAP_GROUP[rec.screen] || 'Map · other', label: n ? n[1] : rec.id.replace(/^map\./, ''), mapNote: n ? n[2] : '', frames: 1, fps: 1, rec }); }
+    if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) { if (FOLDED.includes(rec.id) && !docs.has(rec.id)) continue; const n = MAP_NAMES[rec.id]; catalog.push({ id: rec.id, kind: 'map', group: n ? n[0] : MAP_GROUP[rec.screen] || 'Map · other', label: n ? n[1] : rec.id.replace(/^map\./, ''), mapNote: n ? n[2] : '', frames: 1, fps: 1, rec }); }
     // art for ids the game no longer registers (renamed or removed): still listed so it can be deleted or kept
-    for (const id of docs.keys()) if (!catalog.some(c => c.id === id)) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
+    for (const id of docs.keys()) if (!catalog.some(c => c.id === id) && !((pid(id).n > 1 || pid(id).tone) && catalog.some(c => c.id === pid(id).base))) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
     const groups = GROUP_ORDER.slice(); for (const c of catalog) if (!groups.includes(c.group) && c.group !== 'Other') groups.push(c.group);
     groups.push('Other');
     const rank = (c, i) => NAME_ORDER.includes(c.id) ? NAME_ORDER.indexOf(c.id) - 1e4 : i;
@@ -43,7 +53,7 @@
   const noteFor = (item, doc) => item.entry && item.entry.note ? item.entry.note
     : item.kind === 'dragon' ? `The game shows frames 1–${item.frames} of this pose (${item.fps} fps). One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
       : item.kind === 'sprite' ? 'A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. The game uses the first frame.'
-        : item.kind === 'map' ? `${item.mapNote ? item.mapNote + ' ' : ''}A map symbol: each frame is a variant (the map picks one per symbol and keeps it), used at its own drawn size. Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
+        : item.kind === 'map' ? `${item.mapNote ? item.mapNote + ' ' : ''}A map symbol: add variants with + New variant (each its own drawing at its own size); the map picks one at random for each spot and keeps it. Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
           : 'No longer used by the game (its id is not registered).';
 
   // =====================================================================================================
@@ -766,7 +776,9 @@
   // =====================================================================================================
   const TN = { live: false, keys: ['hue', 'sat', 'light', 'mix'] };
   function renderTone() {
-    const d = D(); document.querySelectorAll('#tone-row [data-tone]').forEach(b => b.classList.toggle('on', b.dataset.tone === S.tone));
+    const d = D(), it = S.item, cur = (it && it.tone) || S.tone; document.querySelectorAll('#tone-row [data-tone]').forEach(b => b.classList.toggle('on', b.dataset.tone === cur));
+    $('tn-draw').hidden = !S.tone || !d; $('tn-draw').textContent = S.tone === 'good' ? '✎ Draw the good version' : '✎ Draw the evil version';
+    $('tone-own').hidden = !(it && it.tone);
     $('tone-ctl').hidden = !S.tone || !d; if (!S.tone || !d) return;
     const t = PA.tone(d, S.tone); for (const k of TN.keys) $('tn-' + k).value = String(t[k]); $('tn-tint').value = t.tint;
     $('tn-auto').disabled = !(d.tones && d.tones[S.tone]);
@@ -777,7 +789,19 @@
     d.tones = d.tones || {}; d.tones[S.tone] = Object.assign(PA.tone(d, S.tone), { [key]: value });
     if (done) { TN.live = false; renderTone(); changed(); } else changed(false, true);
   }
-  document.querySelectorAll('#tone-row [data-tone]').forEach(b => { b.onclick = () => { S.tone = b.dataset.tone; renderTone(); draw(); }; });
+  document.querySelectorAll('#tone-row [data-tone]').forEach(b => { b.onclick = () => { if (!S.item) return; openVersion(baseOf(S.item), S.item.n || 1, b.dataset.tone); }; });
+  // the good or evil version becomes its own drawing, starting from the tinted picture
+  $('tn-draw').onclick = () => {
+    const d = D(), base = baseOf(S.item), n = S.item.n || 1, t = S.tone; if (!d || !t) return; commitFloat();
+    const def = toDef(d); def.palette = PA.tonedPalette(def, t); delete def.tones; def.id = idOf(base.id, n, t);
+    const nd = fromDef(def); nd.fresh = false; docs.set(def.id, nd); S.tone = ''; open(itemFor(base, n, t)); changed();
+    toast(`Your own ${t} version: change it as much as you like. The game uses it ${t === 'good' ? 'in a kind setting' : 'in a cruel setting'} instead of the tint.`, 5000);
+  };
+  $('tn-undraw').onclick = () => {
+    const it = S.item; if (!it || !it.tone) return; const base = baseOf(it), n = it.n || 1, t = it.tone;
+    if (!confirm(`Remove your ${t} drawing? The game tints the normal one again. (Removed from GitHub with your next save.)`)) return;
+    if (saved.has(it.id)) deleted.add(it.id); docs.delete(it.id); saveDrafts(); S.tone = t; open(itemFor(base, n, '')); status(); renderList();
+  };
   for (const k of TN.keys) { $('tn-' + k).addEventListener('input', (e) => toneEdit(k, +e.target.value, false)); $('tn-' + k).addEventListener('change', (e) => toneEdit(k, +e.target.value, true)); }
   $('tn-tint').addEventListener('input', (e) => toneEdit('tint', e.target.value, false)); $('tn-tint').addEventListener('change', (e) => toneEdit('tint', e.target.value, true));
   $('tn-auto').onclick = () => { const d = D(); if (!d || !d.tones || !d.tones[S.tone]) return; pushUndo(); delete d.tones[S.tone]; if (!Object.keys(d.tones).length) d.tones = null; renderTone(); changed(); };
@@ -879,6 +903,10 @@
   $('ly-del').onclick = () => { const d = D(); if (!d || d.layers.length < 2) return; commitFloat(); pushUndo(); const l = d.layers.splice(d.layer, 1)[0]; useLayer(d, Math.min(d.layer, d.layers.length - 1)); changed(); toast(`Deleted “${l.name}” (Undo brings it back)`); };
   function renderFrames() {
     const d = D(), box = $('frames'); box.innerHTML = ''; if (!d) return;
+    // map symbols: no animation frames; the strip shows the variants, each its own drawing
+    const isMap = d.kind === 'map' && d.frames.length === 1;
+    for (const id of ['fr-add', 'fr-dup', 'fr-del', 'fr-left', 'fr-right']) $(id).hidden = isMap;
+    $('var-buttons').hidden = !isMap; if (isMap) { renderVariants(); return; }
     const label = d.kind === 'map' ? 'variant' : 'frame', fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
     d.frames.forEach((_, k) => {
       const el = document.createElement('div'); el.className = 'fr' + (k === S.frame ? ' cur' : '');
@@ -889,6 +917,38 @@
       cap.textContent = `${label} ${k + 1}${unused ? ' (unused)' : ''}`; el.appendChild(cap);
       el.onclick = () => { commitFloat(); S.frame = k; S.sel = null; renderFrames(); draw(); }; box.appendChild(el);
     });
+  }
+  /** the variants of the open map symbol (1 and every '#n' drawing), as tiles; in Good or Evil, their versions */
+  function variantNs(base) { const ns = new Set([1]); for (const id of docs.keys()) { const p = pid(id); if (p.base === base.id && !p.tone) ns.add(p.n); } return [...ns].sort((a, b) => a - b); }
+  function renderVariants() {
+    const base = baseOf(S.item), box = $('frames'), tone = S.item.tone || S.tone, curN = S.item.n || 1;
+    for (const n of variantNs(base)) {
+      const own = tone && docs.get(idOf(base.id, n, tone)), d = own || docs.get(idOf(base.id, n, '')); if (!d) continue;
+      const fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
+      const el = document.createElement('div'); el.className = 'fr' + (n === curN ? ' cur' : '');
+      const c = frameCanvas(own || !tone ? d : { w: d.w, h: d.h, palette: PA.tonedPalette(d, tone) }, flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
+      const cap = document.createElement('div'); cap.textContent = `variant ${n}${tone ? (own ? ` · ${tone} (drawn)` : ` · ${tone} (tint)`) : ''}`; el.appendChild(cap);
+      el.onclick = () => openVersion(base, n, tone); box.appendChild(el);
+    }
+  }
+  /** open variant n in a version: its own good or evil drawing when there is one, else the normal one (tinted when tone) */
+  function openVersion(base, n, tone) {
+    commitFloat();
+    if (tone && docs.has(idOf(base.id, n, tone))) { S.tone = ''; open(itemFor(base, n, tone)); }
+    else { S.tone = tone || ''; open(itemFor(base, n, '')); }
+  }
+  /** an older map drawing with several frames: each frame becomes its own variant ('#2', '#3' …) */
+  function splitFrames(doc) {
+    const p = pid(doc.id); if (doc.kind !== 'map' || p.tone || doc.frames.length < 2) return 0;
+    const base = catalog.find(c => c.id === p.base); if (!base) return 0;
+    let next = Math.max(...variantNs(base)) + 1, made = 0;
+    for (let k = 1; k < doc.frames.length; k++) {
+      const def = toDef(doc), id = idOf(p.base, next++, '');
+      if (def.layers) def.layers = def.layers.map(l => Object.assign({}, l, { frames: [l.frames[k]] })); else def.frames = [def.frames[k]];
+      def.id = id; const nd = fromDef(def); nd.fresh = false; docs.set(id, nd); made++;
+    }
+    eachLayer(doc, fr => fr.slice(0, 1)); doc._rev = (doc._rev || 0) + 1; doc.fresh = false;
+    return made;
   }
   /** terrain art is drawn into cached map chunks with a margin: the game refuses symbols that reach past it (same rule as the loader) */
   /** a map variant as the game uses it: frame k cut to what is drawn (stretched to hold the anchor), as src/art/pixelart.js does */
@@ -909,7 +969,8 @@
     const d = D(), it = S.item; if (!d) return;
     $('title').textContent = `${it.group} · ${it.label}${isDirty(d) ? '  •  unsaved' : saved.has(d.id) ? '  •  saved' : ''}`;
     const warn = d.kind === 'map' ? terrainWarning(d) : '', fam = d.kind === 'map' && HB.mapSpecFamily ? HB.mapSpecFamily(d.id) : null;
-    const sizes = d.kind === 'map' && d.frames.length > 1 ? ' Variant sizes (each is used at its own size): ' + d.frames.map((_, k) => { const b = variantBox(d, k); return b ? `${k + 1}: ${b.w}×${b.h}` : `${k + 1}: empty`; }).join(' · ') + '.' : '';
+    const nv = d.kind === 'map' ? variantNs(baseOf(it)).length : 0;
+    const sizes = (it.tone ? ` Your own ${it.tone} version: the game uses it ${it.tone === 'good' ? 'in a kind setting' : 'in a cruel setting'} instead of tinting the normal drawing.` : '') + (nv > 1 ? ` Variant ${it.n || 1} of ${nv}: each spot gets one at random.` : '');
     $('note').textContent = noteFor(it, d) + (fam ? ` Anchor: ${fam.spec.anchor}.` : '') + sizes + (warn ? '  ⚠ ' + warn : '');
     $('btn-anc-foot').disabled = $('btn-anc-centre').disabled = d.kind === 'sprite';
     $('note').style.color = warn ? '#8a3324' : '';
@@ -920,13 +981,16 @@
   function renderList() {
     const q = $('search').value.trim().toLowerCase(), mine = $('only-mine').checked, box = $('list'); box.innerHTML = '';
     let lastGroup = null;
+    const related = new Map(); for (const id of new Set([...docs.keys(), ...saved.keys()])) { const b = pid(id).base; if (!related.has(b)) related.set(b, []); related.get(b).push(id); }
+    const cur = S.item ? baseOf(S.item).id : null;
     for (const it of catalog) {
-      const doc = docs.get(it.id), drawn = saved.has(it.id) || (doc && !doc.fresh);
+      const ids = related.get(it.id) || [it.id], drawn = ids.some(id => saved.has(id) || (docs.get(id) && !docs.get(id).fresh));
       if (mine && !drawn) continue;
       if (q && !(it.id.toLowerCase().includes(q) || it.group.toLowerCase().includes(q))) continue;
       if (it.group !== lastGroup) { const g = document.createElement('div'); g.className = 'group'; g.textContent = it.group; box.appendChild(g); lastGroup = it.group; }
-      const el = document.createElement('div'); el.className = 'item' + (S.item && S.item.id === it.id ? ' cur' : '');
-      const tag = doc && isDirty(doc) ? '✎ unsaved' : saved.has(it.id) ? '● drawn' : '';
+      const el = document.createElement('div'); el.className = 'item' + (cur === it.id ? ' cur' : '');
+      const n = ids.filter(id => saved.has(id) || (docs.get(id) && !docs.get(id).fresh)).length;
+      const tag = ids.some(id => docs.get(id) && isDirty(docs.get(id)) && !docs.get(id).fresh) ? '✎ unsaved' : n > 1 ? `● ${n} drawings` : n ? '● drawn' : '';
       el.innerHTML = `<span>${it.label}</span><span class="tag">${tag}</span>`; el.onclick = () => open(it); box.appendChild(el);
     }
   }
@@ -947,6 +1011,7 @@
   function open(item) {
     if (S.doc) commitFloat();
     let doc = docs.get(item.id); if (!doc) { doc = newDoc(item); docs.set(item.id, doc); }
+    const split = splitFrames(doc); if (split) setTimeout(() => { toast(`Your ${split + 1} variants are now separate drawings (variant 1 to ${split + 1}), each with its own size and anchor. Save to GitHub keeps them.`, 6000); saveDrafts(); status(); renderList(); }, 0);
     S.item = item; S.doc = doc; S.frame = 0; S.sel = null; S.float = null; S.color = Math.min(S.color === CLEAR ? 0 : S.color, Math.max(0, doc.palette.length - 1));
     setRefs(gameArt(item, doc));
     if (doc.fresh) S.ref = true;
@@ -991,7 +1056,7 @@
    *  current symbol most often; variants are picked per spot like the game does */
   function drawSampleMap() {
     bg('parchment'); const W = pv.width, H = pv.height, z = 2, R = new HB.RNG(11), cur = D();
-    const maps = [...docs.values()].filter(d => d.kind === 'map' && (!d.fresh || d === cur));
+    const maps = [...docs.values()].filter(d => d.kind === 'map' && !pid(d.id).tone && (!d.fresh || d === cur));
     if (!maps.length) { pg.fillStyle = '#6b5a44'; pg.font = '12px system-ui'; pg.fillText('Open a map symbol and draw it to see it here', 24, H / 2); return; }
     const main = cur.kind === 'map' ? cur : maps[0], others = maps.filter(d => d !== main), spots = [];
     const size = (d) => Math.max(10, Math.max(d.w, d.h) * d.scale * z), step = size(main) * (main.id.startsWith('map.terrain') ? 0.8 : 1.6);
@@ -1123,6 +1188,14 @@
   $('zoom-out').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.5); };
   $('zoom-fit').onclick = () => { fit(); draw(); };
   // frames belong to every layer: adding, duplicating, deleting and moving a frame does it in all of them
+  $('v-add').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), nd = newDoc(it); nd.w = d.w; nd.h = d.h; nd.anchor = d.anchor.slice(); nd.scale = d.scale; nd.flip = d.flip; nd.palette = d.palette.slice(); nd.layers = [{ name: 'Layer 1', hidden: false, frames: [blank(nd)] }]; useLayer(nd, 0); docs.set(it.id, nd); S.tone = ''; open(it); toast(`Variant ${n}: draw it here. The map picks one variant at random for each spot.`, 4000); };
+  $('v-dup').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; commitFloat(); const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), def = toDef(d); def.id = it.id; delete def.tones; const nd = fromDef(def); nd.fresh = false; docs.set(it.id, nd); S.tone = ''; open(it); changed(); toast(`Variant ${n} starts as a copy of the one you had open`); };
+  $('v-del').onclick = () => {
+    const base = baseOf(S.item), n = S.item.n || 1; if (n === 1) { toast('Variant 1 is the main drawing: Delete art removes it'); return; }
+    if (!confirm(`Delete variant ${n}${variantNs(base).length > 2 ? '' : ''} and its own good and evil drawings? (Removed from GitHub with your next save.)`)) return;
+    for (const t of ['', 'good', 'evil']) { const id = idOf(base.id, n, t); if (saved.has(id)) deleted.add(id); docs.delete(id); }
+    saveDrafts(); S.tone = ''; open(base); status(); renderList();
+  };
   $('fr-add').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); eachLayer(d, fr => { fr.splice(S.frame + 1, 0, blank(d)); return fr; }); S.frame++; changed(true); };
   $('fr-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); eachLayer(d, fr => { fr.splice(S.frame + 1, 0, fr[S.frame].slice()); return fr; }); S.frame++; changed(true); };
   $('fr-del').onclick = () => { const d = D(); if (!d || d.frames.length < 2) { toast('A sprite keeps at least one frame'); return; } pushUndo(); S.float = null; eachLayer(d, fr => { fr.splice(S.frame, 1); return fr; }); S.frame = Math.max(0, S.frame - 1); changed(true); };
@@ -1211,10 +1284,11 @@
     try { const dr = JSON.parse(localStorage.getItem(PA.DRAFTS) || '{}'); for (const id in dr) { if (dr[id] === null) { if (saved.has(id)) { deleted.add(id); docs.delete(id); restored++; } } else { docs.set(id, fromDef(dr[id])); restored++; } } } catch (e) { /* no drafts */ }
     buildCatalog();
     let last = null; try { last = localStorage.getItem('hb.editor.last'); } catch (e) { /* private mode */ }
-    open(catalog.find(i => i.id === last) || catalog.find(i => i.id === 'dragon.1.fly') || catalog[0]);
+    const lp = last ? pid(last) : null, lb = lp && catalog.find(i => i.id === lp.base);
+    open(lb && docs.has(last) ? itemFor(lb, lp.n, lp.tone) : lb || catalog.find(i => i.id === 'dragon.1.fly') || catalog[0]);
     status(); requestAnimationFrame(previewLoop);
     if (restored) toast(`${restored} unsaved change${restored === 1 ? '' : 's'} restored from this browser`, 4000);
     syncFromGitHub();
-    window.PIXEL_EDITOR = { selectDrawn, setAlpha, renderTone, S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
+    window.PIXEL_EDITOR = { itemFor, openVersion, variantNs, selectDrawn, setAlpha, renderTone, S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
   })();
 })();

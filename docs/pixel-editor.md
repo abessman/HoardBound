@@ -27,6 +27,9 @@ commit by hand.
 - **Frames strip:** every frame of the animation (the dragon's poses have 2 or 4, as the game plays them). Tap a frame
   to draw on it. **Duplicate**, **+ Blank**, **Delete**, ◀ ▶ to reorder, **Copy frame / Paste frame** between frames
   or sprites, **From game art** to start from the game's current drawing.
+- **Variants strip** (map symbols, instead of frames): each variant is its own drawing with its own canvas, size,
+  anchor and layers; the map picks one at random for each spot. **+ New variant** (blank, the size of this one),
+  **Duplicate variant**, **Delete variant**. An older drawing with several frames is split into variants when opened.
 - **Tools:** pencil, eraser, fill, eyedropper (or hold Alt), select a box, move, line, rectangle, filled box, ellipse,
   filled disc, anchor. Brush 1–3 px; **mirror** paints both halves at once. Shapes: drag; Shift keeps them square.
 - **Select, copy, paste:** with Select, tap a pixel or drag a box; hold Ctrl, Cmd or Shift (or turn on **＋ Add**, for
@@ -37,10 +40,12 @@ commit by hand.
   through, such as the map's parchment). Each see-through colour is its own colour (`#rrggbbaa`, also typeable in
   the colour box), so the sprite's colours list shows it over a checker. They stay see-through in the game, so a
   later change to the paper or a territory wash shows through as well.
-- **Good and evil:** **Show Normal / Good / Evil** displays the drawing as the game tints it in a kind or a cruel
-  setting (you still draw in the normal colours). The tint is automatic; with Good or Evil shown, the sliders adjust
-  it for this drawing (hue, colour, light, a tint colour and its strength), saved in the sprite's file; **Automatic**
-  goes back to the game's own shift.
+- **Versions: Normal / Good / Evil.** Every sprite (each variant too) has a good and an evil version, used in a kind or
+  a cruel setting. Until you draw one, Good or Evil shows the game's automatic tint of the normal drawing, with sliders
+  to adjust it (hue, colour, light, a tint colour and its strength; **Reset tint** goes back). **✎ Draw the evil
+  version** makes it its own drawing, starting from the tinted picture: change it as much as you like (another
+  shape, lava, a curl). **Use the automatic tint** removes your drawing again. The tyrant's mountains and the bare and
+  burned trees are no longer separate entries: they are the mountain's and the broadleaf tree's evil versions.
 - **Colour wheel:** drag around the dial for the colour, towards the edge for a stronger one, and on the bar beside it
   for lighter or darker; or type a code (`#3366cc`). It changes the colour you draw with: a colour nothing is drawn in
   yet changes as you drag (no pile of in-between colours); a colour already in the drawing is left alone and you get a
@@ -107,25 +112,26 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   chamber behind it (345×194, frame 1 the bare cave, then one frame per Treasure Chamber level); `lair.hill` is the
   zoomed-out backdrop and `lair.room.<name>` each room (one frame per level). The hoard, trophies, torch flames,
   workers and light are drawn on top, so leave room for them.
-- **Good and evil tones** (0.21): drawn dragons take the evil tone from alignment −30 down and the good tone from 30 up;
-  the lair's pictures take their dragon's; map symbols take them in a tyrant's or a protector's land (the blighted or
-  flourishing cells near your rule). Raid sprites are not tinted yet.
+- **Good and evil versions**: drawn dragons use the evil version from alignment −30 down and the good one from 30 up;
+  the lair's pictures use their dragon's; map symbols use them in a tyrant's or a protector's land (the blighted or
+  flourishing cells near your rule; under a tyrant the mountain's evil version stands where the jagged mountains
+  were). Your own drawing when there is one, else the tint. Raid sprites do not use them yet.
 - **Dragon** (`dragon.<tier>.<pose>`): frame k replaces that pose's frame k for every breed (breed colours are not
   applied to drawn art yet; the good and evil tones are). The anchor ⊕ marks the body centre: the
   game places and rotates the dragon around it. Size tiers 0–3 are hatchling to ancient; keep each tier's canvas
   size close to the game's (the editor starts from it).
 - **Raid sprites** (people, animals, treasure, props): the first frame replaces the sprite. The game always stands a
   sprite on its bottom edge, centred, in the 320×180 scene drawn 4× larger: draw the feet on the last row.
-- **Map symbols** (`map.…` ids): each frame is a variant; the map picks one per symbol and keeps it. Each variant is
-  cut to what is drawn in it, so variants of different sizes keep their sizes (the editor lists them). They are drawn
+- **Map symbols** (`map.…` ids): the variants are separate drawings; the map picks one per spot and keeps it. Each is
+  cut to what is drawn in it, so variants of different sizes keep their sizes. They are drawn
   pixel-sharp at `scale` map pixels per pixel (map pixels at zoom 1; the cells are 22). Choose **Pixel art (editor)**
   in Settings → Map art to see them; anything you have not drawn stays hand-drawn. The anchor ⊕ sits on the symbol's
   spot (a mountain's foot, a village's centre). Terrain may reach about 2 cells from its anchor; bigger is refused.
-- **Mountains** (Map · mountains): the world picks the *kind*, your frames are its *variants*. **Mountain** is most
+- **Mountains** (Map · mountains): the world picks the *kind*, your variants give it variety. **Mountain** is most
   mountain cells and stands in for every kind you have not drawn. **Small mountain** (two or three a cell, round the
   large ones and at the edges of ranges) and **Large mountain** (high peaks) show at about the size you draw them;
-  until drawn, the plain mountain is shrunk or enlarged. Snowy kinds are for cold lands; the tyrant's mountains for a
-  cruel ruler's land.
+  until drawn, the plain mountain is shrunk or enlarged. Snowy kinds are for cold lands; a cruel ruler's land uses
+  each kind's evil version.
 - **Landmarks** (Map · landmarks): big pieces drawn over the map like places, so they have no terrain size limit.
   **Legendary peak**: one per region, on its highest mountain, about 3 cells across, with small mountains round it;
   until drawn it is made of three of your mountains with a gold pennant.
@@ -156,7 +162,9 @@ HB.pixelArt && HB.pixelArt.add({
 A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "name": "sketch", "hidden": true, ... }]`
 (bottom layer first) instead of `"frames"`; the game stacks the visible ones. A layer may add `"opacity"` and `"wash"`
 (0–100; 100 when left out). A palette colour may carry opacity
-(`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tones (hue, sat, light, tint, mix).
+(`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tints (hue, sat, light, tint, mix).
+Variants and versions are their own files: `map.terrain.mountain#2` in `map.terrain.mountain~2.js`, its evil version
+`map.terrain.mountain#2@evil` in `map.terrain.mountain~2~evil.js`, a dragon pose's good version `dragon.2.idle@good`.
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and
 `flip` (may be mirrored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from
 `file://` too (`src/art/pixelart.js`). Safe to edit by hand; the editor rewrites a file when you save that sprite.

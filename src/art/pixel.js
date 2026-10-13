@@ -202,7 +202,8 @@
      *  opts go to gen; optsKey must change whenever opts change the drawing (it is part of the cache key). */
     frame(id, k = 0, opts, optsKey = '', tone = null) {
       const n = art.frames(id); k = ((Math.floor(k) % n) + n) % n;
-      const ov = (tone && sprites.overrides.get(`${id}.${k}.${tone}`)) || sprites.overrides.get(`${id}.${k}`) || (k === 0 ? sprites.overrides.get(id) : null);
+      const tm = tone && sprites.overrideMeta.get(`${id}@${tone}`); // a drawn good or evil version loops its own frames
+      const ov = (tone && sprites.overrides.get(`${id}.${tm ? k % tm.frames : k}.${tone}`)) || sprites.overrides.get(`${id}.${k}`) || (k === 0 ? sprites.overrides.get(id) : null);
       const key = `art|${id}|${k}|${ov ? 'ov' + (tone || '') : optsKey}`;
       let c = sprites.cache.get(key);
       if (c) return c;

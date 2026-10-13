@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.24.0 — 2026-10-13 · Variants and good and evil versions as real drawings
+- **Variants are separate drawings.** For a map symbol the strip under the canvas now shows its variants, each its own
+  drawing with its own size, anchor and layers (no more variants that behave like layers). **+ New variant**,
+  **Duplicate variant**, **Delete variant**; the map picks one at random for each spot. Your mountain's two variants
+  became variant 1 and variant 2.
+- **Draw your own good and evil versions.** Every sprite and every variant has Normal / Good / Evil. Until you draw one,
+  the game tints the normal drawing (adjustable, as before). **✎ Draw the evil version** makes it its own drawing,
+  starting from the tinted picture, to change as much as you like; the game uses it in a cruel setting (a kind one
+  for good): mountains and trees in a tyrant's or a protector's land, your dragon by its deeds, the lair by its
+  dragon. **Use the automatic tint** removes it again.
+- **The tyrant's mountains and the bare and burned trees** are no longer separate entries in the editor: they are the
+  evil versions of the mountain and the broadleaf tree.
+
 ## 0.23.0 — 2026-10-13 · 3D map test
 - **A test of the map in 3D** (Settings → 3D map test, with your campaign if one is open): the parchment lies at a
   steep angle and the mountains, hills, trees, places, legendary peaks and clouds stand up on it, facing you, with

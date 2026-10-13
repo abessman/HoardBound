@@ -97,9 +97,13 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 - 0.21: palette colours may carry opacity (`#rrggbbaa`). Good and evil tones: `HB.pixelArt.TONES` (automatic hue, sat,
   light, tint, mix), per drawing `def.tones`; `PA.canvases(def, tone)` recolours through `PA.shiftHex`. `apply()` adds
   `<id>.<k>.good/.evil` overrides for dragon and anim kinds; `HB.art.frame(id, k, opts, key, tone)` and the dragon's
-  `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The pixel pack gives each
-  variant `tones` images; `mapassets` draws `toneImg[o.tone]` when the wrap sets `q.tone` from `HB.mapart.tone`, which
-  the chunk renderer sets per glyph from the cell's domain mark. Jagged mountains fall back to the pack's mountain.
+  `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The wrap sets `q.tone`
+  from `HB.mapart.tone`, which the chunk renderer sets per glyph from the cell's domain mark.
+- 0.24: separate drawings per id (`PA.parseId`/`idOf`): `<id>#n` variants (map symbols) and `<id>@good|@evil`
+  versions. `apply()` lays drawn versions over the tints (`overrideMeta '<id>@<tone>'` for their frame count). The
+  pixel pack groups by base id: `<base>` (every variant), `<base>@good` / `<base>@evil` (per variant the drawn version
+  or its tint); `MA.draw` tries `<id>@<tone>` first when `o.tone`. Jagged mountains and bare or burned trees fall back
+  to the mountain and the broadleaf tree (their evil versions in a tyrant's land).
 - 0.22: layers stack with real transparency (`PA.composite`: colours' alpha × layer `opacity`); a layer's `wash`
   (0–100) gives a cut-out (`PA.cuts`) that the pixel pack ships as `washCut`. `mapassets` draws it into the chunk's
   `washCut` canvas (`g.washCut` while the chunk renders, only when `MA.hasCuts`); `drawTerritory` paints the wash into

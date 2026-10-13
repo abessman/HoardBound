@@ -11,6 +11,9 @@
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
  *        replaces its frame k, and the drawing's frame count and fps are used;
  *        'map' is a map symbol id: each frame is a variant, drawn through the 'pixel' map art pack (Settings → Map art).
+ * Separate drawings of one id: '<id>#2', '<id>#3' … are more variants of a map symbol (the map picks one per spot), and
+ * '<id>@good' / '<id>@evil' (also '<id>#2@evil') are its own good and evil versions, used in a kind or a cruel setting
+ * instead of the automatic tint. Each is its own file ('#' and '@' become '~' in the file name).
  * Loaded at boot with script tags, so it also works from file://. With ?drafts=1 the editor's unsaved drafts in this
  * browser are applied on top (the editor's "preview in game" buttons use it). Guide: docs/pixel-editor.md. */
 (function () {
@@ -52,6 +55,9 @@
     },
     layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
     layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
+    /** '<base>#<n>@<tone>' → { base, n (1 when none), tone ('' when none) } */
+    parseId(id) { const m = /^(.*?)(?:#(\d+))?(?:@(good|evil))?$/.exec(String(id)); return { base: m[1], n: m[2] ? +m[2] : 1, tone: m[3] || '' }; },
+    idOf(base, n, tone) { return base + (n > 1 ? '#' + n : '') + (tone ? '@' + tone : ''); },
     /** the file a sprite id is stored in ('|' and other odd characters become '~') */
     fileOf(id) { return id.replace(/[^\w.-]/g, '~') + '.js'; },
     script(src) { return new Promise((ok) => { const s = document.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); document.head.appendChild(s); }); },
@@ -125,8 +131,10 @@
     tonedPalette(def, which) { const t = PA.tone(def, which); return (def.palette || []).map(c => PA.shiftHex(c, t)); },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
-      const ov = HB.sprites.overrides;
-      for (const def of PA.entries.values()) {
+      const ov = HB.sprites.overrides, defs = [...PA.entries.values()];
+      // the normal drawings (with their automatic good and evil tints), then drawn good and evil versions over the tints
+      for (const def of defs) {
+        const p = PA.parseId(def.id); if (p.tone || p.n > 1) continue;
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
         if (def.kind === 'sprite') ov.set(def.id, Object.assign({ image: fr[0] }, base));
@@ -136,6 +144,13 @@
           HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps });
         }
       }
+      for (const def of defs) {
+        const p = PA.parseId(def.id); if (!p.tone || p.n > 1 || (def.kind !== 'dragon' && def.kind !== 'anim')) continue;
+        const fr = PA.canvases(def); if (!fr.length) continue;
+        const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
+        fr.forEach((c, k) => ov.set(`${p.base}.${k}.${p.tone}`, Object.assign({ image: c, bodyLength: def.bodyLength || (PA.entries.get(p.base) || {}).bodyLength }, base)));
+        HB.sprites.overrideMeta.set(`${p.base}@${p.tone}`, { frames: fr.length, fps: def.fps });
+      }
       HB.sprites.cache.clear();
     },
     /** the map symbols as a map art pack ('pixel'): nearest-neighbour, one logical px per pixel times def.scale.
@@ -143,22 +158,43 @@
      *  different sizes on one canvas keep their own sizes on the map; empty frames are skipped. A state the world
      *  draws smaller or larger (a small or large mountain: MAP_SPEC drawnK) is sized so it shows at about its drawn size. */
     mapPack() {
-      const assets = {};
+      // every drawing of a symbol, by its base id: the variants (#n, and each frame of an older many-frame file), and
+      // their good and evil versions ('<id>@good' / '<id>@evil' assets: the drawn version where there is one, else
+      // that variant's automatic tint, so a land keeps its variety; HB.mapAssets.draw looks there first in such a land)
+      const groups = new Map();
       for (const def of PA.entries.values()) {
-        if (def.kind !== 'map') continue;
-        const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(def.id) : 1), a = def.anchor || [def.w / 2, def.h], variants = [];
-        const toned = { good: PA.canvases(def, 'good'), evil: PA.canvases(def, 'evil') };
-        PA.canvases(def).forEach((c, i) => {
-          const b = PA.frameBox(def, i); if (!b) return;
-          const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
-          const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
-          const wc = PA.cuts(def), v = { id: 'v' + (i + 1), src: cut(c), tones: { good: cut(toned.good[i]), evil: cut(toned.evil[i]) }, sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip };
-          if (wc && wc[i]) v.washCut = cut(wc[i]); // less territory wash on this symbol (its layers' wash setting)
-          variants.push(v);
+        if (def.kind !== 'map') continue; const p = PA.parseId(def.id);
+        let g = groups.get(p.base); if (!g) groups.set(p.base, g = { normal: [], good: new Map(), evil: new Map() });
+        if (p.tone) g[p.tone].set(p.n, def); else g.normal.push([p.n, def]);
+      }
+      const assets = {};
+      for (const [base, g] of groups) {
+        g.normal.sort((a, b) => a[0] - b[0]);
+        const out = { '': [], good: [], evil: [] };
+        for (const [n, def] of g.normal) PA.canvases(def).forEach((c, i) => {
+          const v = PA.mapVariant(def, i, c, `v${n}.${i + 1}`); if (!v) return; out[''].push(v);
+          for (const tn of ['good', 'evil']) {
+            const td = g[tn].get(n), tv = td ? PA.mapVariant(td, Math.min(i, td.frames.length - 1), null, `v${n}.${i + 1}@${tn}`) : PA.mapVariant(def, i, PA.canvases(def, tn)[i], `v${n}.${i + 1}@${tn}`);
+            if (tv) out[tn].push(tv);
+          }
         });
-        if (variants.length) assets[def.id] = { variants };
+        // a good or evil drawing whose variant has no normal drawing still counts
+        for (const tn of ['good', 'evil']) for (const [n, td] of g[tn]) if (!g.normal.some(([m]) => m === n)) PA.canvases(td).forEach((c, i) => { const v = PA.mapVariant(td, i, c, `v${n}.${i + 1}@${tn}`); if (v) out[tn].push(v); });
+        if (out[''].length) assets[base] = { variants: out[''] };
+        for (const tn of ['good', 'evil']) if (out[tn].length) assets[base + '@' + tn] = { variants: out[tn] };
       }
       return { schemaVersion: 1, name: 'pixel', assets };
+    },
+    /** one map variant from frame i of a drawing: the picture (canvas, or the frame itself) cut to the drawn box,
+     *  stretched to hold the anchor; sized by the drawing's scale (and MAP_SPEC drawnK); with its wash cut-out */
+    mapVariant(def, i, canvas, id) {
+      const c = canvas || PA.canvases(def)[i], b = PA.frameBox(def, i); if (!b || !c) return null;
+      const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(PA.parseId(def.id).base) : 1), a = def.anchor || [def.w / 2, def.h];
+      const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
+      const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
+      const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip };
+      const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(wc[i]); // less territory wash on this symbol (its layers' wash setting)
+      return v;
     },
     /** the box around frame k's drawn pixels { x, y, w, h }, or null when it is empty */
     frameBox(def, k) {

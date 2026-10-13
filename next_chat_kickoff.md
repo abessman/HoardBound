@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.23.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.24.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -11,14 +11,13 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - 0.17–0.19: lair dragon on its hoard and the rooms view; editor picture behind, undo/redo, layers, converter, colour
   wheel, saved palettes. 0.20: mountains in three sizes, one legendary peak per region (`map.landmark.peak`, idea doc
   `docs/ideas/landmarks.md`), crop and anchor buttons, variants at their drawn size (MAP_SPEC `drawnK`).
-- The owner's art so far: `map.terrain.mountain` (64×54 canvas, drawing 55×32, layers "Layer 1" and "converted",
-  scale 0.5, anchor 28,31 (mid-height; the foot would be 31,44)). It draws on every mountain kind until the others
-  are drawn.
-- 284 headless checks pass on both seeds (one more per drawn art file).
+- The owner's art so far: `map.terrain.mountain` (55×30, layer "converted", scale 0.5, anchor at the foot; a second
+  frame in the owner's unsaved draft becomes variant `#2` when the editor opens it). It draws on every mountain kind until the others are drawn.
+- 285 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.23), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.24), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -55,14 +54,18 @@ Working decisions by Claude (not confirmed by the owner):
   toward #4a1c1c (`HB.pixelArt.TONES`). Used for drawn dragons (alignment ≤ −30 / ≥ 30), lair art (its dragon's),
   map symbols on blighted or flourishing cells. Raid sprites untinted. Jagged mountains fall back to the pack's mountain.
 - Paper texel = zoom / 1.5 screen px (clamped 0.5–1.6); the editor's underlay uses the same scale for map symbols.
-- 0.22 (owner: wash settable per sprite, by layer; transparency by layer): layers have opacity and wash (0–100,
-  default 100); layers now stack with real transparency (was topmost pixel wins). The wash cut-out works for pixel-pack
-  map symbols only (chunks carry a `washCut` canvas when any art uses it); places and landmarks are drawn over the
-  wash and never washed. The editor previews the wash as a flat colour (kind 30%, cruel 36%), not the watercolour.
+- 0.22: layer opacity and wash (0–100), real transparency between layers; wash cut-outs for pixel-pack map symbols
+  only (places and landmarks are never washed); the editor previews the wash as a flat colour.
 
 ## 3D map test (0.23, owner asked for a separate test)
 - Settings → 3D map test or `?scene=map3d`; design notes and open questions in `docs/ideas/map-3d.md`. The owner liked
   tilt flattening with zoom, a limited zoom with an Overview button, turning with names facing the camera.
+
+## Variants and versions (0.24, owner's ask)
+- Owner: variants must be separate sprites picked at random (large_mountain1, 2…), and Normal/Good/Evil must be real,
+  drawable versions of any sprite ("more serene, pointier with a curl, lava…"), replacing the tyrant duplicates.
+- Ids `<id>#n` and `<id>@good|@evil`, one file each; the tint stays the fallback per variant; FOLDED in editor.js hides
+  the jagged mountains and bare/burned trees (still in mapspec for packs).
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
