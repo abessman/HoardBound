@@ -22,6 +22,20 @@
     legendCache.set(W, set); return set;
   }
   HB.mapLegendaryPeaks = legendaryCells;
+  /** how high each mountain cell stands among the mountain cells around it (0–1): the crest of a range is near 1.
+   *  Ranges are drawn the old cartographers' way: a chain of big peaks along the crest, smaller ones beside it,
+   *  foothills at the edges and some open paper between (worked out from the world, never saved) */
+  const crestCache = new WeakMap();
+  function crestRank(W) {
+    let r = crestCache.get(W); if (r) return r;
+    r = new Float32Array(W.w * W.h);
+    for (let y = 0; y < W.h; y++) for (let x = 0; x < W.w; x++) {
+      const i = y * W.w + x; if (!isMtn(W.terrain[i])) continue; let lo = 0, tot = 0; const e = W.elev[i];
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { if (!dx && !dy) continue; const X = x + dx, Y = y + dy; if (X < 0 || Y < 0 || X >= W.w || Y >= W.h) continue; const j = Y * W.w + X; if (!isMtn(W.terrain[j])) continue; tot++; if (W.elev[j] < e) lo++; }
+      r[i] = tot ? lo / tot : 1;
+    }
+    crestCache.set(W, r); return r;
+  }
   /** 1: under a legendary peak (its cell and the cells beside and behind it: no glyphs); 2: around it (small mountains) */
   function legendZone(W, x, y) {
     let z = 0;
@@ -483,28 +497,47 @@
           const near = (dirs, test) => dirs.some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < W.w && ny < W.h && test(W.terrain[ny * W.w + nx]); });
           const edge = tt === T().MOUNTAINS && near([[1, 0], [-1, 0], [0, 1], [0, -1]], t2 => !isMtn(t2));
           const byPeak = tt === T().MOUNTAINS && !edge && near([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]], t2 => t2 === T().PEAKS);
-          if ((tt === T().MOUNTAINS && cellRng.chance(edge ? 0.6 : byPeak ? 0.5 : 0.12)) || lz === 2) {
-            const n = cellRng.chance(0.45) ? 3 : 2;
-            for (let k = 0; k < n; k++) {
-              const w = cp * (0.55 + cellRng.next() * 0.22), h = cp * (0.42 + cellRng.next() * 0.22);
-              const gx = X + cp * (0.5 + (k - (n - 1) / 2) * (n === 3 ? 0.3 : 0.4) + (cellRng.next() - 0.5) * 0.15), gy = Y + cp * (0.75 + (k % 2) * 0.18 + (cellRng.next() - 0.5) * 0.15);
-              push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, small: true }));
+          const rk = tt === T().PEAKS ? 1 : crestRank(W)[i];
+          const smalls = (n) => { for (let k = 0; k < n; k++) {
+            const w = cp * (0.55 + cellRng.next() * 0.22), h = cp * (0.42 + cellRng.next() * 0.22);
+            const gx = X + cp * (0.5 + (k - (n - 1) / 2) * (n === 3 ? 0.3 : 0.4) + (cellRng.next() - 0.5) * 0.15), gy = Y + cp * (0.75 + (k % 2) * 0.18 + (cellRng.next() - 0.5) * 0.15);
+            push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, small: true }));
+          } };
+          // around a legendary peak, at a range's edges and beside the high peaks: small mountains, sometimes none
+          if (lz === 2) { smalls(cellRng.chance(0.45) ? 3 : 2); continue; }
+          if (tt === T().MOUNTAINS && (edge || byPeak)) { const r = cellRng.next(); if (r < 0.45) smalls(cellRng.chance(0.4) ? 3 : 2); else if (r < 0.75) smalls(1); continue; }
+          if (rk >= 0.6) {
+            // the crest: big peaks, overlapping along the chain (the snowy great peaks on the highest)
+            const peaks = tt === T().PEAKS || cellRng.chance(0.35) ? 1 : 2, big = tt === T().PEAKS || rk >= 0.88;
+            for (let k = 0; k < peaks; k++) {
+              const w = cp * (big ? 1.45 + cellRng.next() * 0.15 : 1.2 + cellRng.next() * 0.25), h = cp * (big ? 1.35 + cellRng.next() * 0.2 : 1.0 + cellRng.next() * 0.35);
+              const gx = X + cp * (0.5 + (peaks === 2 ? (k ? 0.3 : -0.3) : 0) + (cellRng.next() - 0.5) * 0.25), gy = Y + cp * (0.85 + (cellRng.next() - 0.5) * 0.3);
+              push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, big }));
             }
-            continue;
-          }
-          const peaks = tt === T().PEAKS ? 1 : (cellRng.chance(0.5) ? 2 : 1);
-          for (let k = 0; k < peaks; k++) {
-            const w = cp * (tt === T().PEAKS ? 1.5 : 1.05 + cellRng.next() * 0.35), h = cp * (tt === T().PEAKS ? 1.45 : 0.75 + cellRng.next() * 0.45);
-            const gx = X + cp * (0.5 + (peaks === 2 ? (k ? 0.3 : -0.3) : 0) + (cellRng.next() - 0.5) * 0.3), gy = Y + cp * (0.85 + (cellRng.next() - 0.5) * 0.4);
-            push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, big: tt === T().PEAKS }));
+          } else if (rk >= 0.3) {
+            // the flanks: one mountain, or a pair of small ones
+            if (cellRng.chance(0.72)) { const w = cp * (0.95 + cellRng.next() * 0.3), h = cp * (0.7 + cellRng.next() * 0.3), gx = X + cp * (0.5 + (cellRng.next() - 0.5) * 0.35), gy = Y + cp * (0.85 + (cellRng.next() - 0.5) * 0.3); push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow })); }
+            else smalls(2);
+          } else {
+            // low ground inside a range: small mountains or open paper
+            const r = cellRng.next(); if (r < 0.3) smalls(2); else if (r < 0.55) smalls(1);
           }
         } else if (tt === T().HILLS) {
-          const n = cellRng.chance(0.6) ? 2 : 1;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.5 + (n === 2 ? (k ? 0.28 : -0.28) : 0)), gy = Y + cp * (0.7 + cellRng.next() * 0.3 + (k ? 0.15 : 0)); const w = cp * (0.7 + cellRng.next() * 0.3), h = cp * (0.22 + cellRng.next() * 0.1); push(gy, (g, vr, key) => A.hill(g, gx, gy, w, h, vr, key)); }
+          // hills gather in clumps of three or four with open country between (a slow noise picks the clumps)
+          const gn = this.groupNoise || (this.groupNoise = new HB.Noise2D(new HB.RNG('groups:' + st.seed))), clump = gn.at(x / 3.2, y / 3.2) > 0.22;
+          const spots = clump ? (cellRng.chance(0.35) ? [[-0.24, 0.12], [0.2, 0.08], [-0.02, -0.08], [0.3, -0.16]] : [[-0.22, 0.1], [0.2, 0.06], [0, -0.1]]) : cellRng.chance(0.22) ? [[0, 0]] : [];
+          for (const [ox, oy] of spots) { const gx = X + cp * (0.5 + ox + (cellRng.next() - 0.5) * (clump ? 0.14 : 0.5)), gy = Y + cp * (0.72 + oy + (cellRng.next() - 0.5) * (clump ? 0.12 : 0.4)); const w = cp * (clump ? 0.5 + cellRng.next() * 0.2 : 0.7 + cellRng.next() * 0.25), h = cp * (clump ? 0.18 + cellRng.next() * 0.06 : 0.22 + cellRng.next() * 0.08); push(gy, (g, vr, key) => A.hill(g, gx, gy, w, h, vr, key)); }
         } else if (tt === T().FOREST || tt === T().PINE) {
-          const n = cellRng.chance(0.25) ? 3 : cellRng.chance(0.8) ? 2 : 1;
-          const pine = tt === T().PINE;
-          for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.35 + cellRng.next() * 0.6); const s = cp * (pine ? 0.15 : 0.17) * (0.85 + cellRng.next() * 0.3); push(gy, (g, vr, key) => pine ? A.treePine(g, gx, gy, s, vr, key) : A.treeRound(g, gx, gy, s, vr, key)); }
+          // a forest is a dense mass of small trees with a clear edge: packed inside, thinner at the border, leaning inward
+          const pine = tt === T().PINE, isF = (t2) => t2 === T().FOREST || t2 === T().PINE;
+          const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < W.w && ny < W.h && isF(W.terrain[ny * W.w + nx]); });
+          const inner = nb.length === 4, lean = nb.reduce((a, [dx, dy]) => [a[0] + dx * 0.12, a[1] + dy * 0.12], [0, 0]);
+          const n = lod === 1 ? (inner ? 3 : 2) : inner ? 5 + (cellRng.chance(0.5) ? 1 : 0) : 2 + (cellRng.chance(0.55) ? 1 : 0);
+          for (let k = 0; k < n; k++) {
+            const col = k % 3, row = Math.floor(k / 3), ox = inner ? 0.18 + col * 0.32 + (row % 2) * 0.14 : 0.25 + cellRng.next() * 0.5 + lean[0], oy = inner ? 0.36 + row * 0.42 : 0.4 + cellRng.next() * 0.45 + lean[1];
+            const gx = X + cp * (ox + (cellRng.next() - 0.5) * 0.14), gy = Y + cp * (oy + (cellRng.next() - 0.5) * 0.14), s = cp * (pine ? 0.135 : 0.15) * (0.85 + cellRng.next() * 0.3);
+            push(gy, (g, vr, key) => pine ? A.treePine(g, gx, gy, s, vr, key) : A.treeRound(g, gx, gy, s, vr, key));
+          }
         } else if (tt === T().SWAMP) {
           const n = lod === 0 ? 2 : 1;
           for (let k = 0; k < n; k++) { const gx = X + cp * (0.2 + cellRng.next() * 0.6), gy = Y + cp * (0.3 + cellRng.next() * 0.6); push(gy, (g, vr, key) => A.swampTuft(g, gx, gy, cp * 0.18, vr, key)); }

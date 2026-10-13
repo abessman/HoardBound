@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.25.0 — 2026-10-13 · Grouped like an old map; no mirrored shading
+- **The map's symbols are grouped like a hand-drawn fantasy map.** Mountain ranges are chains of big peaks along their
+  crests, with smaller mountains on the flanks, foothills at the edges and open paper in between, instead of a
+  blanket of peaks. Forests are dense masses of small trees with a clear edge. Hills gather in small clumps with open
+  country around them.
+- **Drawings are no longer mirrored on the map.** A shaded drawing mirrored puts the light on the wrong side. Tick
+  **may be mirrored** (next to Scale) for a symbol that looks right either way.
+
 ## 0.24.0 — 2026-10-13 · Variants and good and evil versions as real drawings
 - **Variants are separate drawings.** For a map symbol the strip under the canvas now shows its variants, each its own
   drawing with its own size, anchor and layers (no more variants that behave like layers). **+ New variant**,

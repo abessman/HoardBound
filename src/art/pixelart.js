@@ -192,7 +192,7 @@
       const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(PA.parseId(def.id).base) : 1), a = def.anchor || [def.w / 2, def.h];
       const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
       const cut = (src) => { const k = document.createElement('canvas'); k.width = w; k.height = h; k.getContext('2d').drawImage(src, -x0, -y0); return k.toDataURL('image/png'); };
-      const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip };
+      const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.mirror }; // mirrored only when the drawing allows it
       const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(wc[i]); // less territory wash on this symbol (its layers' wash setting)
       return v;
     },

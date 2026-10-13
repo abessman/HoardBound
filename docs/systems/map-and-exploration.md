@@ -49,8 +49,12 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   beside the lair; blighted or flourishing glyphs near your rule. The chunk cache is cleared when the domain changes.
   See [domain-and-influence](domain-and-influence.md).
 
-- Mountains (0.20): three sizes. High-peak cells hold one large mountain; mountain cells one or two, or two or three
-  small ones (60% at a range's edge, 50% beside a high peak, 12% elsewhere), so small mountains usually ring the large.
+- Symbols are grouped the way old hand-drawn maps group them (0.25, after the owner's Tolkien map reference):
+  mountain ranges are chains of big peaks along the crest (cells high among their 5×5 mountain neighbours, `crestRank`;
+  the snowy great peaks on the highest and on high-peak cells), single mountains or pairs of small ones on the flanks,
+  small foothills at the edges and beside the high peaks, and open paper on low ground inside a range. Forests are
+  dense masses (five or six small trees in interior cells, two or three leaning inward at the edge). Hills come in
+  clumps of three or four where a slow noise says so, else now and then alone.
   Each region's legendary peak (`HB.mapLegendaryPeaks(W)`: its highest mountain cell with no place on it, preferring
   one ringed by mountains; derived, never saved) is a landmark about three cells across, drawn every frame over the
   map (`drawLandmarks`, family `map.landmark.peak`); the ground under and behind it is left clear and the cells round

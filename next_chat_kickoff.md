@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.24.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.25.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -17,7 +17,7 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.24), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.25), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -26,22 +26,9 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - Converter defaults: 10 colours, dark lines 35, line pickup 22%, paper removal 30, colour boost 120%; Apply makes
   "lines" above "colours" layers (colours filled under the lines up to 4 px); pictures sampled up to 10×10 per pixel.
 
-## Current project: the lair and the owner's art (2026-10-12)
-Owner asked: new art should appear in the editor; a much larger, more detailed dragon in the lair, perched on its
-hoard idling and sleeping on it; a more detailed lair that zooms out into a group of rooms for the add-ons ("not yet
-sure how I want to visualize the addons", will draw and design later); the hoard stays generated; a picture behind
-the pixels in the editor; undo/redo buttons with at least 10 steps.
-Working decisions by Claude (not confirmed by the owner):
-- Lair pictures are 345×194 shown at exactly 2× (crisp pixels); the dragon is about twice raid size (body length
-  40/60/84/104 by tier); placeholders are the composed dragon drawn bigger, in the breed's colours. Drawn art replaces
-  them for every breed (as with the raid dragon).
-- Rooms view: fixed slots in `HB.lairArt.ROOMS` (entrance, guard post, lookout, hoard, strongroom, sleeping chamber,
-  forge, larder, cells; traps, ward and concealment drawn on the passage and the mouth). Unbuilt rooms show as dotted
-  outlines to show what is possible; tapping opens the Build tab. The dragon sleeps on the hoard even with a
-  sleeping chamber built.
-- Each room and both backdrops are editable art with one frame per level; the hoard, trophies, flames, workers,
-  captives, construction and light stay generated on top.
-- Editor picture behind: per sprite in IndexedDB (not in GitHub). Undo history ≥ 20 steps (≤ 120).
+## The lair (0.17, decisions not yet confirmed by the owner; details in docs/systems/lair-and-economy.md)
+- Pictures 345×194 at 2×; lair dragon about twice raid size; rooms view with fixed slots (`HB.lairArt.ROOMS`), unbuilt
+  rooms dotted, tap opens Build; rooms and backdrops are editable art per level, the hoard and light stay generated.
 
 ## Latest: the owner's asks of 2026-10-13 (0.21–0.22, built)
 - The map's paper now moves and scales with the map (was still while the ink panned: "floats on top").
@@ -66,6 +53,11 @@ Working decisions by Claude (not confirmed by the owner):
   drawable versions of any sprite ("more serene, pointier with a curl, lava…"), replacing the tyrant duplicates.
 - Ids `<id>#n` and `<id>@good|@evil`, one file each; the tint stays the fallback per variant; FOLDED in editor.js hides
   the jagged mountains and bare/burned trees (still in mapspec for packs).
+
+## Map groupings and lighting (0.25)
+- Owner showed the Tolkien map: chains, dense forests, clumps, open paper (built, tune by eye). Shaded sprites must
+  not mirror (now opt-in `mirror`). Owner asked (talk only) about outline + a shading mask for lighting: answered
+  feasible (light/shadow mask painted for a light from the left; the game relights mirrored or turned sprites).
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses

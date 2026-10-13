@@ -78,7 +78,7 @@
     const pct = (v) => (v === undefined ? undefined : Math.max(0, Math.min(100, Math.round(+v) || 0)));
     const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
-    const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.flip, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
+    const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.mirror, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
     useLayer(doc, layers.length - 1); return doc;
   }
   /** the picture the game shows for frame k: visible layers merged, the topmost pixel wins (active: a stand-in for the active layer's frame) */
@@ -89,7 +89,7 @@
   }
   function toDef(doc) {
     const def = { id: doc.id, kind: doc.kind, w: doc.w, h: doc.h, anchor: doc.anchor.slice(), fps: doc.fps };
-    if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.flip = true; }
+    if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.mirror = true; } // may be shown mirrored (shading would flip with it)
     if (doc.kind === 'dragon' && doc.bodyLength) def.bodyLength = doc.bodyLength;
     // keep only colours in use, in order
     const used = new Set(); for (const l of doc.layers) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
@@ -167,7 +167,7 @@
   }
   /** a new sprite: the game's size and anchor, blank frames, the game's drawing shown faintly behind (From game art copies it) */
   function newDoc(item) {
-    const doc = { id: item.id, kind: item.kind, w: 16, h: 16, anchor: [8, 16], palette: [item.kind === 'map' ? '#2b1a0e' : '#2a1c22'], layers: [], fps: item.fps, scale: 1, flip: item.kind === 'map' && item.id.startsWith('map.terrain'), bodyLength: null, undo: [], redo: [], fresh: true };
+    const doc = { id: item.id, kind: item.kind, w: 16, h: 16, anchor: [8, 16], palette: [item.kind === 'map' ? '#2b1a0e' : '#2a1c22'], layers: [], fps: item.fps, scale: 1, flip: false, bodyLength: null, undo: [], redo: [], fresh: true };
     const art = gameArt(item, null);
     if (art) { doc.w = art.w; doc.h = art.h; doc.anchor = art.anchor.slice(); doc.bodyLength = art.bodyLength || null; }
     doc.layers = [{ name: 'Layer 1', hidden: false, frames: Array.from({ length: Math.max(1, item.frames) }, () => blank(doc)) }];
@@ -180,8 +180,8 @@
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
   const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, frames: l.frames.map(f => f.slice()) }));
   const lyOp = (l) => (l.opacity === undefined ? 100 : l.opacity), lyWash = (l) => (l.wash === undefined ? 100 : l.wash);
-  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, tones: d.tones ? JSON.stringify(d.tones) : null }; }
-  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
+  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null }; }
+  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
   const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length * d.layers.length))));
   /** change every layer's frames (frame structure, size, shifting), keeping doc.frames on the active layer */
@@ -976,6 +976,7 @@
     $('note').style.color = warn ? '#8a3324' : '';
     $('in-w').value = d.w; $('in-h').value = d.h; $('in-fps').value = d.fps;
     $('scale-wrap').style.display = d.kind === 'map' ? '' : 'none'; $('in-scale').value = String(d.scale);
+    $('mirror-wrap').style.display = d.kind === 'map' ? '' : 'none'; $('chk-mirror').checked = !!d.flip;
     $('fr-ref').disabled = it.kind === 'map' && !it.rec;
   }
   function renderList() {
@@ -1184,6 +1185,7 @@
   $('chk-paper').onchange = (e) => { S.paper = e.target.checked; try { localStorage.setItem('hb.editor.paper', S.paper ? '1' : '0'); } catch (err) { /* private mode */ } draw(); };
   $('btn-seladd').onclick = () => { S.addSel = !S.addSel; $('btn-seladd').classList.toggle('on', S.addSel); if (S.addSel) { setTool('select'); toast('Each tap or box now adds to the selection; tap ＋ Add again to start fresh selections'); } };
   $('btn-seldrawn').onclick = () => selectDrawn();
+  $('chk-mirror').onchange = (e) => { const d = D(); if (!d) return; pushUndo(); d.flip = e.target.checked; changed(); };
   $('zoom-in').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1.5); };
   $('zoom-out').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.5); };
   $('zoom-fit').onclick = () => { fit(); draw(); };

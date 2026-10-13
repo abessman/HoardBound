@@ -127,6 +127,7 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   pixel-sharp at `scale` map pixels per pixel (map pixels at zoom 1; the cells are 22). Choose **Pixel art (editor)**
   in Settings → Map art to see them; anything you have not drawn stays hand-drawn. The anchor ⊕ sits on the symbol's
   spot (a mountain's foot, a village's centre). Terrain may reach about 2 cells from its anchor; bigger is refused.
+  Symbols are never mirrored unless you tick **may be mirrored** (next to Scale): leave it off for shaded drawings.
 - **Mountains** (Map · mountains): the world picks the *kind*, your variants give it variety. **Mountain** is most
   mountain cells and stands in for every kind you have not drawn. **Small mountain** (two or three a cell, round the
   large ones and at the edges of ranges) and **Large mountain** (high peaks) show at about the size you draw them;
@@ -166,7 +167,8 @@ A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "n
 Variants and versions are their own files: `map.terrain.mountain#2` in `map.terrain.mountain~2.js`, its evil version
 `map.terrain.mountain#2@evil` in `map.terrain.mountain~2~evil.js`, a dragon pose's good version `dragon.2.idle@good`.
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and
-`flip` (may be mirrored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from
+`mirror` (true: the map may show it mirrored; off by default, since shading would swap sides; an older `flip` is
+ignored); the dragon adds `bodyLength`. They are classic scripts, so the game loads them from
 `file://` too (`src/art/pixelart.js`). Safe to edit by hand; the editor rewrites a file when you save that sprite.
 `node tools/test.js` checks every file: rows and widths, palette indices, ids, the anchor, and that `index.js` lists
 them all.
