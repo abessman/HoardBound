@@ -6,7 +6,7 @@ HB.pixelArt && HB.pixelArt.add({
  "h": 27,
  "anchor": [21,27],
  "fps": 1,
- "scale": 0.5,
+ "scale": 1,
  "flip": true,
  "palette": ["#705d3a","#514226","#7d6b48","#736343","#998964","#e9e3bd","#dcd7b3","#867755","#44361f","#c3b58b","#cabb8f","#ab9467","#bdac81","#dfd4a9","#b39f72","#9b855b","#baa87a","#a39167","#c3b284","#5c4c2f","#ab9b72","#d0c398","#553d1d","#d7cba0","#b3a47b","#382c19","#3c321e","#67512e","#9a8d6a","#2a1c22"],
  "tones": {"good":{"hue":16,"sat":15,"light":-5,"tint":"#e2c75c","mix":0}},
