@@ -54,9 +54,14 @@ commit by hand.
   - **Colours** is how many colours the rest is reduced to; **Palette** can instead snap to this sprite's colours or
     the game's. **Colour boost** makes the colours richer (pixel art likes them strong). **Outline the shape** adds a
     line around the outside.
+  - **Keep** chooses what comes out: lines and colours, **lines only** (no colours: just the ink, plus the outline if
+    ticked), or colours only.
   - The preview updates as you move a slider (untick *preview* to compare with the picture). **Apply** puts the
-    result in a new layer called "converted" (or replaces this layer's frame); touch it up by hand, or undo and try
-    other settings. ⇆ moves the panel to the other side. (fps is saved with the sprite), at 1–4× over a raid,
+    result, by default, in **two new layers: "lines" above "colours"**, so the outline can be redrawn, recoloured or
+    hidden without touching the colours. Under the lines the colour layer carries on the neighbouring colours, so it
+    has no gaps on its own. Or put it all in one new layer, or replace this layer's frame. Touch it up by hand, or undo
+    and try other settings. ⇆ moves the panel to the other side.
+- **Preview:** ▶ Play runs the animation at its game speed (fps is saved with the sprite), at 1–4× over a raid,
   parchment, dark or checker background. **Sample map** shows your map symbols scattered over parchment at map zoom.
 - **Dragons in game ↗ / Lair in game ↗ / Map in game ↗** open the game's dragon sheet, a test campaign's lair (the
   right dragon size, the rooms view for room art, asleep for the sleeping pose) or the map preview, with your unsaved

@@ -401,7 +401,7 @@
   // paper-coloured samples make it clear, otherwise it takes the average colour; colours are then reduced.
   // =====================================================================================================
   const CV = { open: false, grid: null, canvas: null, key: '', raf: 0, openAfterLoad: false };
-  const cvOpts = () => ({ n: +$('cv-n').value, pal: $('cv-pal').value, dark: +$('cv-dark').value, cover: +$('cv-cover').value, bg: +$('cv-bg').value, sat: +$('cv-sat').value / 100, line: $('cv-line').value.toLowerCase(), outline: $('cv-outline').checked });
+  const cvOpts = () => ({ keep: $('cv-keep').value, n: +$('cv-n').value, pal: $('cv-pal').value, dark: +$('cv-dark').value, cover: +$('cv-cover').value, bg: +$('cv-bg').value, sat: +$('cv-sat').value / 100, line: $('cv-line').value.toLowerCase(), outline: $('cv-outline').checked });
   const luma = (r, g, b) => 0.299 * r + 0.587 * g + 0.114 * b;
   const cdist2 = (a, b) => 2 * (a[0] - b[0]) ** 2 + 4 * (a[1] - b[1]) ** 2 + 3 * (a[2] - b[2]) ** 2; // green counts most, as for the eye
   const boost = (c, k) => { const m = (c[0] + c[1] + c[2]) / 3; return c.map(v => HB.clamp(Math.round(m + (v - m) * k), 0, 255)); };
@@ -480,12 +480,28 @@
     cols.forEach((c, j) => { let bi = 0, bd = Infinity; cand.forEach((q, qi) => { const dd = cdist2(c, q); if (dd < bd) { bd = dd; bi = qi; } }); cells[colAt[j]] = hexes[bi]; });
     // an outline around the shape, on the clear pixels next to it
     if (o.outline) { const add = []; for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) { const i = y * d.w + x; if (cells[i]) continue; if ((x > 0 && cells[i - 1] && cells[i - 1] !== 'L') || (x < d.w - 1 && cells[i + 1] && cells[i + 1] !== 'L') || (y > 0 && cells[i - d.w] && cells[i - d.w] !== 'L') || (y < d.h - 1 && cells[i + d.w] && cells[i + d.w] !== 'L')) add.push(i); } for (const i of add) cells[i] = 'L'; }
-    return cells.map(v => v === 'L' ? o.line : v);
+    // lines and colours kept apart (each can go on its own layer); under the lines the colours carry on from their
+    // neighbours, so a colour layer has no gaps when its lines sit on another layer or are redrawn
+    const lines = cells.map(v => v === 'L'), colours = cells.map(v => v && v !== 'L' ? v : null);
+    for (let pass = 0; pass < 4; pass++) {
+      const fill = [];
+      for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) {
+        const i = y * d.w + x; if (!lines[i] || colours[i]) continue;
+        const count = new Map(); for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const X = x + dx, Y = y + dy; if ((dx || dy) && X >= 0 && Y >= 0 && X < d.w && Y < d.h) { const c = colours[Y * d.w + X]; if (c) count.set(c, (count.get(c) || 0) + 1); } }
+        let best = null, bn = 0; for (const [c, n] of count) if (n > bn) { bn = n; best = c; } if (best) fill.push([i, best]);
+      }
+      if (!fill.length) break; for (const [i, c] of fill) colours[i] = c;
+    }
+    return { lines, colours, line: o.line };
   }
+  /** what a conversion looks like with its keep setting: lines over colours, lines alone, or colours alone */
+  const convPicture = (r, keep) => r.lines.map((l, i) => keep === 'lines' ? (l ? r.line : null) : keep === 'colours' ? r.colours[i] : (l ? r.line : r.colours[i]));
+  const convLayer = (r, part) => r.lines.map((l, i) => part === 'lines' ? (l ? r.line : null) : (r.colours[i] || null));
   function runConvert() {
     CV.raf = 0; const d = D(), ri = curRef(); if (!CV.open || !d || !ri) return;
     const o = cvOpts(); CV.key = convKey(d, ri, o);
-    CV.grid = convertPicture(d, ri, o);
+    CV.res = convertPicture(d, ri, o); CV.grid = convPicture(CV.res, o.keep);
+    $('cv-colour-ctl').classList.toggle('dim', o.keep === 'lines');
     const c = CV.canvas && CV.canvas.width === d.w && CV.canvas.height === d.h ? CV.canvas : document.createElement('canvas'); c.width = d.w; c.height = d.h;
     const g = c.getContext('2d'), img = g.createImageData(d.w, d.h);
     CV.grid.forEach((hex, i) => { if (!hex) return; const v = rgbOf(hex), q = i * 4; img.data[q] = v[0]; img.data[q + 1] = v[1]; img.data[q + 2] = v[2]; img.data[q + 3] = 255; });
@@ -508,10 +524,15 @@
   $('cv-side').onclick = () => $('conv').classList.toggle('left');
   $('cv-apply').onclick = () => {
     const d = D(); if (!d || !CV.grid) return; commitFloat(); pushUndo();
-    if ($('cv-into').value === 'new') { d.layers.splice(d.layer + 1, 0, { name: 'converted', hidden: false, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layer + 1); }
-    const f = blank(d), map = new Map(); CV.grid.forEach((hex, i) => { if (!hex) return; if (!map.has(hex)) map.set(hex, color(d, hex)); f[i] = map.get(hex); });
-    d.frames[S.frame] = f; closeConvert(); renderColors(); changed();
-    toast($('cv-into').value === 'new' ? 'Converted into a new layer, “converted”: touch it up, hide your picture, or undo to try again' : 'Converted into this layer');
+    const keep = $('cv-keep').value, into = $('cv-into').value, map = new Map();
+    const toFrame = (grid) => { const f = blank(d); grid.forEach((hex, i) => { if (!hex) return; if (!map.has(hex)) map.set(hex, color(d, hex)); f[i] = map.get(hex); }); return f; };
+    const addLayer = (name, grid) => { const frames = d.frames.map(() => blank(d)); frames[S.frame] = toFrame(grid); d.layers.splice(d.layer + 1, 0, { name, hidden: false, frames }); useLayer(d, d.layer + 1); };
+    let msg;
+    if (into === 'apart' && keep === 'both') { addLayer('colours', convLayer(CV.res, 'colours')); addLayer('lines', convLayer(CV.res, 'lines')); msg = 'Converted into two new layers, “lines” above “colours”'; }
+    else if (into === 'this') { d.frames[S.frame] = toFrame(CV.grid); msg = 'Converted into this layer'; }
+    else { const name = keep === 'lines' ? 'lines' : keep === 'colours' ? 'colours' : 'converted'; addLayer(name, CV.grid); msg = `Converted into a new layer, “${name}”`; }
+    closeConvert(); renderColors(); changed();
+    toast(msg + ': touch it up, hide your picture, or undo to try again', 4500);
   };
 
   // =====================================================================================================

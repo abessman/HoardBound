@@ -88,14 +88,17 @@
       <div id="conv" class="panel" hidden>
         <div class="row"><b>Picture → pixels</b><span class="grow"></span><label class="small"><input type="checkbox" id="cv-show" checked> preview</label><button id="cv-side" title="Move this panel to the other side">⇆</button></div>
         <div class="small muted">Uses your picture where it sits on the grid: move and size it with the Image behind controls.</div>
+        <label class="col small">Keep <select id="cv-keep"><option value="both">Lines and colours</option><option value="lines">Lines only (no colours)</option><option value="colours">Colours only (no lines)</option></select></label>
+        <div id="cv-colour-ctl">
         <label class="col small">Colours <b id="cv-n-v"></b><input type="range" id="cv-n" min="2" max="32" value="10"></label>
         <label class="col small">Palette <select id="cv-pal"><option value="free">Free: the picture's own colours</option><option value="sprite">This sprite's colours</option><option value="game">Game colours</option></select></label>
         <label class="col small">Dark lines: how dark counts as a line <b id="cv-dark-v"></b><input type="range" id="cv-dark" min="0" max="100" value="35"></label>
         <label class="col small">Line pickup: how much of a pixel must be line <b id="cv-cover-v"></b><input type="range" id="cv-cover" min="2" max="80" value="22"></label>
         <label class="col small">Remove background (paper) <b id="cv-bg-v"></b><input type="range" id="cv-bg" min="0" max="100" value="30"></label>
         <label class="col small">Colour boost <b id="cv-sat-v"></b><input type="range" id="cv-sat" min="50" max="200" value="120"></label>
+        </div>
         <div class="row small wrap"><label>Line colour <input type="color" id="cv-line" value="#2a1c22"></label><label><input type="checkbox" id="cv-outline"> outline the shape</label></div>
-        <div class="row small"><label>Put it in <select id="cv-into"><option value="new">a new layer</option><option value="this">this layer (this frame)</option></select></label></div>
+        <div class="row small"><label>Put it in <select id="cv-into"><option value="apart">new layers: lines above colours</option><option value="new">one new layer</option><option value="this">this layer (this frame)</option></select></label></div>
         <div class="row"><button id="cv-cancel">Cancel</button><span class="grow"></span><button id="cv-apply" class="primary">Apply</button></div>
       </div>
     </div>

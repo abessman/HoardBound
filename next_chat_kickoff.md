@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.18.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.18.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -26,7 +26,9 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - Layers: frames belong to every layer; Copy/Paste frame carry all layers; the eyedropper picks what is visible; a
   hidden layer is left out of the game (eye = in game). A single plain "Layer 1" is saved as `frames` as before.
 - Converter defaults: 10 colours, dark lines 35 (luma < 63), line pickup 22%, paper removal 30 (the corners' colour),
-  colour boost 120%; result goes to a new layer "converted". Large pictures are sampled up to 10×10 per pixel.
+  colour boost 120%. 0.18.1: Keep (lines and colours / lines only / colours only); Apply defaults to two new layers,
+  "lines" above "colours", the colour layer filled under the lines from neighbouring colours (up to 4 px).
+  Large pictures are sampled up to 10×10 per pixel.
 
 ## Current project: the lair and the owner's art (2026-10-12)
 Owner asked: new art should appear in the editor; a much larger, more detailed dragon in the lair, perched on its

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.1 — 2026-10-13
+- **Converter: lines only.** "Keep" chooses lines and colours, lines only (no colours, just the ink and the outline),
+  or colours only.
+- **Converter: lines and colours on their own layers.** Apply now puts the lines on a "lines" layer above a "colours"
+  layer (or everything in one layer, or into this layer, as before). The colour layer is filled in under the lines,
+  so it has no gaps when the lines are hidden or redrawn.
+
 ## 0.18.0 — 2026-10-13 · Layers and picture to pixels
 - **Layers in the pixel editor.** Give a sprite a few named layers (say a sketch, the lines and the colours), draw on
   one at a time, show or hide them, reorder, rename, merge down or delete them. They are saved with the sprite, so
