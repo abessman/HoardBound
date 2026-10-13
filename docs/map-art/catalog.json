@@ -1,6 +1,6 @@
 {
  "generated": "node tools/mapart-export.mjs",
- "game": "0.14.0",
+ "game": "0.20.0",
  "spec": {
   "schemaVersion": 1,
   "cell": 22,
@@ -14,7 +14,7 @@
    "family": "map.terrain.mountain",
    "state": null,
    "sub": false,
-   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "purpose": "A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)",
    "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
    "layer": "terrain",
    "sampling": "smooth",
@@ -90,7 +90,7 @@
    "family": "map.terrain.mountain",
    "state": "snow",
    "sub": false,
-   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "purpose": "A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)",
    "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
    "layer": "terrain",
    "sampling": "smooth",
@@ -166,7 +166,7 @@
    "family": "map.terrain.mountain",
    "state": "peak",
    "sub": false,
-   "purpose": "A mountain on mountain cells (one or two per cell)",
+   "purpose": "A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)",
    "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
    "layer": "terrain",
    "sampling": "smooth",
@@ -233,6 +233,158 @@
    "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
    "terrainReach": {
     "cells": 2.004,
+    "limitCells": 2.2,
+    "maxReachAtK1": 30.2
+   }
+  },
+  {
+   "id": "map.terrain.mountain.small",
+   "family": "map.terrain.mountain",
+   "state": "small",
+   "sub": false,
+   "purpose": "A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)",
+   "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 26.4,
+   "refY": 20.9,
+   "maxK": 1.25,
+   "lod1K": 0.51,
+   "familyStates": [
+    "snow",
+    "peak"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": "small mountains: 2–3 a cell round the high peaks and at the edges of ranges, w 0.55–0.77 cell (k ≈ 0.55)",
+   "measured": {
+    "boundsFromAnchor": [
+     -8,
+     -12.2,
+     8,
+     0.8
+    ],
+    "typicalSize": [
+     16,
+     13
+    ],
+    "reach": 12.3
+   },
+   "recommended": {
+    "logicalSize": [
+     18,
+     15
+    ],
+    "anchorLogical": [
+     9,
+     13.2
+    ],
+    "sourceSizeAt4x": [
+     72,
+     60
+    ],
+    "anchorPxAt4x": [
+     36,
+     53
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     18,
+     15
+    ],
+    "zoom2_5": [
+     45,
+     37.5
+    ],
+    "maxZoom3_2": [
+     57.6,
+     48
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 0.9620000000000001,
+    "limitCells": 2.2,
+    "maxReachAtK1": 30.2
+   }
+  },
+  {
+   "id": "map.terrain.mountain.small.snow",
+   "family": "map.terrain.mountain",
+   "state": "small.snow",
+   "sub": false,
+   "purpose": "A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)",
+   "builder": "HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "layer": "terrain",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 26.4,
+   "refY": 20.9,
+   "maxK": 1.25,
+   "lod1K": 0.51,
+   "familyStates": [
+    "snow",
+    "peak"
+   ],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "random shape per glyph (seeded)",
+   "call": "small mountains where it is cold",
+   "measured": {
+    "boundsFromAnchor": [
+     -8,
+     -12.2,
+     8,
+     0.8
+    ],
+    "typicalSize": [
+     16,
+     13
+    ],
+    "reach": 12.3
+   },
+   "recommended": {
+    "logicalSize": [
+     18,
+     15
+    ],
+    "anchorLogical": [
+     9,
+     13.2
+    ],
+    "sourceSizeAt4x": [
+     72,
+     60
+    ],
+    "anchorPxAt4x": [
+     36,
+     53
+    ],
+    "variants": 3
+   },
+   "onScreen": {
+    "rule": "drawn at k into the 22 px/cell chunk, then scaled with the map (×zoom)",
+    "zoom1": [
+     18,
+     15
+    ],
+    "zoom2_5": [
+     45,
+     37.5
+    ],
+    "maxZoom3_2": [
+     57.6,
+     48
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.mountain(ctx, x, y, w, h, rng, opts)",
+   "terrainReach": {
+    "cells": 0.9620000000000001,
     "limitCells": 2.2,
     "maxReachAtK1": 30.2
    }
@@ -386,6 +538,74 @@
     "limitCells": 2.2,
     "maxReachAtK1": 40.3
    }
+  },
+  {
+   "id": "map.landmark.peak",
+   "family": "map.landmark.peak",
+   "state": null,
+   "sub": false,
+   "purpose": "A legendary peak: one landmark mountain per region (its highest), about three cells across, standing over small mountains",
+   "builder": "HB.mapart.landmarkPeak(ctx, x, y, w, h, rng, key)",
+   "layer": "landmarks",
+   "sampling": "smooth",
+   "param": "w",
+   "ref": 66,
+   "refY": 57.2,
+   "maxK": 1,
+   "lod1K": null,
+   "familyStates": [],
+   "anchor": "centre of the base, on the ground line",
+   "proceduralVariation": "fixed shape",
+   "call": "one per region on its highest mountain: w 3 cells, h 2.6 cells",
+   "measured": {
+    "boundsFromAnchor": [
+     -35,
+     -71.5,
+     34.3,
+     1
+    ],
+    "typicalSize": [
+     69.3,
+     72.5
+    ],
+    "reach": 71.5
+   },
+   "recommended": {
+    "logicalSize": [
+     72,
+     75
+    ],
+    "anchorLogical": [
+     36,
+     72.5
+    ],
+    "sourceSizeAt4x": [
+     288,
+     300
+    ],
+    "anchorPxAt4x": [
+     144,
+     290
+    ],
+    "variants": 1
+   },
+   "onScreen": {
+    "rule": "drawn every frame at k = 1, scaled with the map (×zoom); not in the chunks, so it may be big",
+    "zoom1": [
+     72,
+     75
+    ],
+    "zoom2_5": [
+     180,
+     187.5
+    ],
+    "maxZoom3_2": [
+     230.4,
+     240
+    ]
+   },
+   "label": null,
+   "fallback": "procedural: HB.mapart.landmarkPeak(ctx, x, y, w, h, rng, key)"
   },
   {
    "id": "map.terrain.hill",

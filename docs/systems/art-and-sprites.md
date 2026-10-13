@@ -90,7 +90,10 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   per frame, one drawing for every breed and alignment, placed by its anchor (body centre; fewer frames loop); `anim`
   (0.17) → `<id>.<k>` for any other registered picture, with the drawing's frame count and fps; `map` → the `pixel` map
   art pack (`HB.pixelArt.mapPack()`, built in memory by `HB.mapAssets.use('pixel')`; frames are variants, pixel
-  sampling, `logicalSize = size × scale`).
+  sampling). 0.20: each variant is cut to the box drawn in its frame (stretched to hold the anchor; empty frames are
+  skipped), so variants keep their own sizes; `logicalSize = cut size × scale / drawnK`, where `HB.mapDrawnK(id)` is
+  the k the world usually draws that state at (small mountains 0.55, large 1.25: MAP_SPEC `drawnK`), so a drawing
+  shows at about its drawn size.
 - Layers (0.18): a file may hold `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`;
   `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins), so everything downstream is unchanged.
 - `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's

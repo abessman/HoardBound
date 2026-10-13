@@ -49,6 +49,13 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   beside the lair; blighted or flourishing glyphs near your rule. The chunk cache is cleared when the domain changes.
   See [domain-and-influence](domain-and-influence.md).
 
+- Mountains (0.20): three sizes. High-peak cells hold one large mountain; mountain cells one or two, or two or three
+  small ones (60% at a range's edge, 50% beside a high peak, 12% elsewhere), so small mountains usually ring the large.
+  Each region's legendary peak (`HB.mapLegendaryPeaks(W)`: its highest mountain cell with no place on it, preferring
+  one ringed by mountains; derived, never saved) is a landmark about three cells across, drawn every frame over the
+  map (`drawLandmarks`, family `map.landmark.peak`); the ground under and behind it is left clear and the cells round
+  it hold small mountains. It has no gameplay yet ([idea](../ideas/landmarks.md)).
+
 ### Rendering and art packs (0.10)
 - Terrain sits in cached chunks of 16×16 cells with a 2-cell margin (both levels of detail), at 22 px per cell
   (7 px below zoom 0.55); above zoom 1.3 a 2× backing canvas preserves fine ink details. The cache is bounded

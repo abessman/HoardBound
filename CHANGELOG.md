@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.20.0 — 2026-10-13 · Mountains of every size, a legendary peak, crop and anchor
+- **Small and large mountains.** Mountain ranges now mix three sizes. Small mountains, a clear step smaller, usually
+  gather round the large mountains of the high peaks and along the edges of a range (two or three to a cell), and now
+  and then turn up inside it.
+- **A legendary peak in every region.** Each region's highest mountain is a landmark about three cells across, with
+  two shoulders and a gold pennant, standing in a ring of small mountains so it reads from afar. It is its own piece
+  of art ("Legendary peak" in the editor). It is drawn above the map like a place, so it can be far bigger than a
+  terrain symbol. Until you draw it, it is made of three of your mountains. What it does in play comes later.
+- **Pixel editor: Crop to drawing** cuts the canvas down to what is drawn (every frame and layer). **Crop to box**
+  cuts it to a box you drag with Select. Either way the anchor stays on the same spot of the drawing.
+- **Pixel editor: ⊕ Foot and ⊕ Centre** put the anchor at the bottom middle of the drawing (right for mountains,
+  trees and places) or at its centre.
+- **Variants keep their own sizes.** Each frame of a map symbol is a variant, cut to what is drawn in it. Big and small
+  variants on one canvas show at their own sizes on the map, and the editor lists each variant's size.
+- **Mountain kinds by name in the editor:** Mountain, Small mountain, Large mountain (high peaks), the snowy ones,
+  the tyrant's mountains, and the Legendary peak. Each says where the map uses it. A kind you have not drawn uses the
+  plain mountain, shrunk or enlarged. Small and large mountains show at about the size you draw them.
+- **Fixed:** the editor's file list could keep naming a drawing that had been deleted. Saving now drops names that are
+  not in the folder.
+
 ## 0.19.0 — 2026-10-13 · Colour wheel and saved palettes
 - **Colour wheel in the pixel editor:** drag around the dial for any colour, outwards for a stronger one, the bar for
   lighter or darker, or type a colour code. A colour you have not drawn with yet changes as you drag, so the sprite's

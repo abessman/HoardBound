@@ -77,7 +77,11 @@ commit by hand.
 - **Undo / Redo** (top right, with how many steps there are): up to 120 steps per sprite (at least 20 on the biggest
   canvases), including colour, fps and scale changes. On the iPad: **tap with two fingers to undo, three to redo**.
   **Revert** drops a sprite's unsaved changes; **Delete art** removes your drawing so the game's own art comes back.
-- Canvases go up to 512 × 512 (**Resize**).
+- **Size and anchor:** canvases go up to 512 × 512 (**Resize**). **Crop to drawing** cuts the canvas down to what
+  is drawn in every frame and layer; **Crop to box** cuts it to a box dragged with Select. The anchor stays on the same
+  spot of the drawing. **⊕ Foot** puts the anchor at the bottom middle of the drawing (mountains, trees, places),
+  **⊕ Centre** at its centre; or place it by hand with the Anchor tool (A). Raid sprites always stand on their bottom
+  edge, so these are off for them.
 
 Keys (with a keyboard): B pencil, E eraser, G fill, I eyedropper, M select, V move, L line, R / Shift+R rectangle /
 box, O / Shift+O ellipse / disc, A anchor, P play, ← → frames, Ctrl/Cmd+Z / Shift+Z / Y undo / redo, Ctrl/Cmd+C X V,
@@ -95,10 +99,19 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   size close to the game's (the editor starts from it).
 - **Raid sprites** (people, animals, treasure, props): the first frame replaces the sprite. The game always stands a
   sprite on its bottom edge, centred, in the 320×180 scene drawn 4× larger: draw the feet on the last row.
-- **Map symbols** (`map.…` ids): each frame is a variant; the map picks one per symbol and keeps it. They are drawn
+- **Map symbols** (`map.…` ids): each frame is a variant; the map picks one per symbol and keeps it. Each variant is
+  cut to what is drawn in it, so variants of different sizes keep their sizes (the editor lists them). They are drawn
   pixel-sharp at `scale` map pixels per pixel (map pixels at zoom 1; the cells are 22). Choose **Pixel art (editor)**
   in Settings → Map art to see them; anything you have not drawn stays hand-drawn. The anchor ⊕ sits on the symbol's
   spot (a mountain's foot, a village's centre). Terrain may reach about 2 cells from its anchor; bigger is refused.
+- **Mountains** (Map · mountains): the world picks the *kind*, your frames are its *variants*. **Mountain** is most
+  mountain cells and stands in for every kind you have not drawn. **Small mountain** (two or three a cell, round the
+  large ones and at the edges of ranges) and **Large mountain** (high peaks) show at about the size you draw them;
+  until drawn, the plain mountain is shrunk or enlarged. Snowy kinds are for cold lands; the tyrant's mountains for a
+  cruel ruler's land.
+- **Landmarks** (Map · landmarks): big pieces drawn over the map like places, so they have no terrain size limit.
+  **Legendary peak**: one per region, on its highest mountain, about 3 cells across, with small mountains round it;
+  until drawn it is made of three of your mountains with a gold pennant.
 
 ## Saving
 **Save to GitHub** commits every changed sprite in one commit to the repository's default branch (or the branch set

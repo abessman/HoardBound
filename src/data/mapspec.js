@@ -24,7 +24,10 @@
     maxTerrainOverhang: 2 * C,
     families: {
       // ---- terrain (map chunks; positions come from the world, never from the art)
-      'map.terrain.mountain': T('A mountain on mountain cells (one or two per cell)', 'HB.mapart.mountain(ctx, x, y, w, h, rng, opts)', { param: 'w', ref: 1.2 * C, refY: 0.95 * C, lod1K: 0.51, maxK: 1.25, states: ['snow', 'peak'] }),
+      // optional: states a pack may draw but need not (they fall back along the chain in mapart.js's wrap): small
+      // mountains, a step smaller, around the large ones and at the edges of ranges. drawnK: the k the world usually
+      // draws a state at; the editor's pixel pack divides by it, so a drawing shows at about the size it is drawn
+      'map.terrain.mountain': T('A mountain on mountain cells (one or two per cell; large on the high peaks; small ones around them and at the edges of ranges)', 'HB.mapart.mountain(ctx, x, y, w, h, rng, opts)', { param: 'w', ref: 1.2 * C, refY: 0.95 * C, lod1K: 0.51, maxK: 1.25, states: ['snow', 'peak'], optional: ['small', 'small.snow'], drawnK: { small: 0.55, 'small.snow': 0.55, peak: 1.25 } }),
       'map.terrain.mountain.jagged': T('A mountain drawn as jagged ash-dark teeth near a cruel ruler', 'HB.mapart.mountainJagged(ctx, x, y, w, h, rng, opts)', { param: 'w', ref: 1.35 * C, refY: 1.1 * C, maxK: 1.2, states: ['deep'] }),
       'map.terrain.hill': T('A hill on hill cells (one or two per cell)', 'HB.mapart.hill(ctx, x, y, w, h, rng)', { param: 'w', ref: 0.85 * C, refY: 0.27 * C, lod1K: 0.41, maxK: 1.3 }),
       'map.terrain.tree.round': T('A broadleaf tree (forests: one to three per cell)', 'HB.mapart.treeRound(ctx, x, y, s, rng)', { param: 's', ref: 0.17 * C, lod1K: 0.49, maxK: 1.35 }),
@@ -39,6 +42,9 @@
       'map.terrain.field': T('A cultivated field near a kind ruler’s settlement', 'HB.mapart.field(ctx, x, y, s, rng)', { param: 's', ref: 0.28 * C, maxK: 1.1, anchor: 'centre of the field' }),
       'map.terrain.ash': T('Scattered ash near a cruel ruler', 'HB.mapart.ash(ctx, x, y, s, rng)', { param: 's', ref: 0.3 * C, maxK: 1.1, anchor: 'centre of the scatter' }),
       'map.terrain.blossom': T('A gold fleck in a flourishing grove', 'HB.mapart.blossom(ctx, x, y, s)', { param: 's', ref: 0.19 * C, maxK: 1.3, anchor: 'centre of the fleck' }),
+      // ---- landmarks: big set pieces drawn every frame at the map's scale (not in the chunks, so no reach limit).
+      // optional: true, a pack may leave the whole family out (the legendary peak is then composed of its mountains)
+      'map.landmark.peak': { layer: 'landmarks', sampling: 'smooth', param: 'w', ref: 3 * C, refY: 2.6 * C, maxK: 1, anchor: 'centre of the base, on the ground line', builder: 'HB.mapart.landmarkPeak(ctx, x, y, w, h, rng, key)', purpose: 'A legendary peak: one landmark mountain per region (its highest), about three cells across, standing over small mountains', states: [], optional: true },
       // ---- places (drawn every frame; s = clamp(10·sqrt(zoom), 4, 12) × the type's scale)
       'map.place.farm': P('A farmstead', 7.5),
       'map.place.village': P('A village', 10),
@@ -103,6 +109,8 @@
     const cells = reach1 * Math.max((spec.maxK || 1) / S.cell, (spec.lod1K || 0) / S.lod1Cell), limit = S.marginCells + 0.2;
     return { ok: cells <= limit, cells, px: reach1 * (spec.maxK || 1), limit };
   };
+  /** the k the world usually draws an id at (MAP_SPEC drawnK by state; 1 when it has none) */
+  HB.mapDrawnK = (id) => { const f = HB.mapSpecFamily(id); if (!f || !f.spec.drawnK || id.length <= f.id.length) return 1; return f.spec.drawnK[id.slice(f.id.length + 1)] || 1; };
   /** the family a semantic id belongs to: exact id, else its longest registered prefix (map.place.camp.goblin → map.place.camp) */
   HB.mapSpecFamily = (id) => { const F = HB.MAP_SPEC.families; let k = id; while (k) { if (F[k]) return { id: k, spec: F[k] }; const i = k.lastIndexOf('.'); if (i < 0) break; k = k.slice(0, i); } return null; };
 })();

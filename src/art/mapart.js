@@ -29,7 +29,7 @@
     lineScale: 1,
     setup(ctx) { ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = INK; ctx.fillStyle = FILL; },
 
-    /** mountain peak with base centred at (x,y) */
+    /** mountain peak with base centred at (x,y); opts.pennant: a gold pennant on the summit (a legendary peak) */
     mountain(ctx, x, y, w, h, rng, opts = {}) {
       const apexX = x + J(rng, w * 0.12), apexY = y - h;
       const lx = x - w / 2, rx = x + w / 2;
@@ -62,6 +62,14 @@
       stroke(ctx, opts.big ? 1.5 : 1.2);
       // ridge line from apex down-left
       ctx.beginPath(); ctx.moveTo(apexX, apexY); ctx.lineTo(apexX - w * 0.12, apexY + h * 0.45); ctx.lineTo(apexX - w * 0.05, apexY + h * 0.7); stroke(ctx, 0.8, INK_SOFT);
+      if (opts.pennant) { const fy = apexY - h * 0.24; ctx.beginPath(); ctx.moveTo(apexX, apexY); ctx.lineTo(apexX, fy); stroke(ctx, 1); ctx.beginPath(); ctx.moveTo(apexX, fy); ctx.lineTo(apexX + w * 0.16, fy + h * 0.05); ctx.lineTo(apexX, fy + h * 0.1); ctx.closePath(); ctx.fillStyle = '#c9a53a'; ctx.fill(); stroke(ctx, 0.9); }
+    },
+    /** a legendary peak, base centred at (x,y), about three cells across: two shoulders and a great summit with a gold
+     *  pennant, made of the current mountains (a pack's art when it has some, so it matches the range around it) */
+    landmarkPeak(ctx, x, y, w, h, rng, key = 'legend') {
+      A.mountain(ctx, x - w * 0.29, y - h * 0.03, w * 0.46, h * 0.58, rng, { snow: true, key: key + ':l' });
+      A.mountain(ctx, x + w * 0.3, y - h * 0.01, w * 0.42, h * 0.5, rng, { snow: true, key: key + ':r' });
+      A.mountain(ctx, x, y, w * 0.62, h, rng, { snow: true, big: true, pennant: true, key: key + ':m' });
     },
     hill(ctx, x, y, w, h, rng) {
       ctx.beginPath(); ctx.moveTo(x - w / 2, y); ctx.quadraticCurveTo(x + J(rng, w * 0.1), y - h * 2, x + w / 2, y);
@@ -463,12 +471,30 @@
   const wrap = (name, req) => {
     A[name] = function () {
       const m = MA();
-      if (m && m.entries.size) { const q = req.apply(null, arguments); if (q && m.draw(arguments[0], q.ids, q.x, q.y, q.param, q)) return; }
+      if (m && m.entries.size) { const q = req.apply(null, arguments), p = q && m.draw(arguments[0], q.ids, q.x, q.y, q.param, q); if (p) { if (q.after) q.after(p); return; } }
       return P[name].apply(A, arguments);
     };
   };
   const simple = (name, id) => wrap(name, (ctx, x, y, s, rng, key) => ({ ids: [id], x, y, param: s, key }));
-  wrap('mountain', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.big ? ['map.terrain.mountain.peak', 'map.terrain.mountain.snow', 'map.terrain.mountain'] : o.snow ? ['map.terrain.mountain.snow', 'map.terrain.mountain'] : ['map.terrain.mountain'], x, y, param: w, paramY: h, key: o.key }));
+  const MTN = 'map.terrain.mountain';
+  // a legendary peak's summit drawn with a pack's mountain art still gets its gold pennant on top
+  const tops = new WeakMap(); // per variant: where its summit is (first row with ink), as fractions of its box
+  const summit = (v) => {
+    let t = tops.get(v); if (t) return t; t = { x: 0.5, y: 0 };
+    try {
+      const c = document.createElement('canvas'); c.width = v.sw; c.height = v.sh; const g = c.getContext('2d');
+      g.drawImage(v.img, v.rect[0], v.rect[1], v.sw, v.sh, 0, 0, v.sw, v.sh); const d = g.getImageData(0, 0, v.sw, v.sh).data;
+      row: for (let y = 0; y < v.sh; y++) { let n = 0, sx = 0; for (let x = 0; x < v.sw; x++) if (d[(y * v.sw + x) * 4 + 3] > 60) { n++; sx += x; } if (n) { t = { x: (sx / n + 0.5) / v.sw, y: y / v.sh }; break row; } }
+    } catch (e) { /* a picture from file:// cannot be read back: the box's top centre */ }
+    tops.set(v, t); return t;
+  };
+  const pennantAfter = (ctx, x, h) => (p) => {
+    if (!p.dh) return;
+    const t = summit(p.v); let ax = p.dx + t.x * p.dw; if (p.flip) ax = 2 * x - ax;
+    P.flag(ctx, ax, p.dy + t.y * p.dh + 1, h * 0.2, '#c9a53a');
+  };
+  wrap('mountain', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.big ? [MTN + '.peak', MTN + '.snow', MTN] : o.small ? (o.snow ? [MTN + '.small.snow', MTN + '.small', MTN + '.snow', MTN] : [MTN + '.small', MTN]) : o.snow ? [MTN + '.snow', MTN] : [MTN], x, y, param: w, paramY: h, key: o.key, after: o.pennant ? pennantAfter(ctx, x, h) : null }));
+  wrap('landmarkPeak', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.landmark.peak'], x, y, param: w, paramY: h, key }));
   wrap('mountainJagged', (ctx, x, y, w, h, rng, o = {}) => ({ ids: o.deep ? ['map.terrain.mountain.jagged.deep', 'map.terrain.mountain.jagged'] : ['map.terrain.mountain.jagged'], x, y, param: w, paramY: h, key: o.key }));
   wrap('hill', (ctx, x, y, w, h, rng, key) => ({ ids: ['map.terrain.hill'], x, y, param: w, paramY: h, key }));
   simple('treeRound', 'map.terrain.tree.round'); simple('treePine', 'map.terrain.tree.pine');

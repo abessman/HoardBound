@@ -76,15 +76,30 @@
       }
       HB.sprites.cache.clear();
     },
-    /** the map symbols as a map art pack ('pixel'): nearest-neighbour, one logical px per pixel times def.scale */
+    /** the map symbols as a map art pack ('pixel'): nearest-neighbour, one logical px per pixel times def.scale.
+     *  Each frame is a variant cut to what is drawn in it (stretched to hold the anchor), so variants drawn at
+     *  different sizes on one canvas keep their own sizes on the map; empty frames are skipped. A state the world
+     *  draws smaller or larger (a small or large mountain: MAP_SPEC drawnK) is sized so it shows at about its drawn size. */
     mapPack() {
       const assets = {};
       for (const def of PA.entries.values()) {
         if (def.kind !== 'map') continue;
-        const s = def.scale || 1, a = def.anchor || [def.w / 2, def.h];
-        assets[def.id] = { variants: PA.canvases(def).map((c, i) => ({ id: 'v' + (i + 1), src: c.toDataURL('image/png'), sourceSize: [def.w, def.h], logicalSize: [def.w * s, def.h * s], anchorPx: [a[0], a[1]], sampling: 'pixel', allowFlipX: !!def.flip })) };
+        const s = (def.scale || 1) / (HB.mapDrawnK ? HB.mapDrawnK(def.id) : 1), a = def.anchor || [def.w / 2, def.h], variants = [];
+        PA.canvases(def).forEach((c, i) => {
+          const b = PA.frameBox(def, i); if (!b) return;
+          const x0 = Math.min(b.x, a[0]), y0 = Math.min(b.y, a[1]), w = Math.max(1, Math.max(b.x + b.w, a[0]) - x0), h = Math.max(1, Math.max(b.y + b.h, a[1]) - y0);
+          const cut = document.createElement('canvas'); cut.width = w; cut.height = h; cut.getContext('2d').drawImage(c, -x0, -y0);
+          variants.push({ id: 'v' + (i + 1), src: cut.toDataURL('image/png'), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.flip });
+        });
+        if (variants.length) assets[def.id] = { variants };
       }
       return { schemaVersion: 1, name: 'pixel', assets };
+    },
+    /** the box around frame k's drawn pixels { x, y, w, h }, or null when it is empty */
+    frameBox(def, k) {
+      const rows = (def.frames[k] && def.frames[k].rows) || []; let x0 = Infinity, y0 = Infinity, x1 = -1, y1 = -1;
+      rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] !== '.') { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } });
+      return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
     },
   };
   /** '#rgb', '#rrggbb' or '#rrggbbaa' → [r, g, b, a] */

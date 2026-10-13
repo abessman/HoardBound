@@ -14,23 +14,36 @@
   // =====================================================================================================
   // Everything registered in HB.art (src/art/pixel.js: sprites, dragon poses, the lair's pictures) plus the map symbols.
   // New art registered in the game shows up here by itself.
-  const MAP_GROUP = { terrain: 'Map · terrain', place: 'Map · places', entity: 'Map · moving pieces', seal: 'Map · marks', seal2: 'Map · marks', threat: 'Map · marks', rumor: 'Map · marks', fog: 'Map · fog', ui: 'Map · other' };
-  const GROUP_ORDER = ['Dragon · Hatchling', 'Dragon · Young', 'Dragon · Adult', 'Dragon · Ancient', 'Lair · dragon', 'Lair · places', 'People', 'Animals', 'Treasure', 'Props', 'Map · terrain', 'Map · places', 'Map · moving pieces', 'Map · marks', 'Map · fog', 'Map · other'];
+  const MAP_GROUP = { terrain: 'Map · terrain', landmark: 'Map · landmarks', place: 'Map · places', entity: 'Map · moving pieces', seal: 'Map · marks', seal2: 'Map · marks', threat: 'Map · marks', rumor: 'Map · marks', fog: 'Map · fog', ui: 'Map · other' };
+  const GROUP_ORDER = ['Dragon · Hatchling', 'Dragon · Young', 'Dragon · Adult', 'Dragon · Ancient', 'Lair · dragon', 'Lair · places', 'People', 'Animals', 'Treasure', 'Props', 'Map · mountains', 'Map · landmarks', 'Map · terrain', 'Map · places', 'Map · moving pieces', 'Map · marks', 'Map · fog', 'Map · other'];
+  // the mountain kinds by name, in this order, with where the map uses each (the world picks the kind; frames are variants)
+  const MAP_NAMES = {
+    'map.terrain.mountain': ['Map · mountains', 'Mountain', 'Most mountain cells, one or two a cell. Every mountain kind below uses this drawing until it has its own.'],
+    'map.terrain.mountain.small': ['Map · mountains', 'Small mountain', 'Two or three a cell, usually round the large mountains and at the edges of a range. Shown at about the size you draw it, so draw it a good step smaller than the mountain. Until drawn: the mountain, shrunk.'],
+    'map.terrain.mountain.peak': ['Map · mountains', 'Large mountain (high peaks)', 'One big mountain on each high-peak cell, small mountains round it. Shown at about the size you draw it. Until drawn: the snowy mountain, enlarged.'],
+    'map.terrain.mountain.snow': ['Map · mountains', 'Mountain, snowy', 'Mountains where it is cold. Until drawn: the mountain.'],
+    'map.terrain.mountain.small.snow': ['Map · mountains', 'Small mountain, snowy', 'Small mountains where it is cold. Until drawn: the small mountain.'],
+    'map.terrain.mountain.jagged': ['Map · mountains', 'Mountain under a tyrant', 'Mountains near a cruel ruler: ash-dark teeth.'],
+    'map.terrain.mountain.jagged.deep': ['Map · mountains', 'Mountain under a tyrant, deep', 'Deep in a cruel ruler’s land.'],
+    'map.landmark.peak': ['Map · landmarks', 'Legendary peak', 'One per region, on its highest mountain: about 3 cells across, drawn over the range with small mountains round it (big pieces like this have no terrain size limit). Until drawn: three of your mountains with a gold pennant.'],
+  };
+  const NAME_ORDER = Object.keys(MAP_NAMES);
   let catalog = [];
   function buildCatalog() {
     catalog = [];
     for (const e of HB.art.list()) catalog.push({ id: e.id, kind: e.kind, group: e.group, label: e.label, frames: e.frames, fps: e.fps, entry: e });
-    if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) catalog.push({ id: rec.id, kind: 'map', group: MAP_GROUP[rec.screen] || 'Map · other', label: rec.id.replace(/^map\./, ''), frames: 1, fps: 1, rec });
+    if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) { const n = MAP_NAMES[rec.id]; catalog.push({ id: rec.id, kind: 'map', group: n ? n[0] : MAP_GROUP[rec.screen] || 'Map · other', label: n ? n[1] : rec.id.replace(/^map\./, ''), mapNote: n ? n[2] : '', frames: 1, fps: 1, rec }); }
     // art for ids the game no longer registers (renamed or removed): still listed so it can be deleted or kept
     for (const id of docs.keys()) if (!catalog.some(c => c.id === id)) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
     const groups = GROUP_ORDER.slice(); for (const c of catalog) if (!groups.includes(c.group) && c.group !== 'Other') groups.push(c.group);
     groups.push('Other');
-    catalog = catalog.map((c, i) => [c, i]).sort((a, b) => groups.indexOf(a[0].group) - groups.indexOf(b[0].group) || a[1] - b[1]).map(p => p[0]);
+    const rank = (c, i) => NAME_ORDER.includes(c.id) ? NAME_ORDER.indexOf(c.id) - 1e4 : i;
+    catalog = catalog.map((c, i) => [c, rank(c, i)]).sort((a, b) => groups.indexOf(a[0].group) - groups.indexOf(b[0].group) || a[1] - b[1]).map(p => p[0]);
   }
   const noteFor = (item, doc) => item.entry && item.entry.note ? item.entry.note
     : item.kind === 'dragon' ? `The game shows frames 1–${item.frames} of this pose (${item.fps} fps). One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
       : item.kind === 'sprite' ? 'A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. The game uses the first frame.'
-        : item.kind === 'map' ? `A map symbol: each frame is a variant (the map picks one per symbol and keeps it). Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
+        : item.kind === 'map' ? `${item.mapNote ? item.mapNote + ' ' : ''}A map symbol: each frame is a variant (the map picks one per symbol and keeps it), used at its own drawn size. Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
           : 'No longer used by the game (its id is not registered).';
 
   // =====================================================================================================
@@ -214,6 +227,26 @@
     pushUndo(); commitFloat();
     eachLayer(d, fr => fr.map(f => { const o = new Uint8Array(w * h).fill(CLEAR); for (let y = 0; y < Math.min(h, d.h); y++) for (let x = 0; x < Math.min(w, d.w); x++) o[y * w + x] = f[y * d.w + x]; return o; }));
     d.w = w; d.h = h; d.anchor = d.kind === 'sprite' ? [w >> 1, h] : [Math.min(d.anchor[0], w), Math.min(d.anchor[1], h)]; S.sel = null; fit(); changed(true);
+  }
+  /** the drawn area: the box around every pixel of every frame and layer (or of frame k as the game shows it); null if empty */
+  function drawnBox(d, k) {
+    let x0 = d.w, y0 = d.h, x1 = -1, y1 = -1;
+    const scan = (f) => { for (let y = 0; y < d.h; y++) { const row = y * d.w; for (let x = 0; x < d.w; x++) if (f[row + x] !== CLEAR) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } };
+    if (k === undefined) { for (const l of d.layers) for (const f of l.frames) scan(f); } else scan(flat(d, k));
+    return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
+  }
+  /** cut the canvas to a box (every frame and layer); the anchor stays on the same spot of the drawing */
+  function cropTo(r) {
+    const d = D(); if (!d || !r || r.w < 1 || r.h < 1) return; commitFloat(); pushUndo();
+    eachLayer(d, fr => fr.map(f => { const o = new Uint8Array(r.w * r.h).fill(CLEAR); for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) { const X = r.x + x, Y = r.y + y; if (X >= 0 && Y >= 0 && X < d.w && Y < d.h) o[y * r.w + x] = f[Y * d.w + X]; } return o; }));
+    d.w = r.w; d.h = r.h; d.anchor = d.kind === 'sprite' ? [r.w >> 1, r.h] : [HB.clamp(d.anchor[0] - r.x, 0, r.w), HB.clamp(d.anchor[1] - r.y, 0, r.h)];
+    S.sel = null; fit(); changed(true);
+  }
+  /** the anchor at the drawing's foot (bottom centre) or centre, over every frame */
+  function anchorAt(where) {
+    const d = D(); if (!d) return; if (d.kind === 'sprite') { toast('Raid sprites always stand on their bottom edge, centred'); return; }
+    const b = drawnBox(d); if (!b) { toast('Draw something first'); return; }
+    pushUndo(); d.anchor = [Math.round(b.x + b.w / 2), where === 'foot' ? b.y + b.h : Math.round(b.y + b.h / 2)]; changed();
   }
   function shiftAll(dx, dy) {
     const d = D(); pushUndo(); commitFloat();
@@ -712,16 +745,27 @@
     });
   }
   /** terrain art is drawn into cached map chunks with a margin: the game refuses symbols that reach past it (same rule as the loader) */
+  /** a map variant as the game uses it: frame k cut to what is drawn (stretched to hold the anchor), as src/art/pixelart.js does */
+  function variantBox(d, k) {
+    const b = drawnBox(d, k); if (!b) return null;
+    const x0 = Math.min(b.x, d.anchor[0]), y0 = Math.min(b.y, d.anchor[1]), x1 = Math.max(b.x + b.w, d.anchor[0]), y1 = Math.max(b.y + b.h, d.anchor[1]);
+    return { x: x0, y: y0, w: Math.max(1, x1 - x0), h: Math.max(1, y1 - y0), ax: d.anchor[0] - x0, ay: d.anchor[1] - y0 };
+  }
   function terrainWarning(d) {
     const fam = HB.mapSpecFamily && HB.mapSpecFamily(d.id); if (!fam || fam.spec.layer !== 'terrain' || !HB.mapTerrainReach) return '';
-    const t = HB.mapTerrainReach(fam.spec, [d.w * d.scale, d.h * d.scale], [d.w, d.h], d.anchor, false);
+    // the biggest variant decides (each variant is checked on its own when the game loads it)
+    let t = { ok: true, cells: 0, limit: 2.2 };
+    const u = d.scale / HB.mapDrawnK(d.id); // as the game sizes it (src/art/pixelart.js)
+    d.frames.forEach((_, k) => { const b = variantBox(d, k); if (!b) return; const r = HB.mapTerrainReach(fam.spec, [b.w * u, b.h * u], [b.w, b.h], [b.ax, b.ay], false); if (r.cells > t.cells) t = r; });
     return t.ok ? '' : `Too big for terrain: it reaches ${t.cells.toFixed(1)} cells from the anchor (the map allows ${t.limit.toFixed(1)}), so the game would use its hand-drawn symbol. Make it smaller, lower the scale, or move the anchor to the middle.`;
   }
   function renderInfo() {
     const d = D(), it = S.item; if (!d) return;
     $('title').textContent = `${it.group} · ${it.label}${isDirty(d) ? '  •  unsaved' : saved.has(d.id) ? '  •  saved' : ''}`;
-    const warn = d.kind === 'map' ? terrainWarning(d) : '';
-    $('note').textContent = noteFor(it, d) + (warn ? '  ⚠ ' + warn : '');
+    const warn = d.kind === 'map' ? terrainWarning(d) : '', fam = d.kind === 'map' && HB.mapSpecFamily ? HB.mapSpecFamily(d.id) : null;
+    const sizes = d.kind === 'map' && d.frames.length > 1 ? ' Variant sizes (each is used at its own size): ' + d.frames.map((_, k) => { const b = variantBox(d, k); return b ? `${k + 1}: ${b.w}×${b.h}` : `${k + 1}: empty`; }).join(' · ') + '.' : '';
+    $('note').textContent = noteFor(it, d) + (fam ? ` Anchor: ${fam.spec.anchor}.` : '') + sizes + (warn ? '  ⚠ ' + warn : '');
+    $('btn-anc-foot').disabled = $('btn-anc-centre').disabled = d.kind === 'sprite';
     $('note').style.color = warn ? '#8a3324' : '';
     $('in-w').value = d.w; $('in-h').value = d.h; $('in-fps').value = d.fps;
     $('scale-wrap').style.display = d.kind === 'map' ? '' : 'none'; $('in-scale').value = String(d.scale);
@@ -842,6 +886,8 @@
       // the index: what is on GitHub now, plus new files, minus deleted ones
       let files = [];
       try { files = parseCall(await gh(`/contents/assets/pixelart/index.js?ref=${encodeURIComponent(branch)}`, { raw: true, headers: { Accept: 'application/vnd.github.raw' } })); } catch (e) { files = PA.files.slice(); }
+      // keep only files that are really there (an older editor could list one that was removed)
+      try { const there = new Set((await gh(`/contents/assets/pixelart?ref=${encodeURIComponent(branch)}`)).map(f => f.name)); files = files.filter(f => there.has(f)); } catch (e) { /* listing unavailable: keep the list */ }
       const set = new Set(files);
       const tree = ids.map(id => { set.add(PA.fileOf(id)); return { path: 'assets/pixelart/' + PA.fileOf(id), mode: '100644', type: 'blob', content: fileText(toDef(docs.get(id))) }; });
       for (const id of deleted) { if (set.delete(PA.fileOf(id))) tree.push({ path: 'assets/pixelart/' + PA.fileOf(id), mode: '100644', type: 'blob', sha: null }); }
@@ -947,6 +993,10 @@
   };
   $('fr-ref').onclick = () => { const d = D(); if (!d || !S.refs.length) return; pushUndo(); const rc = S.refs[Math.min(S.frame, S.refs.length - 1)]; d.frames[S.frame] = quantize(d, rc, d.w, d.h); renderColors(); changed(); };
   $('btn-resize').onclick = () => resize(+$('in-w').value, +$('in-h').value);
+  $('btn-crop').onclick = () => { const d = D(); if (!d) return; const b = drawnBox(d); if (!b) { toast('Nothing drawn to crop to'); return; } if (b.w === d.w && b.h === d.h) { toast('Already cropped to the drawing'); return; } cropTo(b); toast(`Cropped to ${b.w}×${b.h}`); };
+  $('btn-cropsel').onclick = () => { const s2 = S.float || S.sel; if (!s2) { toast('Drag a box with Select (⬚) first, then Crop to box'); return; } const r = { x: Math.max(0, s2.x), y: Math.max(0, s2.y) }; r.w = Math.min(D().w, s2.x + s2.w) - r.x; r.h = Math.min(D().h, s2.y + s2.h) - r.y; cropTo(r); toast(`Cropped to ${r.w}×${r.h}`); };
+  $('btn-anc-foot').onclick = () => anchorAt('foot');
+  $('btn-anc-centre').onclick = () => anchorAt('centre');
   document.querySelectorAll('[data-shift]').forEach(b => b.onclick = () => { if (!D()) return; const [dx, dy] = b.dataset.shift.split(',').map(Number); shiftAll(dx, dy); });
   $('in-scale').onchange = (e) => { const d = D(); if (!d) return; pushUndo(); d.scale = +e.target.value; setRefs(gameArt(S.item, d)); changed(); };
   $('in-fps').onchange = (e) => { const d = D(); if (!d) return; pushUndo(); d.fps = Math.max(0.5, Math.min(30, +e.target.value || 2)); changed(); };

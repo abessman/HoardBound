@@ -2,31 +2,30 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-13 · **Version 0.19.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-13 · **Version 0.20.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
 - Full loop works: explore the parchment map, raid in side-view scenes, store treasure, build the lair, sleep, wake.
 - … reveal wash (0.13), Illuminated map pack (0.14–0.15, Codex), pixel editor saving to GitHub (0.16).
-- 0.17: the lair opens on a large dragon perched on its generated hoard (asleep on it while sleeping, also on the
-  sleep screen); zoom out to every room of the hill; the art registry `HB.art` feeds the editor's list; the editor
-  gained a picture behind the pixels and visible undo/redo with finger taps. 0.17.1: a Pixel Editor button on the
-  title screen and in Settings (`HB.openEditor`, new tab or same tab after an autosave).
-- 0.18 (editor): named layers saved in the sprite file (`layers`, bottom first; the game merges visible ones, hidden
-  stay out), and a picture → pixels converter working from the image behind (ink threshold, line pickup, paper
-  removal, colour count or palette snap, colour boost, outline; live preview; applies into a new layer).
-- 0.19 (editor): colour wheel (HSV dial + brightness bar + hex; an unused colour edits in place, "change it
-  everywhere" recolours live with one undo step), saved named palettes (a palettes.js beside the art, created by the
-  first save; saved and synced with GitHub like art), drawings with nothing visible are never saved, parseCall reads index.js correctly,
-  3×3 brush outline fixed. The owner's first save (an empty `dragon.1.bite`) was removed.
-- The owner's art so far: `map.terrain.mountain` (64×54, layers "Layer 1" and "converted"). It is too big for terrain
-  at scale 1 (reach 3.5 cells, limit 2.2; anchor still at 16,24): the map shows the hand-drawn mountain until the owner
-  sets Scale 0.5 and moves the anchor to its foot (about 30,43). `tools/test.js` prints this as a note, not a failure.
-- 280 headless checks pass on both seeds (one more per drawn art file).
+- 0.17: the lair's big dragon on its generated hoard, zoom out to every room, `HB.art` feeds the editor's list,
+  picture behind the pixels, undo/redo with finger taps; 0.17.1 Pixel Editor button (title, Settings).
+- 0.18: named layers saved in the sprite file (game merges visible ones) and a picture → pixels converter.
+  0.19: colour wheel, saved named palettes (`assets/pixelart/palettes.js`), empty drawings never saved.
+- 0.20: mountains in three sizes (small usually round the large and at range edges), one legendary peak per region
+  (`map.landmark.peak`, ~3 cells, drawn every frame by `drawLandmarks`, ground under it clear, small mountains round
+  it; no gameplay yet: `docs/ideas/landmarks.md`). Editor: Crop to drawing / Crop to box, ⊕ Foot / ⊕ Centre, each
+  map variant cut to its drawn box (own size), mountain kinds by name with where they are used; small and large
+  mountains show at about their drawn size (MAP_SPEC `drawnK`, `HB.mapDrawnK`). Save prunes index entries not in the
+  folder.
+- The owner's art so far: `map.terrain.mountain` (64×54 canvas, drawing 55×32, layers "Layer 1" and "converted",
+  scale 0.5, anchor 28,31 (mid-height; the foot would be 31,44)). It draws on every mountain kind until the others
+  are drawn.
+- 282 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.19), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.20), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -53,6 +52,18 @@ Working decisions by Claude (not confirmed by the owner):
 - Each room and both backdrops are editable art with one frame per level; the hoard, trophies, flames, workers,
   captives, construction and light stay generated on top.
 - Editor picture behind: per sprite in IndexedDB (not in GitHub). Undo history ≥ 20 steps (≤ 120).
+
+## Next project: the owner's asks of 2026-10-13 (0.21, being built)
+- The map's parchment stays still while the ink pans over it ("floats on top"): the paper texture must move with
+  the map, like ink on paper.
+- Editor: parchment under the drawing (through the transparency) to judge it as on the map; the eyedropper picks
+  parchment colours.
+- Editor: Excel-style selection (click a pixel or drag a box; Ctrl adds), then lower the selected pixels' opacity so
+  the parchment shows through. Owner leaned to real transparency over baking in the parchment colour (so a parchment
+  change carries through); Claude agrees.
+- Editor: a toggle to see each sprite's good and evil variant; the colour shift automatic but adjustable.
+- Mountains: small and large are just variety; generation should know that small mountains usually go round large
+  ones ("certain features should have certain behaviors"). Legendary = its own large sprite, like a castle (done).
 
 ## Next tasks (in order)
 1. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses

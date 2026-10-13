@@ -3,6 +3,31 @@
   const HB = globalThis.HB;
   if (!HB.isBrowser) return;
   const T = () => HB.TERRAIN;
+  /** each region's legendary peak (a landmark about three cells across): its highest mountain cell with no place on
+   *  it, preferring one ringed by mountains with no place beside it (worked out from the world, never saved) */
+  const legendCache = new WeakMap();
+  const isMtn = (t) => t === T().MOUNTAINS || t === T().PEAKS;
+  function legendaryCells(W) {
+    let set = legendCache.get(W); if (set) return set;
+    const best = new Map();
+    for (let y = 1; y < W.h - 1; y++) for (let x = 1; x < W.w - 1; x++) {
+      const i = y * W.w + x; if (!isMtn(W.terrain[i]) || W.locAt[i] >= 0) continue;
+      const r = W.region ? W.region[i] : 0; if (r < 0) continue;
+      let ringed = 1;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const j = i + dy * W.w + dx; if (!isMtn(W.terrain[j]) || W.locAt[j] >= 0) ringed = 0; }
+      const e = ringed * 10 + (W.elev ? W.elev[i] : 0), b = best.get(r);
+      if (!b || e > b.e) best.set(r, { i, e });
+    }
+    set = new Set([...best.values()].map(b => b.i)); set.list = [...set].map(i => ({ i, x: i % W.w, y: (i / W.w) | 0 }));
+    legendCache.set(W, set); return set;
+  }
+  HB.mapLegendaryPeaks = legendaryCells;
+  /** 1: under a legendary peak (its cell and the cells beside and behind it: no glyphs); 2: around it (small mountains) */
+  function legendZone(W, x, y) {
+    let z = 0;
+    for (const L of legendaryCells(W).list) { const dx = x - L.x, dy = y - L.y, d = Math.max(Math.abs(dx), Math.abs(dy)); if (d <= 1 && dy <= 0) return 1; if (d <= 2) z = 2; }
+    return z;
+  }
 
   const CELL = 22;              // px per cell at zoom 1 (lod0 chunk resolution)
   const CHUNK = 16;             // cells per chunk
@@ -409,6 +434,9 @@
         let gi = 0;
         const push = (yy, fn) => { const key = `${x},${y}:${gi++}`; glyphs.push({ y: yy, fn, key, rng: new HB.RNG(HB.hash32(`${st.seed}:v:${key}`)) }); };
         const mk = this.mark ? this.mark[i] : 0; // < 0 blighted by tyranny, > 0 flourishing under a protector
+        // a legendary peak is drawn every frame over the map (drawLandmarks): keep the ground under it clear
+        const lz = legendZone(W, x, y);
+        if (lz === 1) continue;
         if (mk < 0 && lod === 0 && (tt === T().MOUNTAINS || tt === T().PEAKS)) {
           const w = cp * (tt === T().PEAKS ? 1.6 : 1.2 + cellRng.next() * 0.3), h = cp * (tt === T().PEAKS ? 1.5 : 0.9 + cellRng.next() * 0.4);
           const gx = X + cp * (0.5 + (cellRng.next() - 0.5) * 0.2), gy = Y + cp * 0.9;
@@ -437,11 +465,25 @@
           continue;
         }
         if (tt === T().MOUNTAINS || tt === T().PEAKS) {
+          const snow = tt === T().PEAKS || W.temp[i] < 0.3;
+          // small mountains, a clear step smaller, usually gather round the large ones (the high peaks) and at the
+          // edges of a range as foothills, and now and then turn up among it; always round a legendary peak
+          const near = (dirs, test) => dirs.some(([dx, dy]) => { const nx = x + dx, ny = y + dy; return nx >= 0 && ny >= 0 && nx < W.w && ny < W.h && test(W.terrain[ny * W.w + nx]); });
+          const edge = tt === T().MOUNTAINS && near([[1, 0], [-1, 0], [0, 1], [0, -1]], t2 => !isMtn(t2));
+          const byPeak = tt === T().MOUNTAINS && !edge && near([[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]], t2 => t2 === T().PEAKS);
+          if ((tt === T().MOUNTAINS && cellRng.chance(edge ? 0.6 : byPeak ? 0.5 : 0.12)) || lz === 2) {
+            const n = cellRng.chance(0.45) ? 3 : 2;
+            for (let k = 0; k < n; k++) {
+              const w = cp * (0.55 + cellRng.next() * 0.22), h = cp * (0.42 + cellRng.next() * 0.22);
+              const gx = X + cp * (0.5 + (k - (n - 1) / 2) * (n === 3 ? 0.3 : 0.4) + (cellRng.next() - 0.5) * 0.15), gy = Y + cp * (0.75 + (k % 2) * 0.18 + (cellRng.next() - 0.5) * 0.15);
+              push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, small: true }));
+            }
+            continue;
+          }
           const peaks = tt === T().PEAKS ? 1 : (cellRng.chance(0.5) ? 2 : 1);
           for (let k = 0; k < peaks; k++) {
             const w = cp * (tt === T().PEAKS ? 1.5 : 1.05 + cellRng.next() * 0.35), h = cp * (tt === T().PEAKS ? 1.45 : 0.75 + cellRng.next() * 0.45);
             const gx = X + cp * (0.5 + (peaks === 2 ? (k ? 0.3 : -0.3) : 0) + (cellRng.next() - 0.5) * 0.3), gy = Y + cp * (0.85 + (cellRng.next() - 0.5) * 0.4);
-            const snow = tt === T().PEAKS || W.temp[i] < 0.3;
             push(gy, (g, vr, key) => A.mountain(g, gx, gy, w, h, vr, { key, snow, big: tt === T().PEAKS }));
           }
         } else if (tt === T().HILLS) {
@@ -502,7 +544,8 @@
       // the dragon's territory: a light wash, under the ink
       if (this.frame % 20 === 0) this.syncDomain();
       this.drawTerritory(ctx);
-      // locations
+      // landmarks (a region's legendary peak), then locations
+      this.drawLandmarks(ctx, tl, br);
       this.drawLocations(ctx, tl, br);
       this.drawDomainMarks(ctx, tl, br);
       // entities
@@ -543,6 +586,19 @@
       const W = this.state.world;
       const a = this.worldToScreen(0, 0), b = this.worldToScreen(W.w, W.h);
       ctx.save(); ctx.strokeStyle = HB.palette.inkFaint; ctx.lineWidth = 1; ctx.setLineDash([6, 6]); ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y); ctx.restore();
+    }
+    /** big set pieces drawn every frame at the map's scale, so they may be larger than the chunks' margin allows */
+    drawLandmarks(ctx, tl, br) {
+      const st = this.state, W = st.world, z = this.cam.zoom;
+      for (const L of legendaryCells(W).list) {
+        if (L.x < tl.x - 3 || L.x > br.x + 3 || L.y < tl.y - 2 || L.y > br.y + 4) continue;
+        const fa = this.fogAlpha[L.i]; if (fa >= 0.7) continue;
+        const p = this.worldToScreen(L.x + 0.5, L.y + 0.92);
+        ctx.save(); if (fa > 0) ctx.globalAlpha *= 1 - fa;
+        ctx.translate(p.x, p.y); ctx.scale(z, z); HB.mapart.setup(ctx);
+        HB.mapart.landmarkPeak(ctx, 0, 0, 3 * CELL, 2.6 * CELL, new HB.RNG(HB.hash32(`${st.seed}:legend:${L.i}`)), 'legend' + L.i);
+        ctx.restore();
+      }
     }
     drawLocations(ctx, tl, br) {
       const st = this.state, W = st.world, cam = this.cam, z = CELL * cam.zoom;

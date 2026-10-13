@@ -17,7 +17,7 @@ try {
   const result=await page.evaluate(()=>{
     const missing=[];
     for(const [id,f] of Object.entries(HB.MAP_SPEC.families)) {
-      if(f.layer==='wash')continue;
+      if(f.layer==='wash'||f.optional===true)continue;
       for(const k of [id,...f.states.map(s=>id+'.'+s)])if(!HB.mapAssets.resolve([k],k)&&!HB.mapInk.supports(k))missing.push(k);
     }
     const before=JSON.stringify(localStorage), scene=HB.scenes.top();let pages=0;

@@ -18,6 +18,7 @@
     rumor: (z) => ({ k: clamp(9 * sq(z), 4, 11) / 9, scale: 1, rule: 's = clamp(9·√zoom, 4, 11)' }),
     fog: (z) => ({ k: z, scale: 1, rule: 'r = 16.5·zoom × 0.75–1.15 (doubled below zoom 0.8)' }),
     ui: () => ({ k: 1, scale: 1, rule: 'fixed: r = 34 at the top right' }),
+    landmark: (z) => ({ k: 1, scale: z, rule: 'drawn every frame at k = 1, scaled with the map (×zoom); not in the chunks, so it may be big' }),
   };
   const R = [];
   const add = (id, screen, draw, o = {}) => R.push(Object.assign({ id, screen, draw, random: true }, o));
@@ -27,8 +28,13 @@
   add('map.terrain.mountain', 'terrain', (g, x, y, k, r) => P.mountain(g, x, y, mt.ref * k, mt.refY * k, r, {}), { call: 'w = 26.4·k, h = 20.9·k (cells: w 1.05–1.4 cell, h 0.75–1.2 cell)' });
   add('map.terrain.mountain.snow', 'terrain', (g, x, y, k, r) => P.mountain(g, x, y, mt.ref * k, mt.refY * k, r, { snow: true }), { state: 'snow', call: 'cold mountains' });
   add('map.terrain.mountain.peak', 'terrain', (g, x, y, k, r) => P.mountain(g, x, y, mt.ref * k, mt.ref * k * 0.967, r, { snow: true, big: true }), { state: 'peak', call: 'peaks: w 1.5 cell (k 1.25), h 1.45 cell' });
+  // optional ids (fall back to the ones above when a pack has no art for them)
+  add('map.terrain.mountain.small', 'terrain', (g, x, y, k, r) => P.mountain(g, x, y, mt.ref * k * 0.55, mt.refY * k * 0.55, r, { small: true }), { state: 'small', call: 'small mountains: 2–3 a cell round the high peaks and at the edges of ranges, w 0.55–0.77 cell (k ≈ 0.55)' });
+  add('map.terrain.mountain.small.snow', 'terrain', (g, x, y, k, r) => P.mountain(g, x, y, mt.ref * k * 0.55, mt.refY * k * 0.55, r, { small: true, snow: true }), { state: 'small.snow', call: 'small mountains where it is cold' });
   add('map.terrain.mountain.jagged', 'terrain', (g, x, y, k, r) => P.mountainJagged(g, x, y, jg.ref * k, jg.refY * k, r, {}));
   add('map.terrain.mountain.jagged.deep', 'terrain', (g, x, y, k, r) => P.mountainJagged(g, x, y, jg.ref * k, jg.refY * k, r, { deep: true }), { state: 'deep' });
+  const lm = fam('map.landmark.peak');
+  add('map.landmark.peak', 'landmark', (g, x, y, k, r) => P.landmarkPeak(g, x, y, lm.ref * k, lm.refY * k, r, 'sample'), { random: false, call: 'one per region on its highest mountain: w 3 cells, h 2.6 cells' });
   add('map.terrain.hill', 'terrain', (g, x, y, k, r) => P.hill(g, x, y, hl.ref * k, hl.refY * k, r));
   for (const [id, fn] of [['map.terrain.tree.round', 'treeRound'], ['map.terrain.tree.pine', 'treePine'], ['map.terrain.tree.bare', 'treeBare'], ['map.terrain.tree.burned', 'treeBurned'], ['map.terrain.grass', 'grassTuft'], ['map.terrain.swamp', 'swampTuft'], ['map.terrain.dune', 'dune'], ['map.terrain.snow', 'snowDots'], ['map.terrain.field', 'field'], ['map.terrain.ash', 'ash']]) {
     const f = fam(id); add(id, 'terrain', (g, x, y, k, r) => P[fn](g, x, y, f.ref * k, r));
