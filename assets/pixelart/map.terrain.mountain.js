@@ -4,7 +4,7 @@ HB.pixelArt && HB.pixelArt.add({
  "kind": "map",
  "w": 64,
  "h": 54,
- "anchor": [16,24],
+ "anchor": [28,31],
  "fps": 1,
  "scale": 0.5,
  "flip": true,
