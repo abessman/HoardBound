@@ -263,9 +263,12 @@
   }
   function resize(w, h) {
     const d = D(); w = Math.max(1, Math.min(512, w | 0)); h = Math.max(1, Math.min(512, h | 0)); if (w === d.w && h === d.h) return;
-    pushUndo(); commitFloat();
+    pushUndo(); commitFloat(); sizeTo(d, w, h); S.sel = null; fit(); changed(true);
+  }
+  /** a new canvas size for every frame and layer, the pixels kept from the top left (no undo step) */
+  function sizeTo(d, w, h) {
     eachLayer(d, fr => fr.map(f => { const o = new Uint8Array(w * h).fill(CLEAR); for (let y = 0; y < Math.min(h, d.h); y++) for (let x = 0; x < Math.min(w, d.w); x++) o[y * w + x] = f[y * d.w + x]; return o; }));
-    d.w = w; d.h = h; d.anchor = d.kind === 'sprite' ? [w >> 1, h] : [Math.min(d.anchor[0], w), Math.min(d.anchor[1], h)]; S.sel = null; fit(); changed(true);
+    d.w = w; d.h = h; d.anchor = d.kind === 'sprite' ? [w >> 1, h] : [Math.min(d.anchor[0], w), Math.min(d.anchor[1], h)];
   }
   /** the drawn area: the box around every pixel of every frame and layer (or of frame k as the game shows it); null if empty */
   function drawnBox(d, k) {
@@ -977,9 +980,10 @@
       const f = flat(d, k); let c = frameCanvas(d, f);
       if (S.ref && S.ghosts.length && f.every(v => v === CLEAR)) { const g = document.createElement('canvas'); g.width = Math.max(1, Math.round(d.w * sc)); g.height = Math.max(1, Math.round(d.h * sc)); const x = g.getContext('2d'); x.globalAlpha = 0.3; x.drawImage(S.ghosts[Math.min(k, S.ghosts.length - 1)], 0, 0, g.width, g.height); c = g; }
       c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
-      const cap = document.createElement('div'); const it = S.item, unused = it && k >= it.frames && (it.kind === 'dragon' || it.kind === 'sprite' || (it.entry && it.entry.framesAre === 'levels'));
+      // (dragons and sprites play every frame drawn; frames that are levels stop at the game's count)
+      const cap = document.createElement('div'); const it = S.item, unused = it && k >= it.frames && it.entry && it.entry.framesAre === 'levels';
       cap.textContent = `${label} ${k + 1}${unused ? ' (unused)' : ''}`; el.appendChild(cap);
-      el.onclick = () => { commitFloat(); S.frame = k; S.sel = null; renderFrames(); draw(); }; box.appendChild(el);
+      el.onclick = () => { commitFloat(); S.frame = k; S.sel = null; renderFrames(); draw(); }; dropTarget(el, () => ({ frame: k })); box.appendChild(el);
     });
   }
   /** the variants of the open map symbol (1 and every '#n' drawing), as tiles; in Good or Evil, their versions */
@@ -994,7 +998,7 @@
       const el = document.createElement('div'); el.className = 'fr' + (n === curN ? ' cur' : '');
       const c = frameCanvas(own || !tone ? d : { w: d.w, h: d.h, palette: PA.tonedPalette(d, tone) }, flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; if (gone) c.style.opacity = 0.35; el.appendChild(c);
       const cap = document.createElement('div'); cap.textContent = `variant ${n}${gone ? ' · deleted (Revert brings it back)' : tone ? (own ? ` · ${tone} (drawn)` : ` · ${tone} (tint)`) : ''}`; el.appendChild(cap);
-      el.onclick = () => openVersion(base, n, tone); box.appendChild(el);
+      el.onclick = () => openVersion(base, n, tone); if (!gone) dropTarget(el, () => ({ variant: n })); box.appendChild(el);
     }
   }
   /** open variant n in a version: its own good or evil drawing when there is one, else the normal one (tinted when tone) */
@@ -1302,7 +1306,9 @@
   $('zoom-out').onclick = () => { const r = stage.getBoundingClientRect(); zoomAt(r.width / 2, r.height / 2, 1 / 1.5); };
   $('zoom-fit').onclick = () => { fit(); draw(); };
   // frames belong to every layer: adding, duplicating, deleting and moving a frame does it in all of them
-  $('v-add').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), nd = newDoc(it); nd.w = d.w; nd.h = d.h; nd.anchor = d.anchor.slice(); nd.scale = d.scale; nd.flip = d.flip; nd.palette = d.palette.slice(); nd.layers = [{ name: 'Layer 1', hidden: false, frames: [blank(nd)] }]; useLayer(nd, 0); docs.set(it.id, nd); S.tone = ''; open(it); toast(`Variant ${n}: draw it here. The map picks one variant at random for each spot.`, 4000); };
+  /** a new blank variant of the open map symbol, the size of d (not opened yet): its item */
+  function newVariant(d) { const base = baseOf(S.item), n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), nd = newDoc(it); nd.w = d.w; nd.h = d.h; nd.anchor = d.anchor.slice(); nd.scale = d.scale; nd.flip = d.flip; nd.palette = d.palette.slice(); nd.layers = [{ name: 'Layer 1', hidden: false, frames: [blank(nd)] }]; useLayer(nd, 0); docs.set(it.id, nd); return it; }
+  $('v-add').onclick = () => { const d = D(); if (!d) return; const it = newVariant(d); S.tone = ''; open(it); toast(`Variant ${it.n}: draw it here. The map picks one variant at random for each spot.`, 4000); };
   $('v-dup').onclick = () => { const d = D(), base = baseOf(S.item); if (!d) return; commitFloat(); const n = Math.max(...variantNs(base)) + 1, it = itemFor(base, n, ''), def = toDef(d); def.id = it.id; delete def.tones; const nd = fromDef(def); nd.fresh = false; docs.set(it.id, nd); S.tone = ''; open(it); changed(); toast(`Variant ${n} starts as a copy of the one you had open`); };
   $('v-del').onclick = () => {
     const base = baseOf(S.item), n = S.item.n || 1; if (n === 1) { toast('Variant 1 is the main drawing and stays; draw over it, or delete the other variants'); return; }
@@ -1328,6 +1334,104 @@
     });
     useLayer(d, d.layer); renderLayers(); changed();
   };
+
+  // ---- pictures from your computer (dropped from Explorer or Finder on a frame box, the strip or the canvas, or picked
+  // with Load picture…): each fills a frame, several fill the next ones in file-name order (adding frames); a strip
+  // n frames wide (as the PNG button saves) splits into n; a clean 2×, 3×… enlargement reads back pixel for pixel.
+  // Map symbols take one picture per variant (more make new variants).
+  const isPic = (f) => /^image\//.test(f.type) || /\.(png|gif|jpe?g|webp|bmp)$/i.test(f.name);
+  const hasFiles = (e) => !!(e.dataTransfer && [...e.dataTransfer.types].includes('Files'));
+  const blankDoc = (d) => d.layers.every(l => l.frames.every(f => f.every(v => v === CLEAR)));
+  /** an image's pixels at its own pixel size: { name, w, h, rgba(x, y) } (a k× enlargement, every k×k block one colour, read at 1×) */
+  function picPixels(img, name, d) {
+    const W = img.naturalWidth || img.width, H = img.naturalHeight || img.height, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0); const px = g.getImageData(0, 0, W, H).data;
+    const same = (i, j) => (px[i + 3] === 0 && px[j + 3] === 0) || (px[i] === px[j] && px[i + 1] === px[j + 1] && px[i + 2] === px[j + 2] && px[i + 3] === px[j + 3]);
+    const blocks = (k) => { if (W % k || H % k) return false; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!same((y * W + x) * 4, ((y - y % k) * W + x - x % k) * 4)) return false; return true; };
+    // read smaller only when that gives the drawing's size (or a strip of it), or the picture is too big for the drawing
+    // (then the biggest clean k): a picture that fits stays pixel for pixel, chunky art and plain colours included
+    const k0 = H / d.h; let s = 1;
+    if (Number.isInteger(k0) && k0 >= 1 && W % k0 === 0 && (W / k0) % d.w === 0 && blocks(k0)) s = k0;
+    else if (W > d.w || H > d.h) for (let k = Math.min(W, H, 16); k >= 2; k--) if (blocks(k)) { s = k; break; }
+    return { name, w: W / s, h: H / s, big: s, rgba: (x, y) => { const o = (y * s * W + x * s) * 4; return [px[o], px[o + 1], px[o + 2], px[o + 3]]; } };
+  }
+  /** the pictures in files, by file name (img2 before img10), each a strip of n frames split into n */
+  async function readPics(files, d) {
+    const out = [], list = [...files].filter(isPic).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+    for (const f of list) {
+      let p; try { p = picPixels(await blobImage(f), f.name, d); } catch (e) { toast(`Could not read ${f.name}`); continue; }
+      const n = p.h === d.h && p.w > d.w && p.w % d.w === 0 ? p.w / d.w : 1;
+      if (n === 1) out.push(p); else for (let i = 0; i < n; i++) out.push({ name: p.name, w: d.w, h: d.h, big: p.big, rgba: (x, y) => p.rgba(x + i * d.w, y) });
+    }
+    return out;
+  }
+  const picHex = (c) => (c[3] < 16 ? null : hexOf(c[0], c[1], c[2]) + (c[3] >= 240 ? '' : c[3].toString(16).padStart(2, '0')));
+  /** pictures into frames k, k+1 … of the open drawing's colour layer (frames added as needed); notes for the toast */
+  function putPics(pics, k) {
+    const d = D(), notes = []; commitFloat(); pushUndo(); S.float = null; S.sel = null;
+    let li = d.layer; if (isMarks(d)) { li = d.layers.map((l, i) => i).reverse().find(i => !d.layers[i].shade && !d.layers[i].light); if (li === undefined) { d.layers.unshift({ name: 'Layer 1', hidden: false, frames: d.frames.map(() => blank(d)) }); li = 0; } }
+    useLayer(d, li);
+    // an empty drawing takes the picture's size (the ground point keeps its place: bottom middle for sprites)
+    const p0 = pics[0];
+    if ((p0.w !== d.w || p0.h !== d.h) && blankDoc(d)) {
+      const w = Math.min(512, p0.w), h = Math.min(512, p0.h), a = d.anchor.slice(), ow = d.w, oh = d.h; sizeTo(d, w, h);
+      if (d.kind !== 'sprite') d.anchor = [Math.round(a[0] * w / ow), Math.round(a[1] * h / oh)];
+      fit(); notes.push(`the drawing was empty, so it is now ${w}×${h} like the picture`);
+    }
+    // each picture on the grid: smaller ones bottom middle, pixel for pixel; bigger ones shrunk to fit (nearest pixel)
+    for (const p of pics) if (p.big > 1) notes.push(`${p.name} was a ${p.big}× enlargement, read as ${p.w}×${p.h}`);
+    const grids = pics.map((p) => {
+      const f = Math.min(1, d.w / p.w, d.h / p.h), tw = Math.max(1, Math.round(p.w * f)), th = Math.max(1, Math.round(p.h * f)), ox = (d.w - tw) >> 1, oy = d.h - th, g = new Array(d.w * d.h).fill(null);
+      if (f < 1) notes.push(`${p.name} is ${p.w}×${p.h}, bigger than ${d.w}×${d.h}, so it was shrunk (set the size first to keep every pixel)`);
+      for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) g[(oy + y) * d.w + ox + x] = picHex(p.rgba(Math.min(p.w - 1, Math.floor((x + 0.5) * p.w / tw)), Math.min(p.h - 1, Math.floor((y + 0.5) * p.h / th))));
+      return g;
+    });
+    // the pictures' own colours when they fit in the palette, else close ones merged
+    const fresh = new Set(); for (const g of grids) for (const h of g) if (h && !d.palette.includes(h)) fresh.add(h);
+    const tol = d.palette.length + fresh.size <= AL.length ? 0 : 22; if (tol) notes.push(`there were more colours than the palette holds (${AL.length}), so close ones were merged`);
+    const more = k + pics.length - d.frames.length; if (more > 0) eachLayer(d, fr => fr.concat(Array.from({ length: more }, () => blank(d))));
+    grids.forEach((g, i) => { const o = blank(d); g.forEach((h, j) => { if (h) o[j] = color(d, h, tol); }); d.layers[li].frames[k + i] = o; });
+    useLayer(d, li); S.frame = k; changed(true);
+    return { notes: [...new Set(notes)], added: Math.max(0, more) };
+  }
+  /** load pictures where at() says: { frame: k } (frames from k), { variant: n } (map symbols), or {} (after the last) */
+  async function loadPics(files, at) {
+    if (!D()) return;
+    if (![...files].some(isPic)) { toast('Only pictures load here (PNG, GIF, JPG, WebP)'); return; }
+    const d0 = D(), isMap = d0.kind === 'map' && d0.frames.length === 1, base = isMap && baseOf(S.item), tone = isMap && (S.item.tone || S.tone);
+    if (isMap && at.variant && at.variant !== (S.item.n || 1)) openVersion(base, at.variant, tone);
+    const pics = await readPics(files, D()); if (!pics.length) return;
+    const say = (head, r) => toast([head, ...r.notes].join('; ') + '. Undo takes it back.', r.notes.length ? 8000 : 4000);
+    if (!isMap) {
+      const k = at.frame === undefined ? D().frames.length : at.frame, r = putPics(pics, k), n = pics.length;
+      say(n === 1 ? `Loaded ${pics[0].name} into frame ${k + 1}` : `Loaded ${n} pictures into frames ${k + 1}–${k + n}` + (r.added ? ` (${r.added} new)` : ''), r);
+      return;
+    }
+    // map symbols: one picture per variant, the rest as new variants
+    const done = [], notes = []; let first = null;
+    pics.forEach((p, i) => {
+      if (i > 0 || !at.variant) { const it = newVariant(D()); S.tone = ''; open(it); }
+      if (!first) first = S.item; done.push(S.item.n || 1); notes.push(...putPics([p], 0).notes);
+    });
+    if (first && first.id !== S.item.id) open(first);
+    say(done.length === 1 ? `Loaded ${pics[0].name} into variant ${done[0]}` : `Loaded ${done.length} pictures as variants ${done.join(', ')}`, { notes: [...new Set(notes)] });
+  }
+  /** the drop target under the pointer, highlighted (only that one); null: none */
+  const dropLit = (el) => { document.querySelectorAll('.drop').forEach(x => { if (x !== el) x.classList.remove('drop'); }); if (el) el.classList.add('drop'); };
+  /** an element pictures can be dropped on; at() says where they go */
+  function dropTarget(el, at) {
+    el.addEventListener('dragover', (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'copy'; dropLit(el); });
+    el.addEventListener('dragleave', (e) => { if (!el.contains(e.relatedTarget)) el.classList.remove('drop'); });
+    el.addEventListener('drop', (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.stopPropagation(); el.classList.remove('drop'); loadPics(e.dataTransfer.files, at()); });
+  }
+  dropTarget($('frames'), () => ({}));
+  dropTarget(stage, () => (D() && D().kind === 'map' && D().frames.length === 1 ? { variant: S.item.n || 1 } : { frame: S.frame }));
+  // anywhere else: never let the browser open the picture in place of the editor
+  window.addEventListener('dragover', (e) => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'none'; dropLit(null); } });
+  window.addEventListener('dragleave', (e) => { if (!e.relatedTarget) dropLit(null); });
+  window.addEventListener('drop', (e) => { dropLit(null); if (hasFiles(e)) { e.preventDefault(); toast('Drop pictures on a frame box, the frame strip or the canvas'); } });
+  $('fr-load').onclick = () => { if (D()) $('in-frload').click(); };
+  $('in-frload').onchange = (e) => { const fs = [...(e.target.files || [])]; e.target.value = ''; if (!fs.length) return; const d = D(); loadPics(fs, d.kind === 'map' && d.frames.length === 1 ? { variant: S.item.n || 1 } : { frame: S.frame }); };
   $('fr-ref').onclick = () => { const d = D(); if (!d || !S.refs.length) return; pushUndo(); const rc = S.refs[Math.min(S.frame, S.refs.length - 1)]; d.frames[S.frame] = quantize(d, rc, d.w, d.h); renderColors(); changed(); };
   $('btn-resize').onclick = () => resize(+$('in-w').value, +$('in-h').value);
   $('btn-crop').onclick = () => { const d = D(); if (!d) return; const b = drawnBox(d); if (!b) { toast('Nothing drawn to crop to'); return; } if (b.w === d.w && b.h === d.h) { toast('Already cropped to the drawing'); return; } cropTo(b); toast(`Cropped to ${b.w}×${b.h}`); };

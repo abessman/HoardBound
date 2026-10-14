@@ -24,9 +24,17 @@ commit by hand.
   (the dragon on its hoard and asleep on it, the chamber, the hill and every room); people, animals, treasure and
   props from the raids; map symbols. ● marks what you have drawn, ✎ what is unsaved. The list comes from the game
   itself, so new art added to the game shows up here without changing the editor.
-- **Frames strip:** every frame of the animation (the dragon's poses have 2 or 4, as the game plays them). Tap a frame
+- **Frames strip:** every frame of the animation (the game plays them all at the fps you set). Tap a frame
   to draw on it. **Duplicate**, **+ Blank**, **Delete**, ◀ ▶ to reorder, **Copy frame / Paste frame** between frames
   or sprites, **From game art** to start from the game's current drawing.
+- **Pictures from your computer** (0.29): drag saved pictures from Explorer or Finder onto a frame box and they load
+  into that frame and the next ones, in file-name order, adding frames as needed (on the strip beside the boxes: after
+  the last frame; on the canvas: the frame you are on). **Load picture…** picks them from a file dialog instead. A
+  picture the sprite's size loads pixel for pixel (its colours join the palette, close ones merged only past 62); a
+  clean 2×–16× enlargement reads back at 1×; a strip several frames wide (as **PNG** saves) splits into frames. An
+  empty drawing takes the picture's size; a smaller picture sits bottom middle; a bigger one is shrunk to fit (resize
+  first to keep every pixel). It goes into the layer you are on (a colour layer if a shading or light layer is
+  picked). On a map symbol, each picture fills a variant (extras become new variants). Undo takes it back.
 - **Variants strip** (map symbols, instead of frames): each variant is its own drawing with its own canvas, size,
   anchor and layers; the map picks one at random for each spot. **+ New variant** (blank, the size of this one),
   **Duplicate variant**, **Delete variant**. An older drawing with several frames is split into variants when opened.

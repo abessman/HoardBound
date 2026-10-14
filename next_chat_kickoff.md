@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-14 · **Version 0.28.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-14 · **Version 0.29.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -45,7 +45,6 @@ The owner plays at hoardbound.netlify.app on an iPad.
   not mirror (now opt-in `mirror`). Owner asked (talk only) about outline + a shading mask for lighting: answered
   feasible; 0.26 built shading layers (marks 1/2/3 for a light from the left, `PA.composite`; mirrored symbols get a
   relit pre-mirrored variant). Next: relight with the 3D test's turning and for dragons facing the other way.
-- 0.26.1: a blank draft in the owner's browser hid saved variant 1; blank drafts are now ignored and dropped.
 
 ## Lighting (2026-10-14)
 - Dynamic shading (a sun around outline-only symbols: etching, cel shading, a small 3D map) was tested on a page and
@@ -63,6 +62,8 @@ The owner plays at hoardbound.netlify.app on an iPad.
   side), new directions start as copies, map markers stay unanimated (frames are variants), raids face left or right.
 - 0.28.1 (owner's ask): drawn animations play all their frames at the drawing's fps (`HB.dragonArt.frameAt` in every
   view; raid sprites loop their frames via `HB.art.at`). The generated art keeps its old timings.
+- 0.29 (owner's ask): drop pictures from Explorer onto frame boxes (`loadPics` in editor.js). Choices (not confirmed):
+  name order, empty drawings take the picture's size, smaller ones bottom middle, bigger ones shrunk, k× read at 1×.
 
 ## Next tasks (in order)
 1. The owner tries Facing on the dragon's fly pose and a light layer on a camp or castle (Settings → Time of day).

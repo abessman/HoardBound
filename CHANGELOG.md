@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.29.0 — 2026-10-14 · Drop pictures onto frames
+- **Drag a saved picture from Explorer onto a frame box** in the pixel editor and it loads into that frame. Drop
+  several at once and they fill that frame and the next ones in file-name order (frame2 before frame10), adding frames
+  as needed. Drop on the strip beside the boxes to add them after the last frame, or on the canvas for the frame you
+  are on. **Load picture…** does the same from a file picker (handy on the iPad).
+- **Pixel for pixel.** A picture the sprite's size loads exactly, its colours added to the palette (half-clear pixels
+  stay half-clear). A clean 2×, 3× or 4× enlargement is read back at 1×. A strip as wide as several frames (what the
+  **PNG** button saves) splits into frames. An empty drawing takes the picture's size; a smaller picture sits at the
+  bottom middle; a bigger one is shrunk to fit, and the editor says so. One undo takes the whole drop back.
+- **Map symbols:** a picture dropped on a variant box loads into that variant; extra pictures become new variants.
+- The frame boxes no longer call a dragon's or raid sprite's extra frames "unused": since 0.28.1 they all play.
+
 ## 0.28.1 — 2026-10-14 · Animations as long as you draw them
 - **Drawn animations play every frame at your speed.** The game used a fixed number of frames per dragon pose (four
   for flying), so extra frames were cut and fewer frames repeated. Now a drawn pose plays all its frames at the fps
