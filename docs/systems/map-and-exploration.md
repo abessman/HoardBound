@@ -73,6 +73,12 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   dissolves along a soft irregular edge that bleeds outward from the dragon, with a thin warm wash at the wet edge that
   dries away (`HB.mapReveal` in `src/art/mapfx.js`; `onReveal` → `revealWash.add`, the fog skips those cells and
   clears their clouds early). Preview: `?scene=washpreview`. Reduced motion: a 0.3 s fade.
+- Time of day (0.27, a preview): Settings → Time of day on the map (Day, Dusk, Night; `?time=dusk|night` for one
+  visit). At dusk and night the symbols drawn each frame report their lights (`MA.lights`); after the fog,
+  `drawNight` multiplies the map toward a deep blue, adds each light's pool (fires flicker, magic pulses; still with
+  reduced motion) and draws the glowing pixels. Places without drawn lights get a few by kind (`placeLights`: a camp's
+  fire, a town's windows). Labels keep their paper halo, so they stay readable. The game's own day and night is not
+  modelled yet: this is a view.
 
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).
@@ -93,6 +99,7 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   would help). See [FEATURE_STATUS](../FEATURE_STATUS.md).
 - One seed in many lacks a rival lair (test "rival lairs exist" is seed-dependent).
 - The home settlement's name is drawn without label collision and can overlap "Your lair" at close zoom.
+- Night: terrain symbols do not glow (they sit in chunks); the default place lights are placed by kind, not by the art.
 
 ## Related
 [travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [art-and-sprites](art-and-sprites.md) · [domain-and-influence](domain-and-influence.md)

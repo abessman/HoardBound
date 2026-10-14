@@ -112,12 +112,12 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   colours below toward a warm light or the map's ink (hatched lines when `hatch`); `swap` exchanges lit and shadow.
   `PA.canvases(def, tone, swap)`; the pixel pack gives a mirrorable shaded symbol a pre-mirrored, relit variant
   instead of `allowFlipX`. Shading marks stay out of `flatten` (crop boxes) and of the palette.
-- Layers (0.18): a file may hold `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`;
-  `HB.pixelArt.add` flattens the visible ones into `frames` (topmost pixel wins) for bookkeeping (crop boxes); pictures
-  are stacked with transparency (0.22, below).
-- `?drafts=1` applies the editor's unsaved drafts (localStorage `hb.pixelart.drafts`) on top; the editor's
-  "in game" buttons use it. Drafts hold only drawings with something visible (`isDirty` is false for a blank doc) and
-  `null` for a deletion; on load the editor drops a blank draft that would hide a saved file (0.26.1). `HB.dragonArt.generated()` is the drawing without overrides (the editor's tracing guide).
+- 0.27: light layers (`light: { glow, size }`, marks 1 fire, 2 window, 3 lantern, 4 magic, 5 embers: `PA.LIGHTS`) stay
+  out of the picture; `PA.lightsOf(def, k)` gives patches (`lightSpots`) and a glow canvas, which the pixel pack ships
+  per variant (`lights`, `glowSrc`). `MA.drawResolved` reports them into `MA.lights` (device px) while mapview collects.
+- Layers (0.18): `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`; `add` flattens the visible
+  colour layers into `frames` for bookkeeping (crop boxes). `?drafts=1` applies the editor's unsaved drafts
+  (localStorage `hb.pixelart.drafts`, only drawings with something visible, `null` for a deletion; 0.26.1).
 
 ## Code
 - `src/art/` (palette, pixel helpers + sprite registry, sprites, dragon, mapart, parchment, illustrations).
@@ -152,6 +152,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 - Drawn dragon art ignores breed colours, alignment tints, mutations and scars (one drawing serves all); hurt shows the
   drawn hurt frames. Raid sprites have one frame in the game (no walk cycle yet). Editor saves: last save wins.
 - Editor map symbols are their own pack (`pixel`): choosing it shows undrawn symbols in the original ink, not Illuminated.
+- Lights show for places, travellers and the dragon (drawn each frame); terrain symbols (chunks) and raid or lair art
+  keep their light marks but do not glow yet.
 
 ## Related
 [map-and-exploration](map-and-exploration.md) · [raids-and-encounters](raids-and-encounters.md)

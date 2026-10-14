@@ -81,6 +81,10 @@ commit by hand.
   shadows** draws shadows as engraved lines. **show marks** shows where you painted (yellow, blue, purple); **light
   from ◀ ▶** previews the light from the other side. A symbol that **may be mirrored** gets a mirrored copy with lit
   and shadow swapped, so the light stays on its side.
+- **Light layer** (**+ Light**, always on top): mark where light comes from with **Fire** (orange, flickers),
+  **Window** (warm, steady), **Lantern** (small), **Magic** (blue, pulses) or **Embers** (dim red). By day nothing
+  changes; at dusk and night (Settings → Time of day on the map) the game glows those pixels and casts a pool of light
+  around each patch. **Glow** and **Reach** set how bright and how far; tick **night** above the canvas to preview it.
 - **Picture → pixels:** **Convert to pixels…** turns your picture into pixel art on this sprite's grid, exactly where
   the picture sits behind the pixels (size and move it first with the Image behind controls; set the canvas size with
   **Resize**). With no picture yet it asks for one. Each pixel looks at the part of the picture under it:
@@ -173,7 +177,8 @@ HB.pixelArt && HB.pixelArt.add({
 A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "name": "sketch", "hidden": true, ... }]`
 (bottom layer first) instead of `"frames"`; the game stacks the visible ones. A layer may add `"opacity"` and `"wash"`
 (0–100; 100 when left out). A shading layer adds `"shade": { "light": 35, "dark": 35, "hatch": false }` and its rows
-hold marks: `1` lit, `2` shadow, `3` deep shadow. A palette colour may carry opacity
+hold marks: `1` lit, `2` shadow, `3` deep shadow. A light layer adds `"light": { "glow": 100, "size": 100 }` with marks
+`1` fire, `2` window, `3` lantern, `4` magic, `5` embers. A palette colour may carry opacity
 (`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tints (hue, sat, light, tint, mix).
 Variants and versions are their own files: `map.terrain.mountain#2` in `map.terrain.mountain~2.js`, its evil version
 `map.terrain.mountain#2@evil` in `map.terrain.mountain~2~evil.js`, a dragon pose's good version `dragon.2.idle@good`.

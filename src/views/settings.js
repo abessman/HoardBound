@@ -8,7 +8,7 @@
     enter() {
       const S = HB.settings;
       const w = 520, x = (HB.W - w) / 2, y0 = 120;
-      this.x = x; this.y = y0; this.w = w; this.h = 522;
+      this.x = x; this.y = y0; this.w = w; this.h = 568;
       let y = y0 + 60;
       const row = (label, value, onChange, options, tooltip) => {
         const t = new HB.ui.Toggle({ x: x + 40, y, w: w - 80, label, value, onChange, tooltip });
@@ -24,6 +24,8 @@
       row('Reduce motion', S.reduceMotion, v => { S.reduceMotion = v; S.save(); }, null, 'Shortens transitions and flashes; on the map, ink and watercolour fade in instead of flowing.');
       const packs = [{ label: 'Original ink', value: 'none' }].concat((HB.MAP_PACKS || []).map(p => ({ label: p.label || p.name, value: p.name })));
       if (packs.length > 1) row('Map art', packs.some(p => p.value === S.mapPack) ? S.mapPack : 'none', v => { S.mapPack = v; S.save(); if (HB.mapAssets) HB.mapAssets.use(v); }, packs, 'Choose the map illustrations. Original ink restores the earlier artwork; your campaign stays the same.');
+      row('Time of day on the map', ['day', 'dusk', 'night'].includes(S.mapLight) ? S.mapLight : 'day', v => { S.mapLight = v; S.save(); }, [{ label: 'Day', value: 'day' }, { label: 'Dusk', value: 'dusk' }, { label: 'Night', value: 'night' }],
+        'A preview of the map at dusk or night: campfires, lit windows and lanterns glow. Drawings show the lights you mark in the pixel editor; other places get a few by kind.');
       y += 10;
       // a dev tool for now: the owner draws the game's pixel art there (docs/pixel-editor.md)
       this.ui.add(new HB.ui.Button({ x: x + w / 2 - 230, y, w: 220, h: 40, label: 'Pixel editor', onClick: () => HB.openEditor(),

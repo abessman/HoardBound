@@ -80,3 +80,4 @@ dialog::backdrop { background: rgba(30, 20, 10, 0.35); }
 #layers .ly .eye { min-height: 30px; min-width: 34px; padding: 2px 6px; justify-content: center; }
 #layers .ly .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #layers .ly.off .nm { color: var(--soft); text-decoration: line-through; }
+.lsw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }

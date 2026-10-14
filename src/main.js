@@ -13,6 +13,7 @@
     HB.parchment.init();
     const params = new URLSearchParams(location.search);
     HB.debugMode = params.has('debug');
+    HB.mapTimeOverride = /^(day|dusk|night)$/.test(params.get('time') || '') ? params.get('time') : null; // ?time=dusk|night: the map's time of day for this visit
     await HB.text.load();
     if (location.protocol !== 'file:') await HB.sprites.loadOverrides();
     // pixel art made with the editor (assets/pixelart/, editor/index.html); also works from file://

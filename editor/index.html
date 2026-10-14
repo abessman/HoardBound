@@ -101,6 +101,7 @@
       <label title="The game's current drawing, faintly behind yours, to trace or size against"><input type="checkbox" id="chk-ref"> game art behind</label>
       <label><input type="checkbox" id="chk-grid" checked> grid</label>
       <label title="The map's parchment under the drawing, at map scale, to see how it sits on the map; the eyedropper picks its colours where nothing is drawn"><input type="checkbox" id="chk-paper"> parchment under</label>
+      <label title="See the drawing at night, as the map shows it at dusk and night: its light layer glows (fires flicker)"><input type="checkbox" id="chk-night"> night</label>
       <span class="sep"></span>
       <button id="btn-refimg" title="Load your own picture behind the pixels, to draw over it (kept in this browser for this sprite)">Image behind…</button>
       <input type="file" id="in-refimg" accept="image/*" hidden>
@@ -158,9 +159,10 @@
         <label><input type="checkbox" id="chk-mirror"> mirror</label></div>
     </div>
     <div class="panel" id="layers-panel">
-      <div class="row small"><b>Layers</b><span class="grow"></span>
+      <div class="row small wrap"><b>Layers</b><span class="grow"></span>
         <button id="ly-add" title="A new empty layer above this one">+ New</button>
         <button id="ly-shade" title="A shading layer above this one: paint where the light falls and where the shadows are; the game lights the layers below with it">+ Shading</button>
+        <button id="ly-light" title="A light layer (on top): mark where light comes from, like a fire, lit windows or a lantern; at dusk and night the game glows them">+ Light</button>
         <button id="ly-dup" title="Duplicate this layer">Dup</button>
         <button id="ly-up" title="Move this layer up">▲</button>
         <button id="ly-down" title="Move this layer down">▼</button>
@@ -180,6 +182,12 @@
         <div class="row"><label title="Show where you painted (yellow lit, blue shadow, purple deep)"><input type="checkbox" id="sh-marks" checked> show marks</label>
           <span class="grow"></span><span title="Preview the light from the other side (what a mirrored or turned copy gets)">light from</span><button id="sh-left" class="on">◀</button><button id="sh-right">▶</button></div>
         <button id="sh-suggest" title="Fill this frame's shading from the shape: lit on the left of each part, shadow on the right, deep at the far edge. A start to paint over.">Suggest shading</button>
+      </div>
+      <div id="light-box" class="col small" hidden>
+        <div class="muted">Lights: paint where light comes from. By day nothing changes; at dusk and night the game glows these pixels and casts a pool of light around each patch. Tick <b>night</b> above the canvas to see it.</div>
+        <div class="row wrap"><button data-light="1" title="A campfire, a brazier, a burning roof: orange, flickers"><span class="lsw" style="background:#ff8a2c"></span>Fire</button><button data-light="2" title="Lit windows, candles: warm and steady"><span class="lsw" style="background:#ffcf6a"></span>Window</button><button data-light="3" title="A lantern or torch someone carries: small, sways a little"><span class="lsw" style="background:#ffe39a"></span>Lantern</button><button data-light="4" title="Magic, wards, crystals: cool blue, pulses"><span class="lsw" style="background:#86d3ff"></span>Magic</button><button data-light="5" title="Embers, a dying fire, lava: dim red, flickers"><span class="lsw" style="background:#e0522e"></span>Embers</button></div>
+        <label class="col" title="How bright the pools of light are">Glow <b id="lt-glow-v"></b><input type="range" id="lt-glow" min="20" max="200"></label>
+        <label class="col" title="How far the light reaches around each patch">Reach <b id="lt-size-v"></b><input type="range" id="lt-size" min="30" max="300"></label>
       </div>
       <label class="col small" title="How solid the whole layer is: lower lets what is under it show through (in the game too)">Layer opacity <b id="ly-op-v"></b><input type="range" id="ly-op" min="0" max="100" value="100"></label>
       <label class="col small" title="Map symbols: how much of the map's territory watercolour (kind green, cruel rust) lands on this layer's pixels. The ground keeps its wash; lower keeps the drawing clearer. Shown here with parchment under and Good or Evil.">Wash on this layer <b id="ly-wash-v"></b><input type="range" id="ly-wash" min="0" max="100" value="100"></label>

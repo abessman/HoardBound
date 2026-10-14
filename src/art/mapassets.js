@@ -113,6 +113,11 @@
       // a wash cut-out (the editor's layers set to less wash): the map takes that much territory wash off this symbol
       if (typeof v.washCut === 'string') { MA.hasCuts = true; MA.loadImage(out, v.washCut, (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) { out.cutImg = img; MA.bump(); } }, () => {}); }
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
+      // lights (the editor's light layers): spots in the frame's pixels, and the glowing pixels, shown at dusk and night
+      if (Array.isArray(v.lights)) {
+        out.lights = v.lights.filter(l => l && isFinite(l.x) && isFinite(l.y) && l.kind >= 1).map(l => ({ kind: l.kind | 0, x: +l.x, y: +l.y, r: +l.r > 0 ? +l.r : 4, glow: l.glow === undefined ? 1 : +l.glow }));
+        if (typeof v.glowSrc === 'string') MA.loadImage(out, /^(assets\/|https?:|data:)/.test(v.glowSrc) ? v.glowSrc : base + v.glowSrc, (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) out.glowImg = img; }, () => {});
+      }
       return out;
     },
     /** a watercolour variant (map.wash.*): tileable world-anchored masks, or a bloom order mask */
@@ -221,6 +226,12 @@
       if (v.cutImg && ctx.washCut && ctx.getTransform) { const cc = ctx.washCut; cc.setTransform(ctx.getTransform()); cc.imageSmoothingEnabled = false; cc.drawImage(v.cutImg, 0, 0, v.sw, v.sh, dx, dy, dw, dh); }
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
       if (HB.mapInk && v.decor) HB.mapInk.decorate(ctx, v.decor, x, y, param, o);
+      // lights: while the map collects them (MA.lights, dusk and night), each spot and the glowing pixels in device pixels
+      if (v.lights && MA.lights && ctx.getTransform) {
+        const T = ctx.getTransform(), k = Math.hypot(T.a, T.b);
+        for (const l of v.lights) { const lx = dx + l.x * sx, ly = dy + l.y * sy; MA.lights.push({ x: T.a * lx + T.c * ly + T.e, y: T.b * lx + T.d * ly + T.f, r: l.r * Math.abs(sx) * k, kind: l.kind, glow: l.glow, alpha: ctx.globalAlpha, seed: lx * 7.1 + ly * 3.3 + HB.hash32(String(o.key)) % 997 }); }
+        if (v.glowImg) MA.lights.push({ img: v.glowImg, m: [T.a, T.b, T.c, T.d, T.e, T.f], dx, dy, dw, dh, alpha: ctx.globalAlpha });
+      }
       ctx.restore();
       return { id: r.id, v, sx, sy, dx, dy, dw, dh, flip };
     },

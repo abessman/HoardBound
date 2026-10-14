@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.27.0 — 2026-10-14 · Lights: fires, windows and lanterns at night
+- **Light layers in the pixel editor.** **+ Light** adds a layer where you mark where light comes from: **Fire**
+  (orange, flickers), **Window** (warm and steady), **Lantern** (small), **Magic** (blue, pulses) and **Embers** (dim
+  red). By day the drawing does not change. **Glow** and **Reach** set how bright and how far; tick **night** above the
+  canvas to see it glow.
+- **The map at dusk and night.** Settings → **Time of day on the map** (Day, Dusk, Night) dims the map toward a deep
+  blue and lights it: the lights you mark glow on places, travellers and the dragon, with a pool of light around each,
+  and places you have not drawn yet get a few by kind (a camp's fire, a town's windows). For now this is a view: the
+  game has no day and night of its own yet.
+- **The moving-sun shading test is saved for later** (`docs/ideas/dynamic-shading.md`, with the test page), as you
+  asked: the map keeps your drawn shadows.
+- Fixed: duplicating a shading layer made a colour layer of its marks.
+
 ## 0.26.1 — 2026-10-13 · A blank drawing no longer hides a saved one
 - **Fixed: the editor could show a saved drawing as blank.** A blank copy kept in the browser's unsaved changes (from
   the first finger of a two-finger tap, or a variant left empty) hid the saved drawing, and opening a variant could

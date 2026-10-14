@@ -8,7 +8,10 @@
  * lands on that layer's pixels; less leaves them clearer (map symbols only). A shading layer ({ shade: { light, dark,
  * hatch } }) holds marks, not colours ('1' lit, '2' shadow, '3' deep shadow, painted for a light from the left): it
  * lights the layers under it (toward a warm light, toward ink; hatched lines when hatch), and a mirrored or relit
- * drawing swaps lit and shadow so the light stays on its side.
+ * drawing swaps lit and shadow so the light stays on its side. A light layer ({ light: { glow, size } }) holds light
+ * marks ('1' fire, '2' window or candle, '3' lantern, '4' magic, '5' embers: PA.LIGHTS): it does not change the picture
+ * by day; at night the game glows the marked pixels and casts a pool of light around each patch (map symbols: the map's
+ * time of day, Settings). PA.lightsOf(def, frame) gives the patches and the glowing pixels.
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
@@ -33,7 +36,7 @@
     add(def) { if (def && typeof def.id === 'string') { if (Array.isArray(def.layers) && !def.frames) def.frames = PA.flatten(def); PA.entries.set(def.id, def); } },
     /** a layered drawing's visible layers merged into frames (the topmost pixel wins) */
     flatten(def) {
-      const layers = def.layers.filter(l => l && !l.hidden && !l.shade && Array.isArray(l.frames)), n = Math.max(0, ...def.layers.map(l => (l && l.frames ? l.frames.length : 0))), w = def.w | 0, h = def.h | 0;
+      const layers = def.layers.filter(l => l && !l.hidden && !l.shade && !l.light && Array.isArray(l.frames)), n = Math.max(0, ...def.layers.map(l => (l && l.frames ? l.frames.length : 0))), w = def.w | 0, h = def.h | 0;
       return Array.from({ length: Math.max(1, n) }, (_, k) => ({ rows: Array.from({ length: h }, (_, y) => {
         let row = '';
         for (let x = 0; x < w; x++) { let ch = '.'; for (let i = layers.length - 1; i >= 0; i--) { const f = layers[i].frames[k], c = f && f.rows && f.rows[y] ? f.rows[y][x] : '.'; if (c && c !== '.') { ch = c; break; } } row += ch; }
@@ -47,7 +50,7 @@
       for (let i = 0; i < n; i++) {
         let A = 0, R = 0, G = 0, B = 0, K = 0;
         for (const L of layers) {
-          const v = L.at(i); if (v < 0) continue;
+          const v = L.at(i); if (v < 0 || L.light) continue;
           if (L.shade) { // light the colours below (premultiplied): lit toward a warm light, shadow toward ink
             if (A <= 0 || v < 1 || v > 3) continue; const m = L.swap && v < 3 ? 3 - v : v, S = L.shade;
             let t, c;
@@ -68,6 +71,50 @@
     /** a layer's shading settings ({ light, dark, hatch }), or null for a colour layer */
     shadeOf(l) { return l && l.shade ? Object.assign({ light: 35, dark: 35, hatch: false }, typeof l.shade === 'object' ? l.shade : {}) : null; },
     hasShade(def) { return Array.isArray(def.layers) && def.layers.some(l => l && !l.hidden && l.shade); },
+    // ---- lights: marks for where light comes from (a camp's fire, a castle's windows, a traveller's lantern). r is the
+    // pool's reach in the drawing's pixels (times the layer's size, a little more for a bigger patch); flicker and pulse
+    // make it move. Index = the mark ('1'…'5').
+    LIGHTS: [null,
+      { name: 'Fire', color: '#ff8a2c', r: 7, flicker: 1 },
+      { name: 'Window', color: '#ffcf6a', r: 4.5, flicker: 0.12 },
+      { name: 'Lantern', color: '#ffe39a', r: 3.5, flicker: 0.35 },
+      { name: 'Magic', color: '#86d3ff', r: 6, pulse: 1 },
+      { name: 'Embers', color: '#e0522e', r: 3, flicker: 0.6 }],
+    /** a layer's light settings ({ glow, size }, percent), or null for a layer that is not a light layer */
+    lightOf(l) { return l && l.light ? Object.assign({ glow: 100, size: 100 }, typeof l.light === 'object' ? l.light : {}) : null; },
+    hasLights(def) { return !!def && Array.isArray(def.layers) && def.layers.some(l => l && !l.hidden && l.light); },
+    /** light patches from marks (at(i): the kind 1–5, or anything else for none): one spot per connected patch of a kind,
+     *  at its middle, { kind, x, y, n (pixels), r (reach in pixels), glow (0–1+) } */
+    lightSpots(w, h, at, set) {
+      const seen = new Uint8Array(w * h), out = [], st = [], size = (set && set.size !== undefined ? +set.size : 100) / 100, glow = (set && set.glow !== undefined ? +set.glow : 100) / 100;
+      for (let i = 0; i < w * h; i++) {
+        const k = at(i); if (!(k >= 1 && k < PA.LIGHTS.length) || seen[i]) continue;
+        let sx = 0, sy = 0, n = 0; st.length = 0; st.push(i); seen[i] = 1;
+        while (st.length) {
+          const j = st.pop(), x = j % w, y = (j / w) | 0; sx += x + 0.5; sy += y + 0.5; n++;
+          for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const q = yy * w + xx; if (!seen[q] && at(q) === k) { seen[q] = 1; st.push(q); } }
+        }
+        out.push({ kind: k, x: sx / n, y: sy / n, n, r: PA.LIGHTS[k].r * size * (1 + Math.sqrt(n) * 0.18), glow });
+      }
+      return out;
+    },
+    /** frame k's lights: { spots, glow (a canvas of the marked pixels in their light's colour) }, or null; cached */
+    lightsOf(def, k) {
+      if (!PA.hasLights(def)) return null;
+      const cache = def._lights || (def._lights = []); if (cache[k] !== undefined) return cache[k];
+      const w = def.w | 0, h = def.h | 0, all = new Int8Array(w * h); let spots = [];
+      for (const l of def.layers) {
+        if (!l || l.hidden || !l.light) continue;
+        const kinds = new Int8Array(w * h), rows = (l.frames && l.frames[k] && l.frames[k].rows) || [];
+        rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const v = ALPHABET.indexOf(row[x]); if (v >= 1 && v < PA.LIGHTS.length) { kinds[y * w + x] = v; all[y * w + x] = v; } } });
+        spots = spots.concat(PA.lightSpots(w, h, (i) => kinds[i], PA.lightOf(l)));
+      }
+      if (!spots.length) return (cache[k] = null);
+      const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
+      for (let i = 0; i < w * h; i++) if (all[i] > 0) { const col = hex(PA.LIGHTS[all[i]].color), o = i * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
+      g.putImageData(img, 0, 0);
+      return (cache[k] = { spots, glow: c });
+    },
     layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
     layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
     /** '<base>#<n>@<tone>' → { base, n (1 when none), tone ('' when none) } */
@@ -99,7 +146,7 @@
       const ck = (tone || '') + (swap ? ':swap' : ''), cache = ck ? (def._toned = def._toned || {}) : null;
       if (ck ? cache[ck] : def._canvases) return ck ? cache[ck] : def._canvases;
       const pal = (tone ? PA.tonedPalette(def, tone) : def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
-      const vis = Array.isArray(def.layers) ? def.layers.filter(l => l && !l.hidden && Array.isArray(l.frames)) : null;
+      const vis = Array.isArray(def.layers) ? def.layers.filter(l => l && !l.hidden && !l.light && Array.isArray(l.frames)) : null;
       if (vis && vis.length) {
         const cuts = [];
         const list = (def.frames || []).map((_, k) => {
@@ -218,6 +265,9 @@
       // mirrored only when the drawing allows it; a shaded one comes pre-mirrored and relit instead
       const v = { id, src: cut(c), sourceSize: [w, h], logicalSize: [w * s, h * s], anchorPx: [a[0] - x0, a[1] - y0], sampling: 'pixel', allowFlipX: !!def.mirror && !PA.hasShade(def) };
       const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(mirrored ? flipC(wc[i]) : wc[i]); // less territory wash on this symbol (its layers' wash setting)
+      // its lights (the light layer's patches, in the cut picture's pixels, mirrored with it) and the glowing pixels
+      const lt = PA.lightsOf(def, i);
+      if (lt) { v.lights = lt.spots.map(p => ({ kind: p.kind, x: +((mirrored ? def.w - p.x : p.x) - x0).toFixed(2), y: +(p.y - y0).toFixed(2), r: +p.r.toFixed(2), glow: p.glow })); v.glowSrc = cut(mirrored ? flipC(lt.glow) : lt.glow); }
       return v;
     },
     /** the box around frame k's drawn pixels { x, y, w, h }, or null when it is empty */

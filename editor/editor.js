@@ -60,7 +60,7 @@
   // Documents: one per sprite id. frames are Uint8Arrays of palette indices (255 = transparent)
   // =====================================================================================================
   const docs = new Map(), saved = new Map(), deleted = new Set();
-  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, paper: false, addSel: false, tone: '', shadeVal: 2, marks: true, light: 'left', refs: [], ghosts: [] };
+  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, paper: false, addSel: false, tone: '', shadeVal: 2, marks: true, light: 'left', lightVal: 1, night: false, refs: [], ghosts: [] };
   try { S.paper = localStorage.getItem('hb.editor.paper') === '1'; } catch (e) { /* private mode */ }
   const hexOf = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
   const rgbOf = (hex) => { const v = PA.hex(hex); return v ? [v[0], v[1], v[2]] : [0, 0, 0]; };
@@ -76,7 +76,7 @@
   function fromDef(def) {
     const w = def.w | 0, h = def.h | 0;
     const pct = (v) => (v === undefined ? undefined : Math.max(0, Math.min(100, Math.round(+v) || 0)));
-    const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), shade: PA.shadeOf(l), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
+    const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), shade: PA.shadeOf(l), light: PA.lightOf(l), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
     const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.mirror, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
     useLayer(doc, layers.length - 1); return doc;
@@ -84,7 +84,7 @@
   /** the picture the game shows for frame k: visible layers merged, the topmost pixel wins (active: a stand-in for the active layer's frame) */
   function flat(d, k, active) {
     const out = new Uint8Array(d.w * d.h).fill(CLEAR);
-    d.layers.forEach((l, i) => { if (l.hidden || l.shade) return; const f = i === d.layer && active ? active : l.frames[k]; if (!f) return; for (let j = 0; j < out.length; j++) if (f[j] !== CLEAR) out[j] = f[j]; });
+    d.layers.forEach((l, i) => { if (l.hidden || l.shade || l.light) return; const f = i === d.layer && active ? active : l.frames[k]; if (!f) return; for (let j = 0; j < out.length; j++) if (f[j] !== CLEAR) out[j] = f[j]; });
     return out;
   }
   function toDef(doc) {
@@ -92,22 +92,22 @@
     if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.mirror = true; } // may be shown mirrored (shading would flip with it)
     if (doc.kind === 'dragon' && doc.bodyLength) def.bodyLength = doc.bodyLength;
     // keep only colours in use, in order
-    const used = new Set(); for (const l of doc.layers) if (!l.shade) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
+    const used = new Set(); for (const l of doc.layers) if (!l.shade && !l.light) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
     const keep = [...used].sort((a, b) => a - b), remap = new Map(keep.map((v, i) => [v, i]));
     def.palette = keep.map(i => doc.palette[i]);
     if (doc.tones && Object.keys(doc.tones).length) def.tones = JSON.parse(JSON.stringify(doc.tones)); // good and evil tones, when adjusted
     const enc = (frames, shade) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : shade ? AL[v] : AL[remap.get(v)]; } return s; }) }));
     // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
     const L = doc.layers;
-    if (L.length === 1 && !L[0].hidden && !L[0].shade && L[0].name === 'Layer 1' && lyOp(L[0]) === 100 && lyWash(L[0]) === 100) def.frames = enc(L[0].frames);
-    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, l.shade ? { shade: { light: l.shade.light, dark: l.shade.dark, hatch: !!l.shade.hatch } } : {}, !l.shade && lyOp(l) !== 100 ? { opacity: lyOp(l) } : {}, !l.shade && lyWash(l) !== 100 ? { wash: lyWash(l) } : {}, { frames: enc(l.frames, !!l.shade) }));
+    if (L.length === 1 && !L[0].hidden && !L[0].shade && !L[0].light && L[0].name === 'Layer 1' && lyOp(L[0]) === 100 && lyWash(L[0]) === 100) def.frames = enc(L[0].frames);
+    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, l.shade ? { shade: { light: l.shade.light, dark: l.shade.dark, hatch: !!l.shade.hatch } } : {}, l.light ? { light: { glow: l.light.glow, size: l.light.size } } : {}, !l.shade && !l.light && lyOp(l) !== 100 ? { opacity: lyOp(l) } : {}, !l.shade && !l.light && lyWash(l) !== 100 ? { wash: lyWash(l) } : {}, { frames: enc(l.frames, !!(l.shade || l.light)) }));
     return def;
   }
   /** the file for one sprite: JSON with one field per line and each frame's rows as a grid (easy to read and diff) */
   const framesText = (v, ind) => `[\n${v.map(f => `${ind} { "rows": [\n${f.rows.map(r => ind + '  ' + JSON.stringify(r)).join(',\n')}\n${ind} ] }`).join(',\n')}\n${ind}]`;
   const fileText = (def) => {
     const fields = Object.entries(def).map(([k, v]) => k === 'frames' ? ` "frames": ${framesText(v, ' ')}`
-      : k === 'layers' ? ` "layers": [\n${v.map(l => `  { "name": ${JSON.stringify(l.name)},${l.hidden ? ' "hidden": true,' : ''}${l.opacity !== undefined ? ` "opacity": ${l.opacity},` : ''}${l.wash !== undefined ? ` "wash": ${l.wash},` : ''}${l.shade ? ` "shade": ${JSON.stringify(l.shade)},` : ''} "frames": ${framesText(l.frames, '   ')} }`).join(',\n')}\n ]`
+      : k === 'layers' ? ` "layers": [\n${v.map(l => `  { "name": ${JSON.stringify(l.name)},${l.hidden ? ' "hidden": true,' : ''}${l.opacity !== undefined ? ` "opacity": ${l.opacity},` : ''}${l.wash !== undefined ? ` "wash": ${l.wash},` : ''}${l.shade ? ` "shade": ${JSON.stringify(l.shade)},` : ''}${l.light ? ` "light": ${JSON.stringify(l.light)},` : ''} "frames": ${framesText(l.frames, '   ')} }`).join(',\n')}\n ]`
         : ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     return `/* HoardBound pixel art: ${def.id}. Made with the pixel editor (editor/index.html); safe to edit by hand: '.' is clear, other characters index the palette. */\nHB.pixelArt && HB.pixelArt.add({\n${fields.join(',\n')}\n});\n`;
   };
@@ -115,7 +115,7 @@
   /** the JSON inside a file's HB.pixelArt.add(...) / .index(...) / .palettes(...) call (the header comment may hold brackets too) */
   const parseCall = (text) => { const m = /HB\.pixelArt\.(?:add|index|palettes)\(/.exec(text); if (!m) throw new Error('not an editor file'); return JSON.parse(text.slice(m.index + m[0].length, text.lastIndexOf(')'))); };
   /** nothing the game would show (no pixel on a visible layer): such a drawing is never saved as art */
-  const isEmpty = (doc) => doc.layers.every(l => l.hidden || l.shade || l.frames.every(f => f.every(v => v === CLEAR)));
+  const isEmpty = (doc) => doc.layers.every(l => l.hidden || l.shade || l.light || l.frames.every(f => f.every(v => v === CLEAR)));
   /** unsaved: differs from the saved file (remembered per edit, so big sprites are not re-serialised all the time) */
   const isDirty = (doc) => {
     if (doc.fresh || isEmpty(doc)) return false; // nothing drawn (a pinch's first finger, a blank variant): nothing to keep
@@ -178,10 +178,13 @@
   // Editing primitives (with undo)
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
-  const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, shade: l.shade ? Object.assign({}, l.shade) : null, frames: l.frames.map(f => f.slice()) }));
+  const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, shade: l.shade ? Object.assign({}, l.shade) : null, light: l.light ? Object.assign({}, l.light) : null, frames: l.frames.map(f => f.slice()) }));
   // a shading layer holds marks, not colours: 1 lit, 2 shadow, 3 deep shadow (painted for a light from the left)
   const isShade = (d) => !!(d && d.layers[d.layer] && d.layers[d.layer].shade);
-  const ink = () => (isShade(D()) ? S.shadeVal : S.color);
+  const isLight = (d) => !!(d && d.layers[d.layer] && d.layers[d.layer].light);
+  const isMarks = (d) => isShade(d) || isLight(d); // a layer of marks (shading or lights), not colours
+  const hasLightLayer = (d) => !!(d && d.layers.some(l => l.light && !l.hidden));
+  const ink = () => (isLight(D()) ? S.lightVal : isShade(D()) ? S.shadeVal : S.color);
   const lyOp = (l) => (l.opacity === undefined ? 100 : l.opacity), lyWash = (l) => (l.wash === undefined ? 100 : l.wash);
   function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null }; }
   function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
@@ -264,7 +267,7 @@
   function drawnBox(d, k) {
     let x0 = d.w, y0 = d.h, x1 = -1, y1 = -1;
     const scan = (f) => { for (let y = 0; y < d.h; y++) { const row = y * d.w; for (let x = 0; x < d.w; x++) if (f[row + x] !== CLEAR) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } } };
-    if (k === undefined) { for (const l of d.layers) if (!l.shade) for (const f of l.frames) scan(f); } else scan(flat(d, k));
+    if (k === undefined) { for (const l of d.layers) if (!l.shade && !l.light) for (const f of l.frames) scan(f); } else scan(flat(d, k));
     return x1 < 0 ? null : { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1 };
   }
   /** cut the canvas to a box (every frame and layer); the anchor stays on the same spot of the drawing */
@@ -297,7 +300,7 @@
   }
   /** frame k with the visible layers stacked (PA.composite), and its wash cut-out (null when every layer takes full wash) */
   function composeFrame(d, k, palette) {
-    const layers = d.layers.filter(l => !l.hidden).map(l => { const f = l.frames[k]; return { at: (i) => (f[i] === CLEAR ? -1 : f[i]), op: lyOp(l) / 100, wash: lyWash(l) / 100, shade: l.shade, swap: S.light === 'right' }; });
+    const layers = d.layers.filter(l => !l.hidden && !l.light).map(l => { const f = l.frames[k]; return { at: (i) => (f[i] === CLEAR ? -1 : f[i]), op: lyOp(l) / 100, wash: lyWash(l) / 100, shade: l.shade, swap: S.light === 'right' }; });
     const r = PA.composite(d.w, d.h, layers, palette.map(rgbaOf));
     const c = document.createElement('canvas'); c.width = d.w; c.height = d.h; const g = c.getContext('2d'), img = g.createImageData(d.w, d.h); img.data.set(r.rgba); g.putImageData(img, 0, 0);
     let cut = null; if (r.cut) { cut = document.createElement('canvas'); cut.width = d.w; cut.height = d.h; const cg = cut.getContext('2d'), ci = cg.createImageData(d.w, d.h); for (let i = 0; i < r.cut.length; i++) ci.data[i * 4 + 3] = r.cut[i]; cg.putImageData(ci, 0, 0); }
@@ -305,6 +308,26 @@
   }
   let washC = null; const washBuf = (w, h) => { if (!washC) washC = document.createElement('canvas'); if (washC.width !== w || washC.height !== h) { washC.width = Math.max(1, w); washC.height = Math.max(1, h); } return washC; };
   const MARK = [null, '#ffd23c70', '#2e58d070', '#8a2cb080']; // how shading marks show while you paint them
+  const LMARK = PA.LIGHTS.map(l => (l ? l.color + 'c0' : null)), LGLOW = PA.LIGHTS.map(l => (l ? l.color : null)); // light marks while painting; lit at night
+  /** night preview: the drawing dimmed toward a deep blue, each light's pool and its glowing pixels (as the map shows them) */
+  function drawNight(d, X, Y, z) {
+    const W = d.w * z, H = d.h * z, t = performance.now() / 1000;
+    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgb(72,80,128)'; ctx.fillRect(X, Y, W, H);
+    ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.rect(X, Y, W, H); ctx.clip();
+    for (const l of d.layers) {
+      if (!l.light || l.hidden) continue; const f = l.frames[S.frame]; if (!f) continue;
+      for (const sp of PA.lightSpots(d.w, d.h, (i) => f[i], l.light)) {
+        const K = PA.LIGHTS[sp.kind], c = PA.hex(K.color), seed = sp.x * 7.1 + sp.y * 3.3;
+        const wv = K.pulse ? 0.85 + 0.15 * Math.sin(t * 2.2 + seed) : K.flicker ? 1 + K.flicker * 0.2 * (Math.sin(t * 9.3 + seed) * 0.5 + Math.sin(t * 15.7 + seed * 1.7) * 0.3 + Math.sin(t * 4.1 + seed * 0.3) * 0.2) : 1;
+        const x = X + sp.x * z, y = Y + sp.y * z, R = Math.max(4, sp.r * z * 2.4 * (0.94 + 0.06 * wv)), a = Math.min(1.5, sp.glow) * wv;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, R); g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.5 * a})`); g.addColorStop(0.3, `rgba(${c[0]},${c[1]},${c[2]},${0.2 * a})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    for (const l of d.layers) if (l.light && !l.hidden && l.frames[S.frame]) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LGLOW }, l.frames[S.frame]), X, Y, W, H);
+    ctx.restore();
+  }
   function fit() {
     const d = D(); if (!d) return; const r = stage.getBoundingClientRect();
     S.zoom = Math.max(2, Math.floor(Math.min((r.width - 40) / d.w, (r.height - 40) / d.h)));
@@ -331,8 +354,10 @@
     // (Show Good or Evil: in the colours the game gives it in a kind or a cruel setting; you still draw the normal colours)
     const shown = S.tone ? { w: d.w, h: d.h, palette: PA.tonedPalette(d, S.tone) } : d, comp = composeFrame(d, S.frame, shown.palette);
     ctx.drawImage(comp.canvas, X, Y, W, H);
-    if (d.layers[d.layer].hidden && !isShade(d)) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
+    if (d.layers[d.layer].hidden && !isMarks(d)) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
     if (isShade(d) && S.marks) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: MARK }, F()), X, Y, W, H);
+    if (S.night && hasLightLayer(d)) drawNight(d, X, Y, z);
+    else if (isLight(d)) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LMARK }, F()), X, Y, W, H);
     // with parchment under and Good or Evil shown: the territory wash as on the map, on the ground and, by each layer's
     // wash setting, on the drawing
     if (pp && S.tone) {
@@ -342,7 +367,7 @@
       if (comp.cut) { bg.globalCompositeOperation = 'destination-out'; bg.imageSmoothingEnabled = false; bg.drawImage(comp.cut, 0, 0, B.width, B.height); }
       ctx.drawImage(B, X, Y, W, H);
     }
-    if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = isShade(d) ? MARK[S.shadeVal] : S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
+    if (S.shape) { const pts = shapePts(S.tool, S.shape.a, S.shape.b), col = isLight(d) ? LMARK[S.lightVal] : isShade(d) ? MARK[S.shadeVal] : S.color === CLEAR ? 'rgba(255,255,255,0.8)' : d.palette[S.color]; ctx.fillStyle = col; for (const [x, y] of pts) ctx.fillRect(X + x * z, Y + y * z, z, z); }
     if (S.float) { const fl = S.float; ctx.drawImage(frameCanvas({ w: fl.w, h: fl.h, palette: shown.palette }, fl.data), X + fl.x * z, Y + fl.y * z, fl.w * z, fl.h * z); }
     if (ri && ri.front) drawRef(ri, X, Y, z);
     if (CV.open && CV.canvas && $('cv-show').checked) { ctx.drawImage(CV.canvas, X, Y, W, H); if (ri && CV.key !== convKey(d, ri, cvOpts())) scheduleConvert(); }
@@ -464,6 +489,7 @@
     changed();
   }
   function pick(p) { const d = D(); if (p[0] < 0 || p[1] < 0 || p[0] >= d.w || p[1] >= d.h) return;
+    if (isLight(d)) { const v = F()[p[1] * d.w + p[0]]; if (v >= 1 && v < PA.LIGHTS.length) { S.lightVal = v; renderLayers(); } if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); return; }
     if (isShade(d)) { const v = F()[p[1] * d.w + p[0]]; if (v >= 1 && v <= 3) { S.shadeVal = v; renderLayers(); } if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); return; } const v = flat(d, S.frame)[p[1] * d.w + p[0]], ref = v === CLEAR ? refColor(p) || (S.paper ? paperColor(d, p) : null) : null; S.color = v !== CLEAR ? v : ref ? color(d, ref) : CLEAR; renderColors(); if (S.tool === 'picker') setTool(DRAWING.includes(S.prevTool) ? S.prevTool : 'pencil'); }
   const DRAWING = ['pencil', 'fill', 'line', 'rect', 'rectf', 'ellipse', 'ellipsef'];
 
@@ -874,11 +900,12 @@
       const l = d.layers[i], el = document.createElement('div'); el.className = 'ly' + (i === d.layer ? ' cur' : '') + (l.hidden ? ' off' : '');
       const eye = document.createElement('button'); eye.className = 'eye'; eye.textContent = l.hidden ? '◌' : '◉'; eye.title = l.hidden ? 'Hidden (left out of the game): tap to show' : 'Shown: tap to hide';
       eye.onclick = (e) => { e.stopPropagation(); pushUndo(); l.hidden = !l.hidden; changed(); };
-      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = (l.shade ? '☀ ' : '') + l.name;
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = (l.shade ? '☀ ' : l.light ? '✦ ' : '') + l.name;
       el.append(eye, nm); el.onclick = () => selectLayer(i); el.ondblclick = () => { selectLayer(i); renameLayer(); };
       box.appendChild(el);
     }
-    const cur = d.layers[d.layer], sh = !!cur.shade; $('shade-box').hidden = !sh; $('ly-op').parentElement.hidden = $('ly-wash').parentElement.hidden = sh;
+    const cur = d.layers[d.layer], sh = !!cur.shade, lt = !!cur.light; $('shade-box').hidden = !sh; $('light-box').hidden = !lt; $('ly-op').parentElement.hidden = $('ly-wash').parentElement.hidden = sh || lt;
+    if (lt) { $('lt-glow').value = String(cur.light.glow); $('lt-glow-v').textContent = cur.light.glow + '%'; $('lt-size').value = String(cur.light.size); $('lt-size-v').textContent = cur.light.size + '%'; document.querySelectorAll('#light-box [data-light]').forEach(b => b.classList.toggle('on', +b.dataset.light === S.lightVal)); }
     if (sh) { $('sh-light').value = String(cur.shade.light); $('sh-light-v').textContent = cur.shade.light + '%'; $('sh-dark').value = String(cur.shade.dark); $('sh-dark-v').textContent = cur.shade.dark + '%'; $('sh-hatch').checked = !!cur.shade.hatch; document.querySelectorAll('#shade-box [data-shade]').forEach(b => b.classList.toggle('on', +b.dataset.shade === S.shadeVal)); $('sh-left').classList.toggle('on', S.light !== 'right'); $('sh-right').classList.toggle('on', S.light === 'right'); }
     $('ly-op').value = String(lyOp(cur)); $('ly-op-v').textContent = lyOp(cur) + '%'; $('ly-wash').value = String(lyWash(cur)); $('ly-wash-v').textContent = lyWash(cur) + '%';
     $('ly-merge').disabled = d.layer === 0; $('ly-del').disabled = d.layers.length < 2;
@@ -891,7 +918,7 @@
     pushUndo(); l.name = v; changed();
   }
   $('ly-add').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.splice(d.layer + 1, 0, { name: `Layer ${d.layers.length + 1}`, hidden: false, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layer + 1); changed(); };
-  $('ly-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); const l = d.layers[d.layer]; d.layers.splice(d.layer + 1, 0, { name: `${l.name} copy`, hidden: l.hidden, opacity: l.opacity, wash: l.wash, frames: l.frames.map(f => f.slice()) }); useLayer(d, d.layer + 1); changed(); };
+  $('ly-dup').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); const l = d.layers[d.layer]; d.layers.splice(d.layer + 1, 0, { name: `${l.name} copy`, hidden: l.hidden, opacity: l.opacity, wash: l.wash, shade: l.shade ? Object.assign({}, l.shade) : null, light: l.light ? Object.assign({}, l.light) : null, frames: l.frames.map(f => f.slice()) }); useLayer(d, d.layer + 1); changed(); };
   const moveLayer = (dir) => { const d = D(), j = d ? d.layer + dir : -1; if (!d || j < 0 || j >= d.layers.length) return; commitFloat(); pushUndo(); [d.layers[d.layer], d.layers[j]] = [d.layers[j], d.layers[d.layer]]; useLayer(d, j); changed(); };
   $('ly-up').onclick = () => moveLayer(1); $('ly-down').onclick = () => moveLayer(-1);
   // shading: a layer of light and shadow marks that lights the layers below it
@@ -901,6 +928,11 @@
   for (const key of ['light', 'dark']) { const el = $('sh-' + key); const set = (done) => { const d = D(); if (!isShade(d)) return; if (!SH.live) { pushUndo(); SH.live = true; } d.layers[d.layer].shade[key] = +el.value; $('sh-' + key + '-v').textContent = el.value + '%'; if (done) { SH.live = false; changed(); } else changed(false, true); }; el.addEventListener('input', () => set(false)); el.addEventListener('change', () => set(true)); }
   $('sh-hatch').onchange = (e) => { const d = D(); if (!isShade(d)) return; pushUndo(); d.layers[d.layer].shade.hatch = e.target.checked; changed(); };
   $('sh-marks').onchange = (e) => { S.marks = e.target.checked; draw(); };
+  // lights: a layer of marks for where light comes from (fire, windows, a lantern); the game glows them at dusk and night
+  $('ly-light').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.push({ name: 'lights', hidden: false, light: { glow: 100, size: 100 }, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layers.length - 1); if (!DRAWING.includes(S.tool) && S.tool !== 'eraser') setTool('pencil'); changed(); toast('Light layer: paint where light comes from (a fire, lit windows, a lantern). Tick night to see it glow, as the map shows it at dusk and night.', 6000); };
+  document.querySelectorAll('#light-box [data-light]').forEach(b => { b.onclick = () => { S.lightVal = +b.dataset.light; if (!DRAWING.includes(S.tool)) setTool('pencil'); renderLayers(); }; });
+  for (const key of ['glow', 'size']) { const el = $('lt-' + key); const set = (done) => { const d = D(); if (!isLight(d)) return; if (!SH.live) { pushUndo(); SH.live = true; } d.layers[d.layer].light[key] = +el.value; $('lt-' + key + '-v').textContent = el.value + '%'; if (done) { SH.live = false; changed(); } else changed(false, true); }; el.addEventListener('input', () => set(false)); el.addEventListener('change', () => set(true)); }
+  $('chk-night').onchange = (e) => { S.night = e.target.checked; draw(); };
   $('sh-left').onclick = () => { S.light = 'left'; renderLayers(); draw(); }; $('sh-right').onclick = () => { S.light = 'right'; renderLayers(); draw(); };
   /** a start for the shading, from the shape: in each row, each drawn run is lit on its left, in shadow on its right */
   $('sh-suggest').onclick = () => {
@@ -922,6 +954,7 @@
   $('ly-merge').onclick = () => {
     const d = D(); if (!d || d.layer === 0) return;
     if (d.layers[d.layer].shade || d.layers[d.layer - 1].shade) { toast('A shading layer holds light and shadow marks, not colours: it cannot be merged (hide or delete it instead)'); return; }
+    if (d.layers[d.layer].light || d.layers[d.layer - 1].light) { toast('A light layer holds light marks, not colours: it cannot be merged (hide or delete it instead)'); return; }
     commitFloat(); pushUndo();
     const top = d.layers[d.layer], below = d.layers[d.layer - 1];
     below.frames.forEach((f, k) => { const t = top.frames[k]; for (let i = 0; i < f.length; i++) if (t[i] !== CLEAR) f[i] = t[i]; });
@@ -1060,7 +1093,7 @@
   let lastT = performance.now();
   function previewLoop(t) {
     const dt = (t - lastT) / 1000; lastT = t; if (S.playing) S.playT += dt;
-    drawPreview(); if (S.float || S.sel) draw();
+    drawPreview(); if (S.float || S.sel || (S.night && hasLightLayer(D()) && t - (previewLoop.night || 0) > 66 && (previewLoop.night = t))) draw(); // the night preview flickers
     requestAnimationFrame(previewLoop);
   }
   function bg(kind) {
