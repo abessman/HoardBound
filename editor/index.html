@@ -43,6 +43,12 @@
           <button id="tn-auto" title="Back to the game's automatic shift for this tone">Reset tint</button>
         </span>
       </div>
+      <div class="row small wrap" id="dir-row" hidden>
+        <span title="A sprite can face 2, 4 or 8 ways, each its own drawing with its own frames (its own animation). The plain drawing faces east; the map's dragon and travellers turn to the way they go.">Facing</span>
+        <span id="dir-mode" class="row"><button data-dirs="2" title="East and west (west mirrors east unless you draw it)">2</button><button data-dirs="4" title="East, west, north (away) and south (toward you)">4</button><button data-dirs="8" title="All eight, with the diagonals">8</button></span>
+        <div id="dir-grid" class="dirgrid"></div>
+        <span id="dir-note" class="muted"></span>
+      </div>
       <div class="row small wrap" id="size-row">
         <label>W <input id="in-w" type="number" min="1" max="512"></label>
         <label>H <input id="in-h" type="number" min="1" max="512"></label>

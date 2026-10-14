@@ -195,8 +195,19 @@
       HB.sprites.cache.set(key, c);
       return c;
     },
-    /** draw at (x,y) = anchor position in screen space, scale, facing (1 right, -1 left) */
-    draw(ctx, spec, pose, frame, x, y, scale, facing = 1, alpha = 1) {
+    /** the drawn pose to show facing dir ('n', 'ne' … from the pixel editor's directions), or null when the pose has
+     *  no drawings: { pose ('fly' or 'fly>n'), flip } */
+    facingPose(spec, pose, dir, facing = 1) {
+      const PA = HB.pixelArt, base = `dragon.${spec.tier}.${pose}`, meta = HB.sprites.overrideMeta; if (!PA || !PA.pickDir) return null;
+      const has = (d) => !!meta.get(d === 'e' ? base : base + '>' + d); if (!PA.DIRS.some(has)) return null;
+      const pk = PA.pickDir(dir, has, PA.dirMode((meta.get(base) || {}).dirs, has), facing);
+      return { pose: pk.dir === 'e' ? pose : pose + '>' + pk.dir, flip: pk.flip };
+    },
+    /** draw at (x,y) = anchor position in screen space, scale, facing (1 right, -1 left); dir (optional, 8 ways) picks a
+     *  drawn direction of the pose when the owner drew them */
+    draw(ctx, spec, pose, frame, x, y, scale, facing = 1, alpha = 1, dir) {
+      const fp = dir ? dragonArt.facingPose(spec, pose, dir, facing) : null;
+      if (fp) { pose = fp.pose; facing = fp.flip ? -1 : 1; }
       const s = dragonArt.sprite(spec, pose, frame);
       ctx.save();
       ctx.imageSmoothingEnabled = false;

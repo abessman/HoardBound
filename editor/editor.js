@@ -31,12 +31,12 @@
   // the tyrant's mountains and trees are the evil versions of the mountain and the broadleaf tree now (Version: Evil)
   const FOLDED = ['map.terrain.mountain.jagged', 'map.terrain.mountain.jagged.deep', 'map.terrain.tree.burned', 'map.terrain.tree.bare'];
   // separate drawings of one sprite: '<id>#n' more variants (map symbols), '<id>@good' / '<id>@evil' its own versions
-  const pid = (id) => PA.parseId(id), idOf = (b, n, t) => PA.idOf(b, n, t);
+  const pid = (id) => PA.parseId(id), idOf = (b, n, t, dir) => PA.idOf(b, n, t, dir);
   const baseOf = (item) => item.baseItem || item;
   /** the editor entry for a variant n and version tone of a catalog item */
-  function itemFor(base, n, tone) {
-    const id = idOf(base.id, n, tone); if (id === base.id) return base;
-    return Object.assign({}, base, { id, label: base.label + (n > 1 ? ` · variant ${n}` : '') + (tone ? ` · ${tone}` : ''), baseItem: base, n, tone });
+  function itemFor(base, n, tone, dir) {
+    const id = idOf(base.id, n, tone, dir); if (id === base.id) return base;
+    return Object.assign({}, base, { id, label: base.label + (n > 1 ? ` · variant ${n}` : '') + (dir && dir !== 'e' ? ` · facing ${dir.toUpperCase()}` : '') + (tone ? ` · ${tone}` : ''), baseItem: base, n, tone, dir: dir && dir !== 'e' ? dir : '' });
   }
   let catalog = [];
   function buildCatalog() {
@@ -44,7 +44,7 @@
     for (const e of HB.art.list()) catalog.push({ id: e.id, kind: e.kind, group: e.group, label: e.label, frames: e.frames, fps: e.fps, entry: e });
     if (globalThis.MAPART_EXPORT) for (const rec of MAPART_EXPORT.R) { if (FOLDED.includes(rec.id) && !docs.has(rec.id)) continue; const n = MAP_NAMES[rec.id]; catalog.push({ id: rec.id, kind: 'map', group: n ? n[0] : MAP_GROUP[rec.screen] || 'Map · other', label: n ? n[1] : rec.id.replace(/^map\./, ''), mapNote: n ? n[2] : '', frames: 1, fps: 1, rec }); }
     // art for ids the game no longer registers (renamed or removed): still listed so it can be deleted or kept
-    for (const id of docs.keys()) if (!catalog.some(c => c.id === id) && !((pid(id).n > 1 || pid(id).tone) && catalog.some(c => c.id === pid(id).base))) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
+    for (const id of docs.keys()) if (!catalog.some(c => c.id === id) && !((pid(id).n > 1 || pid(id).tone || pid(id).dir) && catalog.some(c => c.id === pid(id).base))) { const d = docs.get(id); catalog.push({ id, kind: d.kind, group: 'Other', label: id, frames: d.frames.length, fps: d.fps || 2 }); }
     const groups = GROUP_ORDER.slice(); for (const c of catalog) if (!groups.includes(c.group) && c.group !== 'Other') groups.push(c.group);
     groups.push('Other');
     const rank = (c, i) => NAME_ORDER.includes(c.id) ? NAME_ORDER.indexOf(c.id) - 1e4 : i;
@@ -79,6 +79,7 @@
     const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), shade: PA.shadeOf(l), light: PA.lightOf(l), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
     const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.mirror, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
+    if (def.dirs === 2 || def.dirs === 4 || def.dirs === 8) doc.dirs = def.dirs; // how many directions the sprite uses (the plain drawing's setting)
     useLayer(doc, layers.length - 1); return doc;
   }
   /** the picture the game shows for frame k: visible layers merged, the topmost pixel wins (active: a stand-in for the active layer's frame) */
@@ -91,6 +92,7 @@
     const def = { id: doc.id, kind: doc.kind, w: doc.w, h: doc.h, anchor: doc.anchor.slice(), fps: doc.fps };
     if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.mirror = true; } // may be shown mirrored (shading would flip with it)
     if (doc.kind === 'dragon' && doc.bodyLength) def.bodyLength = doc.bodyLength;
+    if (doc.dirs) def.dirs = doc.dirs;
     // keep only colours in use, in order
     const used = new Set(); for (const l of doc.layers) if (!l.shade && !l.light) for (const f of l.frames) for (const v of f) if (v !== CLEAR) used.add(v);
     const keep = [...used].sort((a, b) => a - b), remap = new Map(keep.map((v, i) => [v, i]));
@@ -995,13 +997,57 @@
   }
   /** open variant n in a version: its own good or evil drawing when there is one, else the normal one (tinted when tone) */
   function openVersion(base, n, tone) {
-    commitFloat();
-    if (tone && docs.has(idOf(base.id, n, tone))) { S.tone = ''; open(itemFor(base, n, tone)); }
-    else { S.tone = tone || ''; open(itemFor(base, n, '')); }
+    commitFloat(); const dir = (S.item && S.item.dir) || '';
+    if (tone && docs.has(idOf(base.id, n, tone, dir))) { S.tone = ''; open(itemFor(base, n, tone, dir)); }
+    else { S.tone = tone || ''; open(itemFor(base, n, '', dir)); }
   }
+  // ---- directions: the plain drawing faces east; '<id>>n', '>ne' … are the sprite facing other ways, each with its
+  // own frames (its own animation). The plain drawing's dirs (2, 4, 8) says how many the game uses; a missing one
+  // mirrors the other side or takes the nearest drawn one (PA.pickDir), as the grid shows.
+  const DIR_NAME = { e: 'east (right)', se: 'south-east', s: 'south (toward you)', sw: 'south-west', w: 'west (left)', nw: 'north-west', n: 'north (away)', ne: 'north-east' };
+  const DIR_GRID = ['nw', 'n', 'ne', 'w', '', 'e', 'sw', 's', 'se'], DIR_SET = { 2: ['e', 'w'], 4: ['e', 'w', 'n', 's'], 8: PA.DIRS };
+  const usesDirs = (it) => !!it && (it.kind === 'dragon' || it.kind === 'anim' || it.kind === 'sprite' || (it.kind === 'map' && /^map\.marker\.(dragon|walker|wagon|banner)/.test(baseOf(it).id)));
+  /** a drawing by id without opening it (the open document, else the saved file), or null */
+  function docFor(id) { if (docs.has(id)) return docs.get(id); if (saved.has(id) && !deleted.has(id)) { try { return fromDef(parseCall(saved.get(id))); } catch (e) { return null; } } return null; }
+  const hasDrawing = (id) => { const d = docFor(id); return !!d && !isEmpty(d); };
+  function dirInfo(base, n, tone) { const has = (dir) => hasDrawing(idOf(base.id, n, tone, dir)), bd = docFor(base.id); return { has, mode: PA.dirMode(bd && bd.dirs, has) }; }
+  function flipDoc(d) { for (const l of d.layers) l.frames = l.frames.map(f => { const o = new Uint8Array(f.length); for (let y = 0; y < d.h; y++) for (let x = 0; x < d.w; x++) o[y * d.w + x] = f[y * d.w + (d.w - 1 - x)]; return o; }); d.anchor = [d.w - d.anchor[0], d.anchor[1]]; useLayer(d, d.layer); }
+  function renderDirs() {
+    const it = S.item, row = $('dir-row'); row.hidden = !usesDirs(it); if (row.hidden) return;
+    const base = baseOf(it), n = it.n || 1, tone = it.tone || '', cur = it.dir || 'e', { has, mode } = dirInfo(base, n, tone);
+    document.querySelectorAll('#dir-mode [data-dirs]').forEach(b => b.classList.toggle('on', +b.dataset.dirs === mode));
+    const grid = $('dir-grid'); grid.innerHTML = '';
+    for (const dir of DIR_GRID) {
+      const c = document.createElement('div'); c.className = 'dc'; grid.appendChild(c);
+      if (!dir) { c.classList.add('mid'); c.textContent = '✛'; continue; }
+      if (!DIR_SET[mode].includes(dir)) { c.classList.add('off'); continue; }
+      const own = has(dir), pk = own ? { dir, flip: false } : PA.pickDir(dir, has, mode, dir.includes('w') ? -1 : 1), src = docFor(idOf(base.id, n, tone, pk.dir)), shown = !!src && !isEmpty(src);
+      if (dir === cur) c.classList.add('cur'); if (!own) c.classList.add(shown ? 'mir' : 'none');
+      if (shown) { const th = frameCanvas(src, flat(src, 0)), k = Math.min(34 / src.w, 26 / src.h), t = document.createElement('canvas'); t.width = Math.max(1, Math.round(src.w * k)); t.height = Math.max(1, Math.round(src.h * k)); const g = t.getContext('2d'); g.imageSmoothingEnabled = k < 1; if (pk.flip) { g.translate(t.width, 0); g.scale(-1, 1); } g.drawImage(th, 0, 0, t.width, t.height); c.appendChild(t); }
+      else c.appendChild(document.createTextNode('+'));
+      const lb = document.createElement('span'); lb.className = 'lb'; lb.textContent = dir.toUpperCase(); c.appendChild(lb);
+      c.title = own ? `Facing ${DIR_NAME[dir]}: your drawing. Tap to open it.` : shown ? `Facing ${DIR_NAME[dir]}: the game ${pk.flip ? 'mirrors' : 'shows'} ${pk.dir.toUpperCase()} for now. Tap to draw its own.` : `Facing ${DIR_NAME[dir]}: tap to draw it.`;
+      c.onclick = () => openDir(base, n, tone, dir);
+    }
+    $('dir-note').textContent = cur === 'e' ? `The plain drawing faces east. ${mode} directions: tap one to draw it; faded ones are mirrored or borrowed until you do.` : `Facing ${DIR_NAME[cur]}: its own frames and animation.`;
+  }
+  /** open the drawing facing dir; a new one starts as a copy of what the game shows there now (mirrored from the other side) */
+  function openDir(base, n, tone, dir) {
+    commitFloat(); S.tone = ''; const id = idOf(base.id, n, tone, dir), it = itemFor(base, n, tone, dir);
+    if (dir !== 'e' && !hasDrawing(id)) {
+      const { has, mode } = dirInfo(base, n, tone), pk = PA.pickDir(dir, has, mode, dir.includes('w') ? -1 : 1), src = docFor(idOf(base.id, n, tone, pk.dir));
+      if (src && !isEmpty(src)) { const def = toDef(src); def.id = id; delete def.dirs; const nd = fromDef(def); if (pk.flip) flipDoc(nd); nd.fresh = false; docs.set(id, nd); open(it); changed(); toast(`Facing ${DIR_NAME[dir]}: a copy of ${pk.dir.toUpperCase()}${pk.flip ? ', mirrored,' : ''} to start from. Its frames are its own animation.`, 5000); return; }
+    }
+    open(it);
+  }
+  document.querySelectorAll('#dir-mode [data-dirs]').forEach(b => { b.onclick = () => {
+    const it = S.item; if (!it) return; const base = baseOf(it); let bd = docFor(base.id); if (!bd) bd = newDoc(base);
+    if (!docs.has(base.id)) docs.set(base.id, bd); bd.dirs = +b.dataset.dirs; bd.fresh = false; changed();
+    toast(`${bd.dirs} directions: ${bd.dirs === 2 ? 'east, and west mirrored unless you draw it' : bd.dirs === 4 ? 'east, west, north and south' : 'all eight, diagonals too'}. ${isEmpty(bd) ? 'Draw the plain (east) drawing too, so the setting is kept.' : ''}`, 5000);
+  }; });
   /** an older map drawing with several frames: each frame becomes its own variant ('#2', '#3' …) */
   function splitFrames(doc) {
-    const p = pid(doc.id); if (doc.kind !== 'map' || p.tone || doc.frames.length < 2) return 0;
+    const p = pid(doc.id); if (doc.kind !== 'map' || p.tone || p.dir || doc.frames.length < 2) return 0;
     const base = catalog.find(c => c.id === p.base); if (!base) return 0;
     let next = Math.max(...variantNs(base)) + 1, made = 0;
     for (let k = 1; k < doc.frames.length; k++) {
@@ -1067,7 +1113,7 @@
     if (D()) { D().fresh = false; D()._rev = (D()._rev || 0) + 1; }
     draw();
     if (light) return; // mid-stroke: the rest refreshes on release
-    renderFrames(); renderLayers(); renderInfo(); renderUndo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
+    renderFrames(); renderLayers(); renderInfo(); renderDirs(); renderUndo(); status(); clearTimeout(draftTimer); draftTimer = setTimeout(() => { saveDrafts(); renderList(); }, 400);
     void structure;
   }
   function setRefs(art) { S.refs = art ? art.canvases : []; S.ghosts = art ? art.ghosts : []; }
@@ -1082,7 +1128,7 @@
     if (doc.fresh) S.ref = true;
     $('chk-ref').checked = S.ref;
     loadRefImg(item.id);
-    fit(); renderColors(); renderFrames(); renderLayers(); renderInfo(); renderTone(); renderUndo(); renderList(); syncAlpha(); draw();
+    fit(); renderColors(); renderFrames(); renderLayers(); renderInfo(); renderTone(); renderDirs(); renderUndo(); renderList(); syncAlpha(); draw();
     try { localStorage.setItem('hb.editor.last', item.id); } catch (e) { /* private mode */ }
   }
 
@@ -1354,10 +1400,10 @@
     buildCatalog();
     let last = null; try { last = localStorage.getItem('hb.editor.last'); } catch (e) { /* private mode */ }
     const lp = last ? pid(last) : null, lb = lp && catalog.find(i => i.id === lp.base);
-    open(lb && docs.has(last) ? itemFor(lb, lp.n, lp.tone) : lb || catalog.find(i => i.id === 'dragon.1.fly') || catalog[0]);
+    open(lb && (docs.has(last) || saved.has(last)) ? itemFor(lb, lp.n, lp.tone, lp.dir) : lb || catalog.find(i => i.id === 'dragon.1.fly') || catalog[0]);
     status(); requestAnimationFrame(previewLoop);
     if (restored) toast(`${restored} unsaved change${restored === 1 ? '' : 's'} restored from this browser`, 4000);
     syncFromGitHub();
-    window.PIXEL_EDITOR = { itemFor, openVersion, variantNs, selectDrawn, setAlpha, renderTone, S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
+    window.PIXEL_EDITOR = { itemFor, openVersion, openDir, renderDirs, docFor, variantNs, selectDrawn, setAlpha, renderTone, S, docs, saved, deleted, catalog, open, syncFromGitHub, fromDef, PAL, WH, palettesText, saveToGitHub, isEmpty, setTool, toDef, fileText, indexText, parseCall, isDirty, dirtyIds, undo, redo, paste, copy, commitFloat, toolDown, toolMove, toolUp, flood, resize };
   })();
 })();

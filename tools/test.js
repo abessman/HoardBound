@@ -657,8 +657,10 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
     if (!def || typeof def.id !== 'string') return ['no id'];
     if (file && fileOf(def.id) !== file) p.push(`id ${def.id} belongs in ${fileOf(def.id)}`);
     if (!['sprite', 'dragon', 'anim', 'map'].includes(def.kind)) p.push(`kind ${def.kind}`);
-    // separate drawings: '<id>#n' variants (map symbols), '<id>@good' / '<id>@evil' versions (any kind)
-    const vm = /^(.*?)(#[1-9]\d*)?(@(?:good|evil))?$/.exec(def.id), base = vm[1];
+    // separate drawings: '<id>#n' variants (map symbols), '<id>>n' … directions, '<id>@good' / '<id>@evil' versions (any kind)
+    const vm = /^(.*?)(#[1-9]\d*)?(>(?:ne|nw|se|sw|n|s|w))?(@(?:good|evil))?$/.exec(def.id), base = vm[1];
+    if (def.dirs !== undefined && ![2, 4, 8].includes(def.dirs)) p.push('dirs is 2, 4 or 8');
+    if (def.dirs !== undefined && vm[3]) p.push('dirs belongs on the plain (east) drawing');
     if (vm[2] && def.kind !== 'map') p.push('only map symbols have numbered variants (#2)');
     if (def.kind === 'anim' && !/^[a-z][\w.]*$/i.test(base)) p.push('anim ids are plain dotted names (lair.room.forge)');
     if (def.kind === 'dragon' && !new RegExp(`^dragon\\.[0-3]\\.(${POSES.join('|')})$`).test(base)) p.push('dragon ids are dragon.<0-3>.<pose>');
@@ -682,6 +684,8 @@ section('pixel art files (assets/pixelart, made with editor/index.html)');
   ok(!problems(layered).length && problems(Object.assign({}, layered, { layers: [{ name: 'lines', frames: [{ rows: ['.0'] }] }] })).length, 'a layered drawing passes; a layer with the wrong size is caught');
   ok(!problems(Object.assign({}, good, { palette: ['#2b1a0e80', '#c04040'], tones: { evil: { hue: -12, sat: -60, light: -18, tint: '#4a1c1c', mix: 20 } } })).length && problems(Object.assign({}, good, { tones: { wicked: {} } })).length, 'see-through colours and good/evil tones pass; a misspelt tone is caught');
   ok(!problems(Object.assign({}, good, { id: 'map.place.village#3' }), 'map.place.village~3.js').length && !problems(Object.assign({}, good, { id: 'map.place.village#2@evil' }), 'map.place.village~2~evil.js').length && !problems(Object.assign({}, good, { id: 'dragon.1.fly@good', kind: 'dragon' })).length && problems(Object.assign({}, good, { id: 'dragon.1.fly#2', kind: 'dragon' })).length, 'variants (#n) and good/evil versions (@good, @evil) pass in their own files; a numbered dragon variant is caught');
+  ok(!problems(Object.assign({}, good, { id: 'dragon.1.fly>ne', kind: 'dragon' }), 'dragon.1.fly~ne.js').length && !problems(Object.assign({}, good, { id: 'dragon.1.fly', kind: 'dragon', dirs: 8 })).length && !problems(Object.assign({}, good, { id: 'map.marker.walker>n@evil' }), 'map.marker.walker~n~evil.js').length
+    && problems(Object.assign({}, good, { id: 'dragon.1.fly', kind: 'dragon', dirs: 3 })).some(e => /dirs is/.test(e)) && problems(Object.assign({}, good, { id: 'dragon.1.fly>n', kind: 'dragon', dirs: 4 })).some(e => /plain/.test(e)), 'direction drawings (>n, >ne …) pass in their own files; dirs (2, 4, 8) only on the plain drawing');
   const shaded = Object.assign({}, layered, { layers: [{ name: 'colours', frames: [{ rows: ['.0.', '000'] }] }, { name: 'shading', shade: { light: 35, dark: 40, hatch: true }, frames: [{ rows: ['.3.', '123'] }] }] });
   ok(!problems(shaded).length && problems(Object.assign({}, shaded, { layers: [shaded.layers[0], Object.assign({}, shaded.layers[1], { frames: [{ rows: ['.4.', '123'] }] })] })).some(e => /shading mark/.test(e)), 'a shading layer of marks (1 lit, 2 shadow, 3 deep) passes; another character is caught');
   const lit = Object.assign({}, layered, { layers: [{ name: 'colours', frames: [{ rows: ['.0.', '000'] }] }, { name: 'lights', light: { glow: 120, size: 80 }, frames: [{ rows: ['.1.', '2.5'] }] }] });

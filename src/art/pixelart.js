@@ -20,6 +20,10 @@
  * Separate drawings of one id: '<id>#2', '<id>#3' … are more variants of a map symbol (the map picks one per spot), and
  * '<id>@good' / '<id>@evil' (also '<id>#2@evil') are its own good and evil versions, used in a kind or a cruel setting
  * instead of the automatic tint. Each is its own file ('#' and '@' become '~' in the file name).
+ * Directions: the plain drawing faces east (right); '<id>>n', '>ne', '>se', '>s', '>sw', '>w', '>nw' are drawings of the
+ * same sprite facing other ways, each with its own frames (its own animation). The base drawing's dirs (2, 4 or 8) says
+ * how many the sprite uses; a missing one mirrors the other side ('w' from 'e', 'nw' from 'ne') or takes the nearest
+ * drawn direction (PA.pickDir). The map's dragon and travellers turn this way as they move.
  * Loaded at boot with script tags, so it also works from file://. With ?drafts=1 the editor's unsaved drafts in this
  * browser are applied on top (the editor's "preview in game" buttons use it). Guide: docs/pixel-editor.md. */
 (function () {
@@ -117,9 +121,31 @@
     },
     layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
     layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
-    /** '<base>#<n>@<tone>' → { base, n (1 when none), tone ('' when none) } */
-    parseId(id) { const m = /^(.*?)(?:#(\d+))?(?:@(good|evil))?$/.exec(String(id)); return { base: m[1], n: m[2] ? +m[2] : 1, tone: m[3] || '' }; },
-    idOf(base, n, tone) { return base + (n > 1 ? '#' + n : '') + (tone ? '@' + tone : ''); },
+    /** '<base>#<n>><dir>@<tone>' → { base, n (1 when none), dir ('' when none: east), tone ('' when none) } */
+    parseId(id) { const m = /^(.*?)(?:#(\d+))?(?:>(ne|nw|se|sw|n|s|e|w))?(?:@(good|evil))?$/.exec(String(id)); return { base: m[1], n: m[2] ? +m[2] : 1, dir: m[3] && m[3] !== 'e' ? m[3] : '', tone: m[4] || '' }; },
+    idOf(base, n, tone, dir) { return base + (n > 1 ? '#' + n : '') + (dir && dir !== 'e' ? '>' + dir : '') + (tone ? '@' + tone : ''); },
+    // ---- directions: clockwise from east on the screen (south is down, toward you)
+    DIRS: ['e', 'se', 's', 'sw', 'w', 'nw', 'n', 'ne'],
+    MIRROR: { e: 'w', w: 'e', ne: 'nw', nw: 'ne', se: 'sw', sw: 'se' },
+    /** the direction of a movement on the screen (dx right, dy down) */
+    dirOf(dx, dy) { return PA.DIRS[((Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) % 8) + 8) % 8]; },
+    /** how many directions a sprite uses: its setting, else what is drawn (has(dir); 'e' is the plain drawing) */
+    dirMode(set, has) { if (set === 2 || set === 4 || set === 8) return set; return ['ne', 'nw', 'se', 'sw'].some(d => has(d)) ? 8 : ['n', 's'].some(d => has(d)) ? 4 : 2; },
+    /** which drawing shows a sprite facing dir: { dir, flip }. With fewer directions, the nearest one it has (2: east or
+     *  west by the movement, facing ±1 for straight up or down); a missing drawing mirrors the other side, else the
+     *  nearest drawn direction; nothing drawn: east, flipped when facing left */
+    pickDir(dir, has, mode, facing = 1) {
+      let want = PA.DIRS.includes(dir) ? dir : 'e';
+      if (mode === 4 && want.length === 2) want = want[1];
+      if (mode !== 8 && mode !== 4) want = want === 'n' || want === 's' ? (facing < 0 ? 'w' : 'e') : want.includes('w') ? 'w' : 'e';
+      if (has(want)) return { dir: want, flip: false };
+      const m = PA.MIRROR[want]; if (m && has(m)) return { dir: m, flip: true };
+      const side = facing < 0 ? 'w' : 'e', i = PA.DIRS.indexOf(want);
+      const order = want === 'n' || want === 's' ? [want + side, want + PA.MIRROR[side], side, PA.MIRROR[side]] : [];
+      for (let k = 1; k <= 4; k++) order.push(PA.DIRS[(i + k) % 8], PA.DIRS[(i - k + 8) % 8]);
+      for (const d of order) { if (has(d)) return { dir: d, flip: false }; const md = PA.MIRROR[d]; if (md && has(md)) return { dir: md, flip: true }; }
+      return { dir: 'e', flip: facing < 0 };
+    },
     /** the file a sprite id is stored in ('|' and other odd characters become '~') */
     fileOf(id) { return id.replace(/[^\w.-]/g, '~') + '.js'; },
     script(src) { return new Promise((ok) => { const s = document.createElement('script'); s.src = src; s.onload = () => ok(true); s.onerror = () => ok(false); document.head.appendChild(s); }); },
@@ -201,19 +227,20 @@
         const p = PA.parseId(def.id); if (p.tone || p.n > 1) continue;
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
-        if (def.kind === 'sprite') ov.set(def.id, Object.assign({ image: fr[0] }, base));
+        if (def.kind === 'sprite') { ov.set(def.id, Object.assign({ image: fr[0] }, base)); HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs }); }
         else if (def.kind === 'dragon' || def.kind === 'anim') {
           fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
           for (const tn of ['good', 'evil']) PA.canvases(def, tn).forEach((c, k) => ov.set(`${def.id}.${k}.${tn}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
-          HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps });
+          HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs });
         }
       }
       for (const def of defs) {
         const p = PA.parseId(def.id); if (!p.tone || p.n > 1 || (def.kind !== 'dragon' && def.kind !== 'anim')) continue;
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
-        fr.forEach((c, k) => ov.set(`${p.base}.${k}.${p.tone}`, Object.assign({ image: c, bodyLength: def.bodyLength || (PA.entries.get(p.base) || {}).bodyLength }, base)));
-        HB.sprites.overrideMeta.set(`${p.base}@${p.tone}`, { frames: fr.length, fps: def.fps });
+        const at = PA.idOf(p.base, 1, '', p.dir); // a direction's good or evil version stays with its direction
+        fr.forEach((c, k) => ov.set(`${at}.${k}.${p.tone}`, Object.assign({ image: c, bodyLength: def.bodyLength || (PA.entries.get(p.base) || {}).bodyLength }, base)));
+        HB.sprites.overrideMeta.set(`${at}@${p.tone}`, { frames: fr.length, fps: def.fps });
       }
       HB.sprites.cache.clear();
     },
@@ -227,8 +254,9 @@
       // that variant's automatic tint, so a land keeps its variety; HB.mapAssets.draw looks there first in such a land)
       const groups = new Map();
       for (const def of PA.entries.values()) {
-        if (def.kind !== 'map') continue; const p = PA.parseId(def.id);
-        let g = groups.get(p.base); if (!g) groups.set(p.base, g = { normal: [], good: new Map(), evil: new Map() });
+        if (def.kind !== 'map') continue; const p = PA.parseId(def.id), key = PA.idOf(p.base, 1, '', p.dir);
+        let g = groups.get(key); if (!g) groups.set(key, g = { normal: [], good: new Map(), evil: new Map() });
+        if (!p.dir && p.n === 1 && !p.tone && def.dirs) g.dirs = def.dirs;
         if (p.tone) g[p.tone].set(p.n, def); else g.normal.push([p.n, def]);
       }
       const assets = {};
@@ -247,7 +275,7 @@
         });
         // a good or evil drawing whose variant has no normal drawing still counts
         for (const tn of ['good', 'evil']) for (const [n, td] of g[tn]) if (!g.normal.some(([m]) => m === n)) PA.canvases(td).forEach((c, i) => { const v = PA.mapVariant(td, i, c, `v${n}.${i + 1}@${tn}`); if (v) out[tn].push(v); });
-        if (out[''].length) assets[base] = { variants: out[''] };
+        if (out[''].length) assets[base] = Object.assign({ variants: out[''] }, g.dirs ? { dirs: g.dirs } : {});
         for (const tn of ['good', 'evil']) if (out[tn].length) assets[base + '@' + tn] = { variants: out[tn] };
       }
       return { schemaVersion: 1, name: 'pixel', assets };

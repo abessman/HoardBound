@@ -81,3 +81,12 @@ dialog::backdrop { background: rgba(30, 20, 10, 0.35); }
 #layers .ly .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #layers .ly.off .nm { color: var(--soft); text-decoration: line-through; }
 .lsw { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; box-shadow: 0 0 0 1px rgba(0,0,0,.35); }
+.dirgrid { display: grid; grid-template-columns: repeat(3, 40px); grid-auto-rows: 36px; gap: 2px; }
+.dirgrid .dc { position: relative; display: flex; align-items: center; justify-content: center; border: 1px solid #c9b88f; border-radius: 4px; background: #fbf6ea; cursor: pointer; font-size: 14px; color: #8a7553; }
+.dirgrid .dc canvas { image-rendering: pixelated; margin-bottom: 6px; }
+.dirgrid .dc.cur { outline: 2px solid #8f3a26; outline-offset: -1px; background: #fff; }
+.dirgrid .dc.mir canvas { opacity: .4; }
+.dirgrid .dc.off { visibility: hidden; }
+.dirgrid .dc.mid { border-color: transparent; background: none; cursor: default; color: #b9a67f; }
+.dirgrid .dc .lb { position: absolute; left: 2px; bottom: 0; font-size: 9px; color: #6e5c43; }
+#dir-mode button.on { background: #2b1d10; color: #fff6e8; }

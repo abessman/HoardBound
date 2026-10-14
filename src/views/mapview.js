@@ -714,8 +714,14 @@
       ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.ellipse(p.x + 6 * scale, p.y + (flying ? 16 : 8) * scale, 10 * scale * (1 + d.tier * 0.5), 4 * scale * (1 + d.tier * 0.5), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
       const bobY = flying ? Math.sin(this.dragonFrameT * 6) * 2 : 0;
       const pal = HB.dragonArt.breedPalette(spec.breed, spec.alignment || 0);
-      HB.mapart.dragonMarker(ctx, p.x, p.y - (flying ? 10 : 2) * scale + bobY,
-        7 * scale * (1 + d.tier * .6), { flying, pose, frame, scale, spec, key: 'player-dragon', flipX: facing < 0, inkTint: pal.base });
+      // the way it flies (8 directions, from its movement, smoothed so a zigzag road does not make it twitch)
+      const wx = sc ? -Math.sin(a) : d.x, wy = sc ? Math.cos(a) * 0.6 : d.y, hd = this.heading || (this.heading = { x: wx, y: wy, vx: facing, vy: 0, dir: facing < 0 ? 'w' : 'e' });
+      const mx = sc ? wx : wx - hd.x, my = sc ? wy : wy - hd.y; hd.x = wx; hd.y = wy;
+      if (Math.hypot(mx, my) > 1e-4) { const k = sc ? 1 : 0.25; hd.vx += (mx - hd.vx) * k; hd.vy += (my - hd.vy) * k; if (Math.hypot(hd.vx, hd.vy) > 1e-4) hd.dir = HB.pixelArt ? HB.pixelArt.dirOf(hd.vx, hd.vy) : hd.dir; }
+      const dir = flying ? hd.dir : null, fdir = hd.vx < -1e-4 ? -1 : hd.vx > 1e-4 ? 1 : facing, y = p.y - (flying ? 10 : 2) * scale + bobY;
+      // your own drawn flying dragon (pixel editor) wins over a map pack's marker, so its directions show
+      if (flying && HB.dragonArt.facingPose(spec, 'fly', dir || 'e', fdir)) { HB.dragonArt.draw(ctx, spec, 'fly', frame, p.x, y, scale, fdir, 1, dir); return; }
+      HB.mapart.dragonMarker(ctx, p.x, y, 7 * scale * (1 + d.tier * .6), { flying, pose, frame, scale, spec, key: 'player-dragon', flipX: (flying ? fdir : facing) < 0, inkTint: pal.base, dir });
     }
     // ---------- time of day: Settings → Time of day on the map (or ?time=dusk|night); eased so a change fades
     easeNight(dt) { const want = { dusk: 0.55, night: 1 }[HB.mapTimeOverride || HB.settings.mapLight] || 0, n = this.night || 0; this.night = Math.abs(want - n) < 0.005 ? want : n + (want - n) * Math.min(1, dt * 3); }

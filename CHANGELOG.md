@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.28.0 — 2026-10-14 · Sprites that face 2, 4 or 8 ways
+- **Facing in the pixel editor.** Dragons, lair pictures, raid sprites and the map's travellers and dragon marker can
+  face **2, 4 or 8** directions. The plain drawing faces east; tap a direction in the compass grid to draw it. Each
+  direction is its own drawing with its own frames, so its own animation, size and anchor. A new direction starts as a
+  copy of what the game shows there now (mirrored from the other side). Until you draw one, the game mirrors the other
+  side or borrows the nearest drawn direction, and the grid shows those faded.
+- **The dragon turns on the map.** Flying across the map, the dragon turns to one of eight directions when its flying
+  pose is drawn in directions. Your drawn flying dragon is used on the map even with the Illuminated map art, so you
+  see it turn. Wagons, walkers and banners turn as they go when you draw their markers in directions (pixel map art).
+
 ## 0.27.0 — 2026-10-14 · Lights: fires, windows and lanterns at night
 - **Light layers in the pixel editor.** **+ Light** adds a layer where you mark where light comes from: **Fire**
   (orange, flickers), **Window** (warm and steady), **Lantern** (small), **Magic** (blue, pulses) and **Embers** (dim

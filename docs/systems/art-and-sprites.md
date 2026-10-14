@@ -100,10 +100,11 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The wrap sets `q.tone`
   from `HB.mapart.tone`, which the chunk renderer sets per glyph from the cell's domain mark.
 - 0.24: separate drawings per id (`PA.parseId`/`idOf`): `<id>#n` variants (map symbols) and `<id>@good|@evil`
-  versions. `apply()` lays drawn versions over the tints (`overrideMeta '<id>@<tone>'` for their frame count). The
-  pixel pack groups by base id: `<base>` (every variant), `<base>@good` / `<base>@evil` (per variant the drawn version
-  or its tint); `MA.draw` tries `<id>@<tone>` first when `o.tone`. Jagged mountains and bare or burned trees fall back
-  to the mountain and the broadleaf tree (their evil versions in a tyrant's land).
+  versions; `apply()` lays drawn versions over the tints. The pixel pack groups by base id: `<base>`, `<base>@good`,
+  `<base>@evil` (per variant the drawn version or its tint); `MA.draw` tries `<id>@<tone>` first when `o.tone`.
+- 0.28: directions `<id>>dir` (ne, e… nw; the plain drawing faces east; `dirs` 2, 4, 8 on it): overrides
+  `<id>>dir.<k>`, pixel-pack assets `<base>>dir`. `PA.pickDir(dir, has, mode, facing)` gives the drawing or a mirror;
+  `dragonArt.facingPose`/`draw(…, dir)`, `MA.draw` with `o.dir` (`MA.dirBases`); headings from movement in mapview.
 - 0.22: layers stack with real transparency (`PA.composite`: colours' alpha × layer `opacity`); a layer's `wash`
   (0–100) gives a cut-out (`PA.cuts`) that the pixel pack ships as `washCut`. `mapassets` draws it into the chunk's
   `washCut` canvas (`g.washCut` while the chunk renders, only when `MA.hasCuts`); `drawTerritory` paints the wash into
@@ -139,15 +140,14 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   the watercolour preview frame by frame: nothing under the fog drawn, an irregular dissolving edge, spreading from the
   dragon, world anchoring, drying away, reduced motion; the live map's reveal and territory; saves untouched
   (`docs/map-art/wash-checks.json`).
-- Pixel editor: browser-checked by hand (draw, shapes, select/copy/paste, frames, undo, preview, sample map, a mocked
-  GitHub save and sync, drafts shown in `?scene=dragons` and `?scene=mappreview&mappack=pixel`). No automated test yet.
+- Pixel editor: browser-checked by hand and by throwaway Playwright scripts (draw, layers, lights, directions, drafts in
+  the game with `?drafts=1`); `tools/test.js` validates every art file (ids, layers, marks, `dirs`).
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
 - Terrain uses 1× or 2× chunk bitmaps; maximum zoom still enlarges the 2× cache slightly. Physical iPad performance needs review.
 - Still hand-coded on the map: parchment, roads, rivers, coasts, washes (restylable via a pack's `style`), labels,
   selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
-- The sample pack's art is deliberate test art, not a style proposal; so are its watercolour textures.
 - The reveal wash is drawn cell by cell (no dissolve) in the far views (zoom below 0.8), where cells are a few px.
 - Drawn dragon art ignores breed colours, alignment tints, mutations and scars (one drawing serves all); hurt shows the
   drawn hurt frames. Raid sprites have one frame in the game (no walk cycle yet). Editor saves: last save wins.

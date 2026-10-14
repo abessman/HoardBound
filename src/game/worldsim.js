@@ -220,10 +220,14 @@
         if (p.x < -40 || p.x > HB.W + 40 || p.y < -40 || p.y > HB.H + 40) continue;
         ctx.save(); A.setup(ctx);
         const key = 'ent' + e.id; // stable art-pack variant per entity
-        if (e.kind === 'caravan') A.wagon(ctx, p.x, p.y, s, e.wealth > 500 ? '#6a4a85' : undefined, key);
-        else if (e.kind === 'hero') A.walker(ctx, p.x, p.y, s, e.lance ? '#7a2418' : undefined, key);
-        else if (e.kind === 'army') A.banner(ctx, p.x, p.y, s, e.color, key);
-        else if (e.kind === 'hunters') A.walker(ctx, p.x, p.y, s, '#7a2418', key);
+        // the way it goes (8 directions from its movement, kept by the map view): for art drawn in directions
+        const H = map.entHeading || (map.entHeading = new Map()), h = H.get(e.id) || { x: e.x, y: e.y, vx: 1, vy: 0, dir: 'e' }, mx = e.x - h.x, my = e.y - h.y;
+        if (Math.hypot(mx, my) > 1e-3 && Math.hypot(mx, my) < 3) { h.vx += (mx - h.vx) * 0.3; h.vy += (my - h.vy) * 0.3; if (HB.pixelArt) h.dir = HB.pixelArt.dirOf(h.vx, h.vy); }
+        h.x = e.x; h.y = e.y; H.set(e.id, h); const f = { dir: h.dir, facing: h.vx < 0 ? -1 : 1 };
+        if (e.kind === 'caravan') A.wagon(ctx, p.x, p.y, s, e.wealth > 500 ? '#6a4a85' : undefined, key, f);
+        else if (e.kind === 'hero') A.walker(ctx, p.x, p.y, s, e.lance ? '#7a2418' : undefined, key, f);
+        else if (e.kind === 'army') A.banner(ctx, p.x, p.y, s, e.color, key, f);
+        else if (e.kind === 'hunters') A.walker(ctx, p.x, p.y, s, '#7a2418', key, f);
         ctx.restore();
         if (map.cam.zoom > 0.8 && (map.hoverEntity === e || map.selected === e)) HB.text.draw(ctx, e.name, p.x, p.y - s * 2.6, { size: 12, italic: true, align: 'center', stroke: 'rgba(240,228,200,0.7)', strokeWidth: 2.5 });
       }

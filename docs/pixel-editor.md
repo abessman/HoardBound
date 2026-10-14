@@ -48,6 +48,13 @@ commit by hand.
   version** makes it its own drawing, starting from the tinted picture: change it as much as you like (another
   shape, lava, a curl). **Use the automatic tint** removes your drawing again. The tyrant's mountains and the bare and
   burned trees are no longer separate entries: they are the mountain's and the broadleaf tree's evil versions.
+- **Facing: 2, 4 or 8 directions** (dragons, lair pictures, raid sprites and the map's travellers and dragon marker).
+  The plain drawing faces east (right). Pick how many directions the sprite uses, then tap a direction in the compass
+  grid to draw it: each is its own drawing with its own frames (its own animation), size and anchor. A new direction
+  starts as a copy of what the game shows there now (mirrored from the other side). Until you draw one, the game
+  mirrors the other side (west from east, north-west from north-east) or borrows the nearest drawn direction; the
+  grid shows those faded. On the map the dragon turns to the way it flies (your drawn flying pose wins over the map
+  art's marker), and travellers turn as they go.
 - **Colour wheel:** drag around the dial for the colour, towards the edge for a stronger one, and on the bar beside it
   for lighter or darker; or type a code (`#3366cc`). It changes the colour you draw with: a colour nothing is drawn in
   yet changes as you drag (no pile of in-between colours); a colour already in the drawing is left alone and you get a
@@ -178,7 +185,8 @@ A drawing with layers has `"layers": [{ "name": "lines", "frames": [...] }, { "n
 (bottom layer first) instead of `"frames"`; the game stacks the visible ones. A layer may add `"opacity"` and `"wash"`
 (0–100; 100 when left out). A shading layer adds `"shade": { "light": 35, "dark": 35, "hatch": false }` and its rows
 hold marks: `1` lit, `2` shadow, `3` deep shadow. A light layer adds `"light": { "glow": 100, "size": 100 }` with marks
-`1` fire, `2` window, `3` lantern, `4` magic, `5` embers. A palette colour may carry opacity
+`1` fire, `2` window, `3` lantern, `4` magic, `5` embers. Directions are their own files too: `dragon.2.fly>n` in
+`dragon.2.fly~n.js` (`>ne`, `>e`… `>nw`; the plain file faces east and holds `"dirs": 8`, or 2 or 4). A palette colour may carry opacity
 (`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tints (hue, sat, light, tint, mix).
 Variants and versions are their own files: `map.terrain.mountain#2` in `map.terrain.mountain~2.js`, its evil version
 `map.terrain.mountain#2@evil` in `map.terrain.mountain~2~evil.js`, a dragon pose's good version `dragon.2.idle@good`.

@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-14 · **Version 0.27.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-14 · **Version 0.28.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -13,11 +13,11 @@ The owner plays at hoardbound.netlify.app on an iPad.
   `docs/ideas/landmarks.md`), crop and anchor buttons, variants at their drawn size (MAP_SPEC `drawnK`).
 - The owner's art so far: `map.terrain.mountain` (55×30, scale 0.5, anchor at the foot), its variant `#2`, and
   `map.terrain.mountain.small` (32×15). The mountain draws on every mountain kind until the others are drawn.
-- 290 headless checks pass on both seeds (one more per drawn art file).
+- 291 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.27), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.28), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -56,11 +56,14 @@ The owner plays at hoardbound.netlify.app on an iPad.
   travellers and the dragon; places without drawn lights get a few by kind. Claude's choices (not confirmed): the
   five kinds and colours, night = multiply toward rgb(72,80,128), pools 2.4× the light's reach. Not yet: glowing
   terrain symbols, lights in raids and the lair, a real day/night cycle.
-- **Next (owner's ask, 0.28):** directional sprites: per sprite 2, 4 or 8 directions, each its own drawing with its own
-  animation (dragon flight first; the overworld dragon should turn in 8 directions).
+- 0.28 (owner's ask): directional sprites. Facing 2 / 4 / 8 in the editor (compass grid), each direction its own
+  drawing and animation (`<id>>n`, `dirs` on the plain east drawing); missing ones mirror or borrow (`PA.pickDir`).
+  The overworld dragon turns 8 ways when `dragon.<tier>.fly` is drawn in directions (the drawn pose wins over the
+  pack's marker); travellers turn with pixel-pack markers. Choices (not confirmed): 4 = E W N S (diagonals go to the
+  side), new directions start as copies, map markers stay unanimated (frames are variants), raids face left or right.
 
 ## Next tasks (in order)
-1. 0.28 directional sprites (above), then the owner draws a camp or castle with a light layer and checks it at night.
+1. The owner tries Facing on the dragon's fly pose and a light layer on a camp or castle (Settings → Time of day).
 2. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
    first (Lair · dragon), then the chamber and rooms. Adjust slots and sizes to the owner's drawings.
 3. How upgrades should look in the rooms view (owner's design to come): possibly drawn room cards per level.

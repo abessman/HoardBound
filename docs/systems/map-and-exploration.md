@@ -79,6 +79,9 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   reduced motion) and draws the glowing pixels. Places without drawn lights get a few by kind (`placeLights`: a camp's
   fire, a town's windows). Labels keep their paper halo, so they stay readable. The game's own day and night is not
   modelled yet: this is a view.
+- Facing (0.28): the dragon and the travellers keep a smoothed heading from their movement (`MapScene.heading`,
+  `map.entHeading`) and turn to one of 8 directions when their art is drawn in directions; the owner's drawn flying
+  pose is drawn instead of a pack's dragon marker so its directions show.
 
 ## Code
 - World generation: `src/world/worldgen.js` (terrain, rivers, regions with tier gates, subregions, factions, locations, roads).

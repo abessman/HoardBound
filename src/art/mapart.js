@@ -453,7 +453,7 @@
     /** Default map dragon: retain the existing pixel sprite when no illustrated marker is selected. */
     dragonMarker(ctx, x, y, s, o = {}) {
       const spec = o.spec || { tier: 0, breed: 'red', alignment: 0, mutations: [], scars: 0 };
-      HB.dragonArt.draw(ctx, spec, o.pose || (o.flying ? 'fly' : 'idle'), o.frame || 0, x, y, o.scale || s / 7, o.flipX ? -1 : 1);
+      HB.dragonArt.draw(ctx, spec, o.pose || (o.flying ? 'fly' : 'idle'), o.frame || 0, x, y, o.scale || s / 7, o.flipX ? -1 : 1, 1, o.dir);
     },
     /** a small faction flag, drawn over art-pack settlement art at its attach.flag point */
     flag(ctx, x, y, s, color) {
@@ -511,10 +511,11 @@
   wrap('homeSettlement', (ctx, x, y, s, stage, path) => ({ ids: [`map.home.${path}.${stage}`], x, y, param: s, key: 'home' }));
   wrap('pennant', (ctx, x, y, s, color, mark, status) => status ? { ids: [`map.marker.pennant.${status}`], x, y, param: s, key: status, tint: color, mark } : null);
   wrap('crossedSwords', (ctx, x, y, s) => ({ ids: ['map.marker.crossedSwords'], x, y, param: s, key: 'swords' }));
-  wrap('wagon', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.wagon.rich', 'map.marker.wagon'] : ['map.marker.wagon'], x, y, param: s, key, tint: color }));
-  wrap('banner', (ctx, x, y, s, color, key) => ({ ids: ['map.marker.banner'], x, y, param: s, key, tint: color }));
-  wrap('walker', (ctx, x, y, s, color, key) => ({ ids: color ? ['map.marker.walker.hunter', 'map.marker.walker'] : ['map.marker.walker'], x, y, param: s, key }));
-  wrap('dragonMarker', (ctx, x, y, s, o = {}) => ({ ids: [o.flying ? 'map.marker.dragon.flying' : 'map.marker.dragon.resting', 'map.marker.dragon'], x, y, param: s, key: o.key, inkTint: o.inkTint, flipX: o.flipX }));
+  // travellers and the dragon may pass a facing ({ dir, facing }: 8 ways from their movement) for art drawn in directions
+  wrap('wagon', (ctx, x, y, s, color, key, f) => ({ ids: color ? ['map.marker.wagon.rich', 'map.marker.wagon'] : ['map.marker.wagon'], x, y, param: s, key, tint: color, dir: f && f.dir, facing: f && f.facing }));
+  wrap('banner', (ctx, x, y, s, color, key, f) => ({ ids: ['map.marker.banner'], x, y, param: s, key, tint: color, dir: f && f.dir, facing: f && f.facing }));
+  wrap('walker', (ctx, x, y, s, color, key, f) => ({ ids: color ? ['map.marker.walker.hunter', 'map.marker.walker'] : ['map.marker.walker'], x, y, param: s, key, dir: f && f.dir, facing: f && f.facing }));
+  wrap('dragonMarker', (ctx, x, y, s, o = {}) => ({ ids: [o.flying ? 'map.marker.dragon.flying' : 'map.marker.dragon.resting', 'map.marker.dragon'], x, y, param: s, key: o.key, inkTint: o.inkTint, flipX: o.flipX, dir: o.dir, facing: o.flipX ? -1 : 1 }));
   wrap('compassRose', (ctx, x, y, r) => ({ ids: ['map.decoration.compass'], x, y, param: r, key: 'compass' }));
   wrap('seal', (ctx, x, y, r, kind, key) => ({ ids: kind === 'locked' ? ['map.marker.seal.story.locked', 'map.marker.seal.story'] : [`map.marker.seal.${kind}`], x, y, param: r, key }));
   wrap('threatMark', (ctx, x, y, s, key) => ({ ids: ['map.marker.threat'], x, y, param: s, key }));

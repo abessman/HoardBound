@@ -35,7 +35,7 @@
       name = name || 'none';
       const request = MA._request = (MA._request || 0) + 1;
       MA._pending = name; // also cancel a pending pack when the original art is selected
-      MA.entries.clear(); MA.hasCuts = false; MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
+      MA.entries.clear(); MA.dirBases = new Set(); MA.hasCuts = false; MA.pack = null; MA.packStyle = null; MA.packName = name; MA.style = merge(DEFAULT_STYLE, {}); MA.bump();
       if (name === 'none') return Promise.resolve(false);
       if (!/^[\w-]+$/.test(name)) { MA.warn(`bad pack name "${name}"`); return Promise.resolve(false); }
       MA._pending = name;
@@ -69,12 +69,14 @@
       for (const [id, def] of list) {
         if (!id || typeof id !== 'string') { MA.warn(`pack "${name}": an asset has no id`); continue; }
         if (MA.entries.has(id)) { MA.warn(`duplicate id ${id}: the first one is used`); continue; }
-        // '<id>@good' / '<id>@evil': a symbol's version for a kind or a cruel land (the editor's pixel pack); draw() looks there first
-        const fam = HB.mapSpecFamily ? HB.mapSpecFamily(/@(good|evil)$/.test(id) ? id.replace(/@(good|evil)$/, '') : id) : null;
+        // '<id>@good' / '<id>@evil': a symbol's version for a kind or a cruel land (the editor's pixel pack); draw() looks there first.
+        // '<id>>n', '>ne' …: the symbol facing another way (the plain one faces east); draw() picks one by o.dir
+        const plain = id.replace(/(?:>(?:ne|nw|se|sw|n|s|e|w))?(?:@(?:good|evil))?$/, ''), fam = HB.mapSpecFamily ? HB.mapSpecFamily(plain) : null;
+        if (plain !== id.replace(/@(?:good|evil)$/, '')) MA.dirBases.add(plain);
         if (!fam) { MA.warn(`unknown id ${id} (not in src/data/mapspec.js); ignored`); continue; }
         const variants = ((def && def.variants) || []).map((v, i) => fam.spec.layer === 'wash' ? MA.washVariant(id, fam, v, i, base) : MA.variant(id, fam, v, i, base)).filter(Boolean);
         if (!variants.length) { MA.warn(`${id}: no usable variants; procedural art is used`); continue; }
-        MA.entries.set(id, { id, family: fam.id, spec: fam.spec, variants });
+        MA.entries.set(id, { id, family: fam.id, spec: fam.spec, variants, dirs: def && def.dirs });
       }
       MA.bump();
       return true;
@@ -235,7 +237,15 @@
       ctx.restore();
       return { id: r.id, v, sx, sy, dx, dy, dw, dh, flip };
     },
-    draw(ctx, ids, x, y, param, o = {}) { const r = (o.tone && MA.resolve(ids.map(i => i + '@' + o.tone), o.key)) || MA.resolve(ids, o.key); return r ? MA.drawResolved(ctx, r, x, y, param, o) : HB.mapInk && HB.mapInk.draw(ctx, ids, x, y, param, o); },
+    draw(ctx, ids, x, y, param, o = {}) {
+      // facing (o.dir, from its movement): a symbol drawn in several directions shows the one it faces (or a mirror)
+      if (o.dir && MA.dirBases && MA.dirBases.size && HB.pixelArt) {
+        const id = ids.find(i => MA.dirBases.has(i));
+        if (id) { const has = (d) => MA.entries.has(d === 'e' ? id : id + '>' + d), PA = HB.pixelArt, e = MA.entries.get(id), pk = PA.pickDir(o.dir, has, PA.dirMode(e && e.dirs, has), o.facing || 1);
+          ids = [pk.dir === 'e' ? id : id + '>' + pk.dir].concat(ids); o = Object.assign({}, o, { flipX: pk.flip }); }
+      }
+      const r = (o.tone && MA.resolve(ids.map(i => i + '@' + o.tone), o.key)) || MA.resolve(ids, o.key); return r ? MA.drawResolved(ctx, r, x, y, param, o) : HB.mapInk && HB.mapInk.draw(ctx, ids, x, y, param, o);
+    },
     // ---------- places: the id chain for a location, most specific first
     placeIds(L) {
       const sub = L.type === 'camp' ? L.camp : L.type === 'stronghold' ? L.lieutenant : L.type === 'city' && L.tier >= 4 ? 'great' : null;
