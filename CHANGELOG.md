@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.28.1 — 2026-10-14 · Animations as long as you draw them
+- **Drawn animations play every frame at your speed.** The game used a fixed number of frames per dragon pose (four
+  for flying), so extra frames were cut and fewer frames repeated. Now a drawn pose plays all its frames at the fps
+  you set, on the map, in raids, in the lair, on the sleep and awakening screens, and each direction or good or evil
+  version uses its own frame count. The editor's note says how long one loop takes.
+- **Raid people animate.** A raid sprite drawn with several frames now loops them in the raid at its fps, each
+  person a little out of step with the others (one loop for everything they do, for now).
+
 ## 0.28.0 — 2026-10-14 · Sprites that face 2, 4 or 8 ways
 - **Facing in the pixel editor.** Dragons, lair pictures, raid sprites and the map's travellers and dragon marker can
   face **2, 4 or 8** directions. The plain drawing faces east; tap a direction in the compass grid to draw it. Each

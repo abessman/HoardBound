@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-14 · **Version 0.28.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-14 · **Version 0.28.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -61,13 +61,15 @@ The owner plays at hoardbound.netlify.app on an iPad.
   The overworld dragon turns 8 ways when `dragon.<tier>.fly` is drawn in directions (the drawn pose wins over the
   pack's marker); travellers turn with pixel-pack markers. Choices (not confirmed): 4 = E W N S (diagonals go to the
   side), new directions start as copies, map markers stay unanimated (frames are variants), raids face left or right.
+- 0.28.1 (owner's ask): drawn animations play all their frames at the drawing's fps (`HB.dragonArt.frameAt` in every
+  view; raid sprites loop their frames via `HB.art.at`). The generated art keeps its old timings.
 
 ## Next tasks (in order)
 1. The owner tries Facing on the dragon's fly pose and a light layer on a camp or castle (Settings → Time of day).
 2. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
    first (Lair · dragon), then the chamber and rooms. Adjust slots and sizes to the owner's drawings.
 3. How upgrades should look in the rooms view (owner's design to come): possibly drawn room cards per level.
-4. Raid walk cycles; breed palettes for drawn dragons; editor asks (layers, rotate or scale a selection).
+4. Raid sprites: separate walk/idle/fight animations (0.28.1 loops all frames); breed palettes for drawn dragons; editor asks (layers, rotate or scale a selection).
 5. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner

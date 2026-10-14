@@ -27,8 +27,8 @@
   function dragon(g, x, y, t, pose = 'fly', scale = 1) {
     const st = HB.state; if (!st) return;
     const spec = HB.dragonArt.specOf(st);
-    const f = Math.floor(t * 8) % 4;
-    HB.dragonArt.draw(g, spec, pose, pose === 'fly' ? f : 0, x, y + (pose === 'fly' ? Math.sin(t * 6) * 2 : 0), scale, 1);
+    const f = HB.dragonArt.frameAt(spec, pose, t, pose === 'fly' ? 4 : 1, 8); // a drawn pose plays all its frames
+    HB.dragonArt.draw(g, spec, pose, f, x, y + (pose === 'fly' ? Math.sin(t * 6) * 2 : 0), scale, 1);
   }
   function people(g, ids, x, y, gap = 10) { ids.forEach((id, i) => px.blit(g, S.get(id), x + i * gap, y)); }
   function shadow(g, x, y, w) { px.ellipse(g, x, y, w, w * 0.3, 'rgba(0,0,0,0.25)'); }

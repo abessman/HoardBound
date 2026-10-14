@@ -158,15 +158,16 @@
       if (e.kind === 'ballista') { const b = S.get('ballista'); px.blit(g, b, x - 6, yb - 8); if (e.state === 'aiming') { g.fillStyle = P.gemRed; if (Math.floor(this.t * 10) % 2) g.fillRect(x - 1, yb - 14, 3, 3); } return; }
       if (e.kind === 'rivalDragon') {
         const spec = { tier: e.rival ? e.rival.tier : 2, breed: e.rival ? e.rival.breed : 'black', alignment: -60, mutations: ['stonePlates'], scars: 2 };
-        const f = Math.floor(this.t * 6) % 4;
-        HB.dragonArt.draw(g, spec, e.fearT > 0 ? 'hurt' : (e.cooldown > e.rate - 0.4 ? 'breathe' : 'idle'), e.cooldown > e.rate - 0.4 ? 1 : f % 2, x, yb - 14, 1, e.facing);
+        const f = Math.floor(this.t * 6) % 4, rp = e.fearT > 0 ? 'hurt' : (e.cooldown > e.rate - 0.4 ? 'breathe' : 'idle');
+        HB.dragonArt.draw(g, spec, rp, rp === 'breathe' && !HB.dragonArt.isDrawn(spec, rp) ? 1 : HB.dragonArt.frameAt(spec, rp, this.t, 2, 6), x, yb - 14, 1, e.facing);
         if (e.cooldown > e.rate - 0.35) { const fl = HB.dragonArt.flame(40, 'fire', f); g.drawImage(fl, e.facing > 0 ? x + 16 : x - 16 - fl.width, yb - 24); }
         this.drawHpBar(g, x, yb - 40, e);
         return;
       }
       // people / animals
       const spriteId = e.sprite || ({ orc: 'orc', orcArcher: 'orc', warlord: 'warlord', warden: 'warden', guard: 'guard', militia: 'villager2', archer: 'archer', knight: 'knight', hero: 'hero', captain: 'knight', bandit: 'bandit', goblin: 'goblin', goblinArcher: 'goblin', dwarfWarrior: 'dwarf', elfArcher: 'archer', villager: 'villager', merchant: 'villager2', priest: 'priest', noble: 'noble', worker: 'villager2', sheep: 'sheep', cow: 'cow', horse: 'horse' }[e.kind] || 'villager');
-      const sp = S.get(spriteId);
+      // a raid sprite drawn with several frames plays them (each person a little out of step with the others)
+      const sm = HB.sprites.overrideMeta.get(spriteId), sp = sm && sm.frames > 1 && HB.art ? HB.art.at(spriteId, this.t + (e.id || 0) * 0.37) : S.get(spriteId);
       const bob = e.state === 'flee' || (e.melee && e.state === 'alert' && Math.abs(e.vx) > 0) ? (Math.floor(this.t * 10 + e.id) % 2) : 0;
       let yOff = 0;
       if (e.state === 'asleep') { g.save(); g.translate(x, yb); g.rotate(-Math.PI / 2); px.blit(g, sp, -sp.height, -sp.width / 2); g.restore(); if (Math.floor(this.t * 2 + e.id) % 2) { g.fillStyle = P.white; g.fillRect(x + 6, yb - 10, 1, 1); g.fillRect(x + 8, yb - 13, 1, 1); } return; }
@@ -180,12 +181,12 @@
     drawDragon(g, cam) {
       const r = this.r, D = r.dragon, st = this.state;
       const spec = HB.dragonArt.specOf(st);
-      const f = D.pose === 'fly' || D.pose === 'grab' ? Math.floor(D.poseT * 8) % 4 : Math.floor(D.poseT * 2) % 2;
       const x = Math.round(D.x - cam), y = Math.round(D.y);
       // shadow
       px.ellipse(g, x, HB.raid.GROUND + 1, 8 + spec.tier * 5, 2 + spec.tier, 'rgba(0,0,0,0.25)');
-      const pose = D.hurtT > 0 ? 'hurt' : D.pose === 'breathe' ? 'breathe' : D.pose;
-      const sp = HB.dragonArt.draw(g, spec, pose, pose === 'breathe' ? 1 : f, x, y, 1, D.facing);
+      const pose = D.hurtT > 0 ? 'hurt' : D.pose === 'breathe' ? 'breathe' : D.pose, quick = D.pose === 'fly' || D.pose === 'grab';
+      const f = HB.dragonArt.frameAt(spec, pose, D.poseT, quick ? 4 : 2, quick ? 8 : 2); // all the frames you drew, at your fps
+      const sp = HB.dragonArt.draw(g, spec, pose, pose === 'breathe' && !HB.dragonArt.isDrawn(spec, pose) ? 1 : f, x, y, 1, D.facing);
       if (D.busy && D.busy.id === 'breathe' && D.busy.t > 0.2 && D.busy.t < 0.9) {
         const L = 30 + spec.tier * 18;
         const fl = HB.dragonArt.flame(L, st.dragon.stats.breathElement || 'fire', Math.floor(D.poseT * 10) % 4);

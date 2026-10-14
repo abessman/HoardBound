@@ -355,7 +355,7 @@
     // what lives in the rooms: the hoard and the dragon, the forge fire, captives, workers in the passages
     const ch = ROOMS.find(r => r.id === 'chamber'), pile = pileSize(st, ch.w / 2 - 12, 24, 0.5), cx = ch.x + ch.w / 2, fl = ch.y + ch.h - 3;
     if (pile.w) drawPile(g, st, cx, fl, pile.w, pile.h, 1, new HB.RNG(HB.hash32('lairpile' + st.seed)));
-    const spec = HB.dragonArt.specOf(st), pose = st.phase === 'sleeping' ? 'sleep' : 'idle', f = Math.floor(t * 1.5) % 2;
+    const spec = HB.dragonArt.specOf(st), pose = st.phase === 'sleeping' ? 'sleep' : 'idle', f = HB.dragonArt.frameAt(spec, pose, t, 2, 1.5);
     const ds = HB.dragonArt.sprite(spec, pose, f);
     HB.dragonArt.draw(g, spec, pose, f, cx, Math.round(fl - (pile.h ? pile.h * 0.8 : 0) - (ds.height - ds.anchorY) + 1), 1, 1);
     const fg = ROOMS.find(r => r.id === 'forge'); if (states.get('forge').built) { flame(g, fg.x + 12, fg.y + fg.h - 8, t, 0, false); flame(g, fg.x + 16, fg.y + fg.h - 8, t, 1, false); }

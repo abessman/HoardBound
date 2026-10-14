@@ -50,9 +50,11 @@
     const rank = (c, i) => NAME_ORDER.includes(c.id) ? NAME_ORDER.indexOf(c.id) - 1e4 : i;
     catalog = catalog.map((c, i) => [c, rank(c, i)]).sort((a, b) => groups.indexOf(a[0].group) - groups.indexOf(b[0].group) || a[1] - b[1]).map(p => p[0]);
   }
+  /** how the game plays this drawing: every frame you draw, at its fps */
+  const loopNote = (doc) => { if (!doc) return 'The game plays every frame you draw, at the fps you set.'; const n = doc.frames.length, f = doc.fps || 2, sec = n / f; return `The game plays all ${n} frame${n === 1 ? '' : 's'} at ${f} fps: one loop every ${sec < 10 ? sec.toFixed(sec < 1 ? 2 : 1) : Math.round(sec)} s. Add or remove frames, or change fps, to make it longer or shorter.`; };
   const noteFor = (item, doc) => item.entry && item.entry.note ? item.entry.note
-    : item.kind === 'dragon' ? `The game shows frames 1–${item.frames} of this pose (${item.fps} fps). One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
-      : item.kind === 'sprite' ? 'A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. The game uses the first frame.'
+    : item.kind === 'dragon' ? `${loopNote(doc)} One drawing serves every breed and alignment. Put the anchor (⊕) on the body centre: the dragon is placed there.`
+      : item.kind === 'sprite' ? `A raid sprite: drawn standing on its anchor (⊕, bottom centre) at 4× in the 320×180 scene. ${doc && doc.frames.length > 1 ? loopNote(doc) : 'Draw more frames and the raid plays them.'}`
         : item.kind === 'map' ? `${item.mapNote ? item.mapNote + ' ' : ''}A map symbol: add variants with + New variant (each its own drawing at its own size); the map picks one at random for each spot and keeps it. Drawn pixel-sharp; one pixel = ${doc ? doc.scale : 1} map pixels at zoom 1. The anchor (⊕) sits on the symbol's spot. Choose “Pixel art (editor)” in Settings → Map art to see these in the game.`
           : 'No longer used by the game (its id is not registered).';
 

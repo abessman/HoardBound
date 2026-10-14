@@ -103,6 +103,7 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
 - One seed in many lacks a rival lair (test "rival lairs exist" is seed-dependent).
 - The home settlement's name is drawn without label collision and can overlap "Your lair" at close zoom.
 - Night: terrain symbols do not glow (they sit in chunks); the default place lights are placed by kind, not by the art.
+- The reveal wash is drawn cell by cell (no dissolve) in the far views (zoom below 0.8), where cells are a few px.
 
 ## Related
 [travel](travel.md) · [realms-and-memory](realms-and-memory.md) · [art-and-sprites](art-and-sprites.md) · [domain-and-influence](domain-and-influence.md)

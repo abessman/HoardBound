@@ -203,6 +203,16 @@
       const pk = PA.pickDir(dir, has, PA.dirMode((meta.get(base) || {}).dirs, has), facing);
       return { pose: pk.dir === 'e' ? pose : pose + '>' + pk.dir, flip: pk.flip };
     },
+    /** the frame to show at time t (seconds): a pose drawn in the pixel editor plays all its frames at its own fps (each
+     *  direction and good or evil version its own); the generated art keeps the caller's frames and fps */
+    frameAt(spec, pose, t, frames, fps, dir, facing) {
+      const fp = dir ? dragonArt.facingPose(spec, pose, dir, facing) : null, p = fp ? fp.pose : pose, meta = HB.sprites.overrideMeta, tone = HB.art.toneOf(spec.alignment || 0);
+      const m = (tone && meta.get(`dragon.${spec.tier}.${p}@${tone}`)) || meta.get(`dragon.${spec.tier}.${p}`);
+      const n = m ? Math.max(1, m.frames | 0) : Math.max(1, frames | 0), f = m && m.fps > 0 ? m.fps : fps;
+      return Math.floor(Math.max(0, t) * f) % n;
+    },
+    /** whether the owner drew this pose (then it animates by its own frames, even a pose the game shows still) */
+    isDrawn(spec, pose) { return !!HB.sprites.overrideMeta.get(`dragon.${spec.tier}.${pose}`); },
     /** draw at (x,y) = anchor position in screen space, scale, facing (1 right, -1 left); dir (optional, 8 ways) picks a
      *  drawn direction of the pose when the owner drew them */
     draw(ctx, spec, pose, frame, x, y, scale, facing = 1, alpha = 1, dir) {

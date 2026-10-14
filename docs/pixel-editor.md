@@ -137,10 +137,12 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   flourishing cells near your rule; under a tyrant the mountain's evil version stands where the jagged mountains
   were). Your own drawing when there is one, else the tint. Raid sprites do not use them yet.
 - **Dragon** (`dragon.<tier>.<pose>`): frame k replaces that pose's frame k for every breed (breed colours are not
-  applied to drawn art yet; the good and evil tones are). The anchor ⊕ marks the body centre: the
+  applied to drawn art yet; the good and evil tones are). The game plays every frame you draw at the fps you set, so
+  the animation is as long as you make it (the note above the canvas says how long one loop takes). The anchor ⊕ marks the body centre: the
   game places and rotates the dragon around it. Size tiers 0–3 are hatchling to ancient; keep each tier's canvas
   size close to the game's (the editor starts from it).
-- **Raid sprites** (people, animals, treasure, props): the first frame replaces the sprite. The game always stands a
+- **Raid sprites** (people, animals, treasure, props): the drawing replaces the sprite; with several frames the raid
+  loops them at your fps (each person a little out of step). The game always stands a
   sprite on its bottom edge, centred, in the 320×180 scene drawn 4× larger: draw the feet on the last row.
 - **Map symbols** (`map.…` ids): the variants are separate drawings; the map picks one per spot and keeps it. Each is
   cut to what is drawn in it, so variants of different sizes keep their sizes. They are drawn

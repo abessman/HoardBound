@@ -300,7 +300,7 @@
       const dp = this.project(V, dx, dy, alt), sp = this.project(V, dx, dy, 0), ahead = this.project(V, H.x + 0.5 + Math.cos(a + 0.1) * 2.6, H.y + 0.5 + Math.sin(a + 0.1) * 1.8, alt);
       if (dp && sp) {
         items.push({ z: sp.z + 0.02, draw: () => { ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.ellipse(sp.x, sp.y, sp.s * 0.55, sp.s * 0.55 * Math.cos(V.ph), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore(); } });
-        items.push({ z: dp.z - 0.5, draw: () => { const spec = HB.dragonArt.specOf(st), frame = Math.floor(this.t * 8) % 4, scale = dp.s / Gd.CELL * 1.05; HB.dragonArt.draw(ctx, spec, 'fly', frame, dp.x, dp.y, scale, ahead && ahead.x < dp.x ? -1 : 1); } });
+        items.push({ z: dp.z - 0.5, draw: () => { const spec = HB.dragonArt.specOf(st), frame = HB.dragonArt.frameAt(spec, 'fly', this.t, 4, 8), scale = dp.s / Gd.CELL * 1.05; HB.dragonArt.draw(ctx, spec, 'fly', frame, dp.x, dp.y, scale, ahead && ahead.x < dp.x ? -1 : 1); } });
       }
       items.sort((p, q) => q.z - p.z);
       for (const it of items) it.draw();

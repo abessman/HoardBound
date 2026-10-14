@@ -33,7 +33,7 @@
       });
       // animated flight at large scale
       const v = variants[Math.floor(this.t / 3) % variants.length];
-      const f = Math.floor(this.t * 8) % 4;
+      const f = HB.dragonArt.frameAt(v, 'fly', this.t, 4, 8);
       HB.dragonArt.draw(ctx, v, 'fly', f, HB.W - 180, 140 + Math.sin(this.t * 6) * 4, 4 - v.tier * 0.6, 1);
       HB.text.draw(ctx, 'Esc to leave', HB.W - 30, HB.H - 20, { size: 12, align: 'right', color: HB.palette.inkSoft });
     }

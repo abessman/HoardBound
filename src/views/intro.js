@@ -34,7 +34,7 @@
       const p = this.pages[this.page];
       const w = 760, h = 480, x = (HB.W - w) / 2, y = (HB.H - h) / 2;
       HB.parchment.panel(ctx, x, y, w, h, { title: p.title, tone: 'light' });
-      HB.dragonArt.draw(ctx, HB.dragonArt.specOf(this.state), this.page === 0 ? 'idle' : 'fly', Math.floor(this.t * 6) % 4, x + w - 90, y + 80, 2.5, -1);
+      { const sp = HB.dragonArt.specOf(this.state), ps = this.page === 0 ? 'idle' : 'fly'; HB.dragonArt.draw(ctx, sp, ps, HB.dragonArt.frameAt(sp, ps, this.t, 4, 6), x + w - 90, y + 80, 2.5, -1); }
       HB.text.paragraph(ctx, p.text, x + 40, y + 60, w - 200, { size: 17, lineHeight: 24 });
       HB.text.draw(ctx, `${this.page + 1} / ${this.pages.length}`, x + w / 2, y + h - 20, { size: 12, align: 'center', color: HB.palette.inkSoft });
       this.ui.draw(ctx);

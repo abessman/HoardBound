@@ -145,12 +145,12 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
 
 ## Known issues and tuning
 - Procedural dragon art is plain; the title screen uses an ink drawing.
-- Terrain uses 1× or 2× chunk bitmaps; maximum zoom still enlarges the 2× cache slightly. Physical iPad performance needs review.
+- Terrain uses 1× or 2× chunk bitmaps (maximum zoom enlarges the 2× cache slightly); iPad performance needs review.
 - Still hand-coded on the map: parchment, roads, rivers, coasts, washes (restylable via a pack's `style`), labels,
   selection, far-view dots, the smoke overlay. List: `docs/map-art/IMPLEMENTATION.md`.
-- The reveal wash is drawn cell by cell (no dissolve) in the far views (zoom below 0.8), where cells are a few px.
 - Drawn dragon art ignores breed colours, alignment tints, mutations and scars (one drawing serves all); hurt shows the
-  drawn hurt frames. Raid sprites have one frame in the game (no walk cycle yet). Editor saves: last save wins.
+  drawn hurt frames. Drawn animations play every frame at the drawing's fps (0.28.1: `dragonArt.frameAt`; a raid
+  sprite with several frames loops them, one cycle for every state, not separate walk and idle). Last save wins.
 - Editor map symbols are their own pack (`pixel`): choosing it shows undrawn symbols in the original ink, not Illuminated.
 - Lights show for places, travellers and the dragon (drawn each frame); terrain symbols (chunks) and raid or lair art
   keep their light marks but do not glow yet.

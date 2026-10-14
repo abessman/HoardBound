@@ -139,7 +139,7 @@
       // the dragon
       const dp = this.worldToScreen(this.dragon.x, this.dragon.y - 0.6), flying = Math.abs(this.dragon.tx - this.dragon.x) > 0.05;
       const spec = { tier: 1, breed: 'red', alignment: this.sources[0].side * 30, mutations: [], scars: 0, element: 'fire' };
-      HB.dragonArt.draw(ctx, spec, flying ? 'fly' : 'idle', flying ? Math.floor(this.dragon.frame * 8) % 4 : Math.floor(this.dragon.frame * 1.5) % 2, dp.x, dp.y, HB.clamp(cam.zoom * 1.1, 0.9, 2.2), this.dragon.facing);
+      HB.dragonArt.draw(ctx, spec, flying ? 'fly' : 'idle', HB.dragonArt.frameAt(spec, flying ? 'fly' : 'idle', this.dragon.frame, flying ? 4 : 2, flying ? 8 : 1.5), dp.x, dp.y, HB.clamp(cam.zoom * 1.1, 0.9, 2.2), this.dragon.facing);
       HB.parchment.panel(ctx, 14, 12, 470, 92, { shadow: false, stains: false, vignette: 0.05 });
       HB.text.draw(ctx, 'Watercolour preview', 30, 40, { size: 20, family: 'sc' });
       HB.text.paragraph(ctx, 'Fly east: the land the dragon uncovers washes in. The buttons try the territory\'s watercolour. Drag to pan, wheel or pinch to zoom. Nothing here is saved.', 30, 50, 440, { size: 13, italic: true, color: HB.palette.inkSoft, lineHeight: 16, maxLines: 3 });

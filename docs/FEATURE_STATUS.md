@@ -117,7 +117,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Draw the game's pixel art in the browser | Functional | `editor/` ([guide](pixel-editor.md)): every dragon tier and pose with its frames, raid people, animals, treasure and props, map symbols; pencil, eraser, fill, eyedropper, box select, move, copy/cut/paste, flip, line, rectangle, ellipse (filled or not), mirror, brush sizes, colour picker and game palette, undo, onion skin, the game's drawing behind to trace; touch, pinch and keys. |
 | See it move and in place | Functional | Play at the game's fps over a raid or parchment background; sample map of drawn map symbols; open the game's dragon sheet or map preview with unsaved drawings (`?drafts=1`). |
 | Saved to GitHub, editable later | Functional | One readable file per sprite in `assets/pixelart/`, committed through the GitHub API with a fine-grained token kept in the browser; drafts kept locally until saved; brings in art saved from another device; checked by `tools/test.js`. |
-| The game uses the drawings | Functional | Raid sprites (first frame), dragon frames per tier and pose (all breeds share one drawing), map symbols through the "Pixel art (editor)" map art pack (Settings → Map art). |
+| The game uses the drawings | Functional | Raid sprites (all their frames, looped; 0.28.1), dragon frames per tier and pose (every drawn frame at the drawing's fps; 0.28.1) (all breeds share one drawing), map symbols through the "Pixel art (editor)" map art pack (Settings → Map art). |
 | New game art appears in the editor | Functional | 0.17: the editor lists the game's art registry (`HB.art`): sprites, dragon poses and the lair's pictures register where they are drawn. |
 | Your own picture behind the pixels | Functional | 0.17: load any image per sprite (kept in the browser), opacity, size, move, on top; the eyedropper samples it on empty pixels. |
 | Named layers, saved with the sprite | Functional | 0.18: a few named layers per sprite (show/hide, reorder, merge, rename); saved in the sprite's file; the game merges the visible ones, hidden layers stay out. |
@@ -134,7 +134,7 @@ How each part works is in `docs/systems/`; this file is only the status. Honest 
 | Map symbol variants as separate drawings | Functional | 0.24: + New variant / Duplicate / Delete in the editor, each with its own size and anchor; the map picks one at random per spot; older many-frame drawings split on open. 0.26.1: variant 1 stays while others exist; deleted variants show faded until saved; blank unsaved copies never hide a saved drawing. |
 | Undo and redo on the iPad | Functional | Buttons with step counts (≥ 20, up to 120), two-finger tap undo, three-finger tap redo; colour, fps and scale changes are undoable. |
 | Breed colours, mutations and scars on drawn dragons | Deferred | Drawn art replaces the composed dragon whole (it takes the good or evil tone since 0.21); layers or palette swaps would bring the rest back. |
-| Walk cycles for raid people | Deferred | The game shows one frame of a raid sprite; extra frames are kept but unused. |
+| Walk cycles for raid people | Simplified | 0.28.1: a raid sprite's drawn frames loop at its fps, whatever the person is doing; separate walk, idle and fight animations are not split yet. |
 
 ## Encounters and travel
 

@@ -708,7 +708,6 @@
       const spec = HB.dragonArt.specOf(st);
       const flying = !!sc || st.phase === 'traveling' || st.phase === 'returning';
       const pose = flying ? 'fly' : (st.phase === 'sleeping' ? 'sleep' : 'idle');
-      const frame = flying ? Math.floor(this.dragonFrameT * 8) % 4 : Math.floor(this.dragonFrameT * 1.5) % 2;
       const scale = HB.clamp(this.cam.zoom * 1.1, 0.9, 2.2) * (flying ? 1 : 0.9);
       // shadow
       ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#2b1a0e'; ctx.beginPath(); ctx.ellipse(p.x + 6 * scale, p.y + (flying ? 16 : 8) * scale, 10 * scale * (1 + d.tier * 0.5), 4 * scale * (1 + d.tier * 0.5), 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
@@ -719,6 +718,7 @@
       const mx = sc ? wx : wx - hd.x, my = sc ? wy : wy - hd.y; hd.x = wx; hd.y = wy;
       if (Math.hypot(mx, my) > 1e-4) { const k = sc ? 1 : 0.25; hd.vx += (mx - hd.vx) * k; hd.vy += (my - hd.vy) * k; if (Math.hypot(hd.vx, hd.vy) > 1e-4) hd.dir = HB.pixelArt ? HB.pixelArt.dirOf(hd.vx, hd.vy) : hd.dir; }
       const dir = flying ? hd.dir : null, fdir = hd.vx < -1e-4 ? -1 : hd.vx > 1e-4 ? 1 : facing, y = p.y - (flying ? 10 : 2) * scale + bobY;
+      const frame = HB.dragonArt.frameAt(spec, pose, this.dragonFrameT, flying ? 4 : 2, flying ? 8 : 1.5, dir, fdir); // all the frames you drew, at your fps
       // your own drawn flying dragon (pixel editor) wins over a map pack's marker, so its directions show
       if (flying && HB.dragonArt.facingPose(spec, 'fly', dir || 'e', fdir)) { HB.dragonArt.draw(ctx, spec, 'fly', frame, p.x, y, scale, fdir, 1, dir); return; }
       HB.mapart.dragonMarker(ctx, p.x, y, 7 * scale * (1 + d.tier * .6), { flying, pose, frame, scale, spec, key: 'player-dragon', flipX: (flying ? fdir : facing) < 0, inkTint: pal.base, dir });

@@ -12,8 +12,9 @@
  * marks ('1' fire, '2' window or candle, '3' lantern, '4' magic, '5' embers: PA.LIGHTS): it does not change the picture
  * by day; at night the game glows the marked pixels and casts a pool of light around each patch (map symbols: the map's
  * time of day, Settings). PA.lightsOf(def, frame) gives the patches and the glowing pixels.
- * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; the first frame is used);
- *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment);
+ * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; several frames play at the drawing's fps);
+ *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment); the game
+ *        plays all its frames at its fps (HB.dragonArt.frameAt), so the animation is as long as you draw it;
  *        'anim' is any other registered picture (HB.art, e.g. lair.dragon.<tier>.perch, lair.room.forge): frame k
  *        replaces its frame k, and the drawing's frame count and fps are used;
  *        'map' is a map symbol id: each frame is a variant, drawn through the 'pixel' map art pack (Settings → Map art).
@@ -227,7 +228,8 @@
         const p = PA.parseId(def.id); if (p.tone || p.n > 1) continue;
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
-        if (def.kind === 'sprite') { ov.set(def.id, Object.assign({ image: fr[0] }, base)); HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs }); }
+        // a raid sprite: its first frame by its id; every frame as <id>.<k>, which the raid plays when there are several
+        if (def.kind === 'sprite') { ov.set(def.id, Object.assign({ image: fr[0] }, base)); fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c }, base))); HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs }); }
         else if (def.kind === 'dragon' || def.kind === 'anim') {
           fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
           for (const tn of ['good', 'evil']) PA.canvases(def, tn).forEach((c, k) => ov.set(`${def.id}.${k}.${tn}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
