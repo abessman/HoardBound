@@ -112,9 +112,9 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   colours below toward a warm light or the map's ink (hatched lines when `hatch`); `swap` exchanges lit and shadow.
   `PA.canvases(def, tone, swap)`; the pixel pack gives a mirrorable shaded symbol a pre-mirrored, relit variant
   instead of `allowFlipX`. Shading marks stay out of `flatten` (crop boxes) and of the palette.
-- 0.27: light layers (`light: { glow, size }`, marks 1 fire, 2 window, 3 lantern, 4 magic, 5 embers: `PA.LIGHTS`) stay
-  out of the picture; `PA.lightsOf(def, k)` gives patches (`lightSpots`) and a glow canvas, which the pixel pack ships
-  per variant (`lights`, `glowSrc`). `MA.drawResolved` reports them into `MA.lights` (device px) while mapview collects.
+- 0.27: light layers (`light: { glow, size }`; mark = kind + 8 × intensity step, `PA.lightMark`, `PA.LEVELS`: 1 fire,
+  2 window, 3 lantern, 4 magic, 5 embers, 0.32: 6 smoke, `PA.drawSmoke`) stay out of the picture; `PA.lightsOf(def, k)`
+  gives patches and a glow canvas, shipped per variant (`lights`, `glowSrc`); `MA.drawResolved` adds them to `MA.lights`.
 - Layers (0.18): `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`; `add` flattens the visible
   colour layers into `frames` for bookkeeping (crop boxes). `?drafts=1` applies the editor's drafts (`hb.pixelart.drafts`,
   `null` = deleted); 0.30: Settings → Your drawings → Local test (`artSource`, `?localart=1`) applies its Save locally

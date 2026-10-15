@@ -9,9 +9,10 @@
  * hatch } }) holds marks, not colours ('1' lit, '2' shadow, '3' deep shadow, painted for a light from the left): it
  * lights the layers under it (toward a warm light, toward ink; hatched lines when hatch), and a mirrored or relit
  * drawing swaps lit and shadow so the light stays on its side. A light layer ({ light: { glow, size } }) holds light
- * marks ('1' fire, '2' window or candle, '3' lantern, '4' magic, '5' embers: PA.LIGHTS): it does not change the picture
- * by day; at night the game glows the marked pixels and casts a pool of light around each patch (map symbols: the map's
- * time of day, Settings). PA.lightsOf(def, frame) gives the patches and the glowing pixels.
+ * marks ('1' fire, '2' window or candle, '3' lantern, '4' magic, '5' embers, '6' smoke: PA.LIGHTS; a mark is kind +
+ * 8 × intensity step, PA.LEVELS): it does not change the picture by day; at night the game glows the marked pixels and
+ * casts a pool of light around each patch (map symbols: the map's time of day, Settings); smoke rises from its patches
+ * day and night. PA.lightsOf(def, frame) gives the patches and the glowing pixels.
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; several frames play at the drawing's fps);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment); the game
  *        plays all its frames at its fps (HB.dragonArt.frameAt), so the animation is as long as you draw it;
@@ -95,22 +96,41 @@
       { name: 'Window', color: '#ffcf6a', r: 4.5, flicker: 0.12 },
       { name: 'Lantern', color: '#ffe39a', r: 3.5, flicker: 0.35 },
       { name: 'Magic', color: '#86d3ff', r: 6, pulse: 1 },
-      { name: 'Embers', color: '#e0522e', r: 3, flicker: 0.6 }],
+      { name: 'Embers', color: '#e0522e', r: 3, flicker: 0.6 },
+      { name: 'Smoke', color: '#6a5a4a', r: 4, smoke: 1 }],
+    /** a light mark's intensity (bright, or for smoke thick) by its step (mark >> 3); step 0 is the plain mark, 100% */
+    LEVELS: [1, 0.25, 0.5, 0.75, 1.5, 2, 3],
+    /** a light mark: its kind (mark & 7, PA.LIGHTS) and intensity step (mark >> 3, PA.LEVELS), or null when it is none */
+    lightMark(v) { const k = v & 7, s = v >> 3; return v >= 1 && k >= 1 && k < PA.LIGHTS.length && s < PA.LEVELS.length ? { kind: k, step: s, level: PA.LEVELS[s] } : null; },
+    /** puffs of smoke rising from (x, y) on g, in g's pixels: r the patch's reach, dens its thickness, a its opacity;
+     *  t the time (s), seed to keep spots out of step. Hand-drawn style: soft ink-brown puffs that swell and drift */
+    drawSmoke(g, x, y, r, dens, a, seed, t) {
+      const n = Math.max(2, Math.round(3 + 2 * Math.min(3, dens))), life = 3.4, R = Math.max(1.5, r), c = hex(PA.LIGHTS[6].color);
+      for (let i = 0; i < n; i++) {
+        const ph = (t / life + i / n + (seed * 0.137) % 1 + 1) % 1, wob = Math.sin(ph * 5 + seed + i * 1.7);
+        const px = x + ph * ph * R * 1.8 + wob * R * 0.22, py = y - ph * R * 4.2, rr = R * (0.32 + ph * 0.85);
+        const al = a * Math.min(1, 0.4 + 0.25 * dens) * Math.min(1, ph / 0.12) * (1 - ph); if (al <= 0.005) continue;
+        const gr = g.createRadialGradient(px, py, 0, px, py, rr);
+        gr.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${al})`); gr.addColorStop(0.6, `rgba(${c[0]},${c[1]},${c[2]},${al * 0.55})`); gr.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
+        g.fillStyle = gr; g.beginPath(); g.arc(px, py, rr, 0, Math.PI * 2); g.fill();
+      }
+    },
     /** a layer's light settings ({ glow, size }, percent), or null for a layer that is not a light layer */
     lightOf(l) { return l && l.light ? Object.assign({ glow: 100, size: 100 }, typeof l.light === 'object' ? l.light : {}) : null; },
     hasLights(def) { return !!def && Array.isArray(def.layers) && def.layers.some(l => l && !l.hidden && l.light); },
-    /** light patches from marks (at(i): the kind 1–5, or anything else for none): one spot per connected patch of a kind,
-     *  at its middle, { kind, x, y, n (pixels), r (reach in pixels), glow (0–1+) } */
+    /** light patches from marks (at(i): a light mark, or anything else for none): one spot per connected patch of one
+     *  mark (kind and intensity), at its middle, { kind, x, y, n (pixels), r (reach in pixels), glow (0–3: the layer's
+     *  glow × the mark's intensity; for smoke its thickness) } */
     lightSpots(w, h, at, set) {
       const seen = new Uint8Array(w * h), out = [], st = [], size = (set && set.size !== undefined ? +set.size : 100) / 100, glow = (set && set.glow !== undefined ? +set.glow : 100) / 100;
       for (let i = 0; i < w * h; i++) {
-        const k = at(i); if (!(k >= 1 && k < PA.LIGHTS.length) || seen[i]) continue;
+        const k = at(i), m = PA.lightMark(k); if (!m || seen[i]) continue;
         let sx = 0, sy = 0, n = 0; st.length = 0; st.push(i); seen[i] = 1;
         while (st.length) {
           const j = st.pop(), x = j % w, y = (j / w) | 0; sx += x + 0.5; sy += y + 0.5; n++;
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const q = yy * w + xx; if (!seen[q] && at(q) === k) { seen[q] = 1; st.push(q); } }
         }
-        out.push({ kind: k, x: sx / n, y: sy / n, n, r: PA.LIGHTS[k].r * size * (1 + Math.sqrt(n) * 0.18), glow });
+        out.push({ kind: m.kind, x: sx / n, y: sy / n, n, r: PA.LIGHTS[m.kind].r * size * (1 + Math.sqrt(n) * 0.18), glow: glow * m.level });
       }
       return out;
     },
@@ -118,16 +138,16 @@
     lightsOf(def, k) {
       if (!PA.hasLights(def)) return null;
       const cache = def._lights || (def._lights = []); if (cache[k] !== undefined) return cache[k];
-      const w = def.w | 0, h = def.h | 0, all = new Int8Array(w * h); let spots = [];
+      const w = def.w | 0, h = def.h | 0, all = new Int8Array(w * h), lvl = new Uint8Array(w * h); let spots = [];
       for (const l of def.layers) {
         if (!l || l.hidden || !l.light) continue;
         const kinds = new Int8Array(w * h), rows = (l.frames && l.frames[k] && l.frames[k].rows) || [];
-        rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const v = ALPHABET.indexOf(row[x]); if (v >= 1 && v < PA.LIGHTS.length) { kinds[y * w + x] = v; all[y * w + x] = v; } } });
+        rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const v = ALPHABET.indexOf(row[x]), m = PA.lightMark(v); if (m) { kinds[y * w + x] = v; if (!PA.LIGHTS[m.kind].smoke) { all[y * w + x] = m.kind; lvl[y * w + x] = m.step; } } } });
         spots = spots.concat(PA.lightSpots(w, h, (i) => kinds[i], PA.lightOf(l)));
       }
       if (!spots.length) return (cache[k] = null);
       const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
-      for (let i = 0; i < w * h; i++) if (all[i] > 0) { const col = hex(PA.LIGHTS[all[i]].color), o = i * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = 255; }
+      for (let i = 0; i < w * h; i++) if (all[i] > 0) { const col = hex(PA.LIGHTS[all[i]].color), o = i * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = Math.round(255 * Math.min(1, 0.35 + 0.65 * PA.LEVELS[lvl[i]])); } // dimmer marks glow less
       g.putImageData(img, 0, 0);
       return (cache[k] = { spots, glow: c });
     },

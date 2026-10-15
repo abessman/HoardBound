@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.32.0 — 2026-10-15 · Light intensity and smoke
+- **Intensity for each light.** On a light layer, pick an **Intensity** (25% to 300%) before you paint: each patch keeps
+  its own, so one drawing can hold a dim candle and a roaring bonfire. A dimmer patch glows less and casts a smaller
+  pool; a brighter one more. **Layer glow** (was Glow) still brightens the whole layer on top. The eyedropper picks a
+  patch's kind and intensity back up.
+- **Smoke.** A new **Smoke** mark: puffs that rise, swell and drift from each smoke patch, in soft ink brown, by day
+  and at night (fainter in the dark). Its intensity sets how thick it is and **Reach** how big. It shows in the
+  editor's canvas and preview as you paint, and on the map for places, travellers and the dragon, rising out of the
+  mist from places you can see.
+
 ## 0.31.0 — 2026-10-15 · A sepia slider for every version
 - **Sepia** in the pixel editor's Version row: draw in full colour, then lean the sprite toward the map's sepia inks,
   from 0% (your colours) to 100% (all sepia). Each colour moves to the ink of the same lightness, so the shading

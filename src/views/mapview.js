@@ -594,8 +594,8 @@
       // the dragon's territory: a light wash, under the ink
       if (this.frame % 20 === 0) this.syncDomain();
       this.drawTerritory(ctx);
-      // at dusk and night, the symbols drawn from here to the dragon report their lights (drawNight shows them)
-      const night = this.night || 0, MA = HB.mapAssets; if (MA) MA.lights = night > 0.01 ? (this.lights = []) : null;
+      // the symbols drawn from here to the dragon report their lights and smoke (drawSmoke, and drawNight at dusk and night)
+      const night = this.night || 0, MA = HB.mapAssets; this.lights = []; if (MA) MA.lights = this.lights;
       // landmarks (a region's legendary peak), then locations
       this.drawLandmarks(ctx, tl, br);
       this.drawLocations(ctx, tl, br);
@@ -610,6 +610,7 @@
       // fog
       this.drawFog(ctx, tl, br);
       this.drawHazyPlaces(ctx, tl, br);
+      this.drawSmoke(ctx); // over the mist, so a plume rises out of it (only from places you can see)
       if (night > 0.01) this.drawNight(ctx, night);
       this.drawThreats(ctx, tl, br);
       this.drawStoryMarks(ctx, tl, br);
@@ -669,9 +670,9 @@
         const tierScale = L.type === 'farm' ? 0.75 : L.type === 'city' ? 1.15 : L.type === 'hold' || L.type === 'rivalLair' ? 1.1 : 1;
         const minor = L.type === 'farm' || L.type === 'camp' || L.type === 'mine' || L.type === 'shrine' || L.type === 'monastery' || L.type === 'ruin' || L.type === 'tower';
         if ((cam.zoom < 0.55 && minor) || (cam.zoom < 0.38 && L.type === 'village')) { ctx.fillStyle = HB.palette.ink; ctx.beginPath(); ctx.arc(p.x, p.y - 2, L.type === 'village' ? 2 : 1.3, 0, Math.PI * 2); ctx.fill(); ctx.restore(); continue; }
-        const MA = HB.mapAssets, n0 = MA && MA.lights ? MA.lights.length : -1;
+        const MA = HB.mapAssets, n0 = MA && MA.lights && this.night > 0.01 ? MA.lights.length : -1;
         HB.mapart.settlement(ctx, L, p.x, p.y, s * tierScale, rng, { flagColor: f ? f.color : undefined });
-        if (n0 >= 0 && MA.lights.length === n0) this.placeLights(ctx, L, p, s * tierScale); // art without drawn lights
+        if (n0 >= 0 && !MA.lights.slice(n0).some(l => !this.isSmoke(l))) this.placeLights(ctx, L, p, s * tierScale); // art without drawn lights (smoke alone too)
         ctx.restore();
       }
     }
@@ -724,6 +725,7 @@
       HB.mapart.dragonMarker(ctx, p.x, y, 7 * scale * (1 + d.tier * .6), { flying, pose, frame, scale, spec, key: 'player-dragon', flipX: (flying ? fdir : facing) < 0, inkTint: pal.base, dir });
     }
     // ---------- time of day: Settings → Time of day on the map (or ?time=dusk|night); eased so a change fades
+    isSmoke(l) { const LT = HB.pixelArt && HB.pixelArt.LIGHTS; return !l.img && !!(LT && LT[l.kind] && LT[l.kind].smoke); }
     easeNight(dt) { const want = { dusk: 0.55, night: 1 }[HB.mapTimeOverride || HB.settings.mapLight] || 0, n = this.night || 0; this.night = Math.abs(want - n) < 0.005 ? want : n + (want - n) * Math.min(1, dt * 3); }
     /** a place drawn without lights of its own (procedural or pack art): a few lights by kind, so night has life.
      *  [mark, x, y] in the place's size (s) from its foot; marks as in HB.pixelArt.LIGHTS */
@@ -735,6 +737,16 @@
       const T = ctx.getTransform(), k = Math.hypot(T.a, T.b);
       for (const [mark, ox, oy] of D) { const x = p.x + ox * s, y = p.y + oy * s; MA.lights.push({ x: T.a * x + T.c * y + T.e, y: T.b * x + T.d * y + T.f, r: LT[mark].r * s * 0.11 * k, kind: mark, glow: 1, alpha: ctx.globalAlpha, seed: L.id * 13.7 + ox * 5, core: Math.max(1, s * 0.09 * k) }); }
     }
+    /** smoke rising from the smoke marks of the symbols drawn this frame (day and night; still with Reduce motion) */
+    drawSmoke(ctx) {
+      const PA = HB.pixelArt, LT = (PA && PA.LIGHTS) || [], lights = this.lights || [], t = HB.settings.reduceMotion ? 1.2 : this.t;
+      let any = false; for (const l of lights) if (!l.img && LT[l.kind] && LT[l.kind].smoke) { any = true; break; } if (!any) return;
+      // a plume stays readable on a small symbol: puffs at least about 2.4 screen px per zoom step across
+      const minR = 2.4 * (ctx.canvas.width / HB.W) * Math.max(0.6, this.cam.zoom);
+      ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+      for (const l of lights) if (!l.img && LT[l.kind] && LT[l.kind].smoke) PA.drawSmoke(ctx, l.x, l.y, Math.max(minR, l.r), l.glow, l.alpha * (1 - 0.35 * (this.night || 0)), l.seed || 0, t);
+      ctx.restore();
+    }
     /** dusk and night: the map dimmed toward a deep blue, then each light's pool added and its glowing pixels drawn
      *  bright (fires flicker, magic pulses). Lights come from the symbols' light layers (drawn in the editor) */
     drawNight(ctx, night) {
@@ -745,7 +757,7 @@
       ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgb(${m(dk[0])},${m(dk[1])},${m(dk[2])})`; ctx.fillRect(0, 0, W, H);
       ctx.globalCompositeOperation = 'lighter';
       for (const l of lights) {
-        const K = LT[l.kind]; if (l.img || !K) continue;
+        const K = LT[l.kind]; if (l.img || !K || K.smoke) continue;
         const f = wave(K, l.seed), a = Math.min(1.5, l.glow) * night * l.alpha * f, R = Math.max(5, l.r * 2.4 * (0.94 + 0.06 * f)), c = PA.hex(K.color);
         const g = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, R);
         g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.5 * a})`); g.addColorStop(0.3, `rgba(${c[0]},${c[1]},${c[2]},${0.2 * a})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
@@ -754,7 +766,7 @@
       ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
       for (const l of lights) {
         if (l.img) { ctx.setTransform(l.m[0], l.m[1], l.m[2], l.m[3], l.m[4], l.m[5]); ctx.globalAlpha = l.alpha * Math.min(1, 0.35 + night); ctx.drawImage(l.img, l.dx, l.dy, l.dw, l.dh); ctx.setTransform(1, 0, 0, 1, 0, 0); continue; }
-        if (!l.core || !LT[l.kind]) continue; // a lit window or flame for a place without drawn lights
+        if (!l.core || !LT[l.kind] || LT[l.kind].smoke) continue; // a lit window or flame for a place without drawn lights
         const K = LT[l.kind], f = wave(K, l.seed); ctx.globalAlpha = l.alpha * Math.min(1, night * 1.4) * Math.min(1, f); ctx.fillStyle = K.color;
         const q = l.core * (l.kind === 1 ? 1.3 * f : 1); ctx.fillRect(Math.round(l.x - q / 2), Math.round(l.y - q / 2), Math.max(1, Math.round(q)), Math.max(1, Math.round(q * (l.kind === 1 ? 1.4 : 1))));
       }

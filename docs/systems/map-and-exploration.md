@@ -74,7 +74,8 @@ World generation, fog and knowledge, rumours, storm walls, and the parchment map
   dries away (`HB.mapReveal` in `src/art/mapfx.js`; `onReveal` → `revealWash.add`, the fog skips those cells and
   clears their clouds early). Preview: `?scene=washpreview`. Reduced motion: a 0.3 s fade.
 - Time of day (0.27, a preview): Settings → Time of day on the map (Day, Dusk, Night; `?time=dusk|night` for one
-  visit). At dusk and night the symbols drawn each frame report their lights (`MA.lights`); after the fog,
+  visit). The symbols drawn each frame report their lights and smoke (`MA.lights`); after the fog `drawSmoke` (0.32,
+  day and night) puts up the smoke plumes (a minimum size per zoom so they read on small places); then at dusk and night,
   `drawNight` multiplies the map toward a deep blue, adds each light's pool (fires flicker, magic pulses; still with
   reduced motion) and draws the glowing pixels. Places without drawn lights get a few by kind (`placeLights`: a camp's
   fire, a town's windows). Labels keep their paper halo, so they stay readable. The game's own day and night is not

@@ -228,7 +228,7 @@
       if (v.cutImg && ctx.washCut && ctx.getTransform) { const cc = ctx.washCut; cc.setTransform(ctx.getTransform()); cc.imageSmoothingEnabled = false; cc.drawImage(v.cutImg, 0, 0, v.sw, v.sh, dx, dy, dw, dh); }
       if (v.tintImg && o.tint) { let t = v.tintCache.get(o.tint); if (!t) { t = MA.colourise(v.tintImg, v.rect, o.tint, 0.9); v.tintCache.set(o.tint, t); } ctx.drawImage(t, dx, dy, dw, dh); }
       if (HB.mapInk && v.decor) HB.mapInk.decorate(ctx, v.decor, x, y, param, o);
-      // lights: while the map collects them (MA.lights, dusk and night), each spot and the glowing pixels in device pixels
+      // lights and smoke: while the map collects them (MA.lights), each spot and the glowing pixels in device pixels
       if (v.lights && MA.lights && ctx.getTransform) {
         const T = ctx.getTransform(), k = Math.hypot(T.a, T.b);
         for (const l of v.lights) { const lx = dx + l.x * sx, ly = dy + l.y * sy; MA.lights.push({ x: T.a * lx + T.c * ly + T.e, y: T.b * lx + T.d * ly + T.f, r: l.r * Math.abs(sx) * k, kind: l.kind, glow: l.glow, alpha: ctx.globalAlpha, seed: lx * 7.1 + ly * 3.3 + HB.hash32(String(o.key)) % 997 }); }

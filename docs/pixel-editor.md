@@ -102,7 +102,9 @@ commit by hand.
 - **Light layer** (**+ Light**, always on top): mark where light comes from with **Fire** (orange, flickers),
   **Window** (warm, steady), **Lantern** (small), **Magic** (blue, pulses) or **Embers** (dim red). By day nothing
   changes; at dusk and night (Settings → Time of day on the map) the game glows those pixels and casts a pool of light
-  around each patch. **Glow** and **Reach** set how bright and how far; tick **night** above the canvas to preview it.
+  around each patch. **Intensity** (0.32, 25%–300%, picked before you paint) is each patch's own brightness; **Layer
+  glow** and **Reach** set the whole layer's brightness and size; tick **night** above the canvas to preview it.
+  **Smoke** (0.32) rises from its patches day and night (intensity = how thick), on the canvas and in the preview.
 - **Picture → pixels:** **Convert to pixels…** turns your picture into pixel art on this sprite's grid, exactly where
   the picture sits behind the pixels (size and move it first with the Image behind controls; set the canvas size with
   **Resize**). With no picture yet it asks for one. Each pixel looks at the part of the picture under it:
