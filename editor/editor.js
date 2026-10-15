@@ -81,6 +81,7 @@
     const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), shade: PA.shadeOf(l), light: PA.lightOf(l), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
     const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.mirror, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
+    doc.sepia = cleanSepia(def.sepia); // how far each version leans to sepia (percent)
     if (def.dirs === 2 || def.dirs === 4 || def.dirs === 8) doc.dirs = def.dirs; // how many directions the sprite uses (the plain drawing's setting)
     useLayer(doc, layers.length - 1); return doc;
   }
@@ -90,6 +91,8 @@
     d.layers.forEach((l, i) => { if (l.hidden || l.shade || l.light) return; const f = i === d.layer && active ? active : l.frames[k]; if (!f) return; for (let j = 0; j < out.length; j++) if (f[j] !== CLEAR) out[j] = f[j]; });
     return out;
   }
+  /** { normal?, good?, evil? } percents above 0 (0–100), or null */
+  const cleanSepia = (o) => { if (!o || typeof o !== 'object') return null; const r = {}; for (const k of ['normal', 'good', 'evil']) { const v = Math.round(+o[k] || 0); if (v > 0) r[k] = Math.min(100, v); } return Object.keys(r).length ? r : null; };
   function toDef(doc) {
     const def = { id: doc.id, kind: doc.kind, w: doc.w, h: doc.h, anchor: doc.anchor.slice(), fps: doc.fps };
     if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.mirror = true; } // may be shown mirrored (shading would flip with it)
@@ -100,6 +103,7 @@
     const keep = [...used].sort((a, b) => a - b), remap = new Map(keep.map((v, i) => [v, i]));
     def.palette = keep.map(i => doc.palette[i]);
     if (doc.tones && Object.keys(doc.tones).length) def.tones = JSON.parse(JSON.stringify(doc.tones)); // good and evil tones, when adjusted
+    const sp = cleanSepia(doc.sepia); if (sp) def.sepia = sp; // the lean to sepia per version, when set
     const enc = (frames, shade) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : shade ? AL[v] : AL[remap.get(v)]; } return s; }) }));
     // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
     const L = doc.layers;
@@ -182,6 +186,8 @@
   // Editing primitives (with undo)
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
+  /** a drawing as the game shows it in a tone ('' normal): good or evil shift and the lean to sepia (d itself when neither) */
+  const look = (d, tone) => (tone || PA.sepiaOf(d, tone) > 0 ? { w: d.w, h: d.h, palette: PA.shownPalette(d, tone) } : d);
   const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, shade: l.shade ? Object.assign({}, l.shade) : null, light: l.light ? Object.assign({}, l.light) : null, frames: l.frames.map(f => f.slice()) }));
   // a shading layer holds marks, not colours: 1 lit, 2 shadow, 3 deep shadow (painted for a light from the left)
   const isShade = (d) => !!(d && d.layers[d.layer] && d.layers[d.layer].shade);
@@ -190,8 +196,8 @@
   const hasLightLayer = (d) => !!(d && d.layers.some(l => l.light && !l.hidden));
   const ink = () => (isLight(D()) ? S.lightVal : isShade(D()) ? S.shadeVal : S.color);
   const lyOp = (l) => (l.opacity === undefined ? 100 : l.opacity), lyWash = (l) => (l.wash === undefined ? 100 : l.wash);
-  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null }; }
-  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
+  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null, sepia: d.sepia ? Object.assign({}, d.sepia) : null }; }
+  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d.sepia = s.sepia ? Object.assign({}, s.sepia) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
   const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length * d.layers.length))));
   /** change every layer's frames (frame structure, size, shifting), keeping doc.frames on the active layer */
@@ -359,7 +365,7 @@
     // the visible layers stacked as the game stacks them (real transparency: colours' own and each layer's opacity); the
     // active layer drawn faintly if it is hidden, so drawing on it is never invisible
     // (Show Good or Evil: in the colours the game gives it in a kind or a cruel setting; you still draw the normal colours)
-    const shown = S.tone ? { w: d.w, h: d.h, palette: PA.tonedPalette(d, S.tone) } : d, comp = composeFrame(d, S.frame, shown.palette);
+    const shown = look(d, S.tone), comp = composeFrame(d, S.frame, shown.palette);
     ctx.drawImage(comp.canvas, X, Y, W, H);
     if (d.layers[d.layer].hidden && !isMarks(d)) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
     if (isShade(d) && S.marks) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: MARK }, F()), X, Y, W, H);
@@ -818,10 +824,22 @@
     const d = D(), it = S.item, cur = (it && it.tone) || S.tone; document.querySelectorAll('#tone-row [data-tone]').forEach(b => b.classList.toggle('on', b.dataset.tone === cur));
     $('tn-draw').hidden = !S.tone || !d; $('tn-draw').textContent = S.tone === 'good' ? '✎ Draw the good version' : '✎ Draw the evil version';
     $('tone-own').hidden = !(it && it.tone);
+    renderSepia();
     $('tone-ctl').hidden = !S.tone || !d; if (!S.tone || !d) return;
     const t = PA.tone(d, S.tone); for (const k of TN.keys) $('tn-' + k).value = String(t[k]); $('tn-tint').value = t.tint;
     $('tn-auto').disabled = !(d.tones && d.tones[S.tone]);
   }
+  /** the version the Version row shows: 'normal', 'good' or 'evil' */
+  const curTone = () => (S.item && S.item.tone) || S.tone || 'normal';
+  function renderSepia() { const d = D(), v = d && d.sepia ? Math.round(+d.sepia[curTone()] || 0) : 0; $('in-sepia').value = String(v); $('sepia-v').textContent = v + '%'; $('sepia-ctl').hidden = !d; }
+  function sepiaEdit(value, done) {
+    const d = D(); if (!d) return;
+    if (!TN.sepia) { pushUndo(); TN.sepia = true; }
+    d.sepia = cleanSepia(Object.assign({}, d.sepia, { [curTone()]: value })); $('sepia-v').textContent = Math.round(value) + '%';
+    if (done) { TN.sepia = false; changed(); } else changed(false, true);
+  }
+  $('in-sepia').addEventListener('input', (e) => sepiaEdit(+e.target.value, false));
+  $('in-sepia').addEventListener('change', (e) => sepiaEdit(+e.target.value, true));
   function toneEdit(key, value, done) {
     const d = D(); if (!d || !S.tone) return;
     if (!TN.live) { pushUndo(); TN.live = true; }
@@ -977,7 +995,7 @@
     const label = d.kind === 'map' ? 'variant' : 'frame', fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
     d.frames.forEach((_, k) => {
       const el = document.createElement('div'); el.className = 'fr' + (k === S.frame ? ' cur' : '');
-      const f = flat(d, k); let c = frameCanvas(d, f);
+      const f = flat(d, k); let c = frameCanvas(look(d, S.tone), f);
       if (S.ref && S.ghosts.length && f.every(v => v === CLEAR)) { const g = document.createElement('canvas'); g.width = Math.max(1, Math.round(d.w * sc)); g.height = Math.max(1, Math.round(d.h * sc)); const x = g.getContext('2d'); x.globalAlpha = 0.3; x.drawImage(S.ghosts[Math.min(k, S.ghosts.length - 1)], 0, 0, g.width, g.height); c = g; }
       c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; el.appendChild(c);
       // (dragons and sprites play every frame drawn; frames that are levels stop at the game's count)
@@ -996,7 +1014,7 @@
       let d = own || docs.get(vid); if ((!d || isEmpty(d)) && gone) { try { d = fromDef(parseCall(saved.get(vid))); } catch (e) { /* keep the blank */ } } if (!d) continue;
       const fit = Math.min(4, 64 / Math.max(d.h, 1), 120 / Math.max(d.w, 1)), sc = fit >= 1 ? Math.floor(fit) : fit;
       const el = document.createElement('div'); el.className = 'fr' + (n === curN ? ' cur' : '');
-      const c = frameCanvas(own || !tone ? d : { w: d.w, h: d.h, palette: PA.tonedPalette(d, tone) }, flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; if (gone) c.style.opacity = 0.35; el.appendChild(c);
+      const c = frameCanvas(look(d, own ? '' : tone), flat(d, 0)); c.style.width = d.w * sc + 'px'; c.style.height = d.h * sc + 'px'; if (gone) c.style.opacity = 0.35; el.appendChild(c);
       const cap = document.createElement('div'); cap.textContent = `variant ${n}${gone ? ' · deleted (Revert brings it back)' : tone ? (own ? ` · ${tone} (drawn)` : ` · ${tone} (tint)`) : ''}`; el.appendChild(cap);
       el.onclick = () => openVersion(base, n, tone); if (!gone) dropTarget(el, () => ({ variant: n })); box.appendChild(el);
     }
@@ -1205,7 +1223,7 @@
     const kind = $('in-bg').value, W = pv.width, H = pv.height; bg(kind);
     // big pictures (the lair's) shrink to fit the preview; backdrops (anchor at the corner) are centred
     const sc = Math.min(+$('in-pscale').value, W * 0.96 / d.w, H * 0.96 / d.h), backdrop = d.anchor[0] === 0 && d.anchor[1] === 0;
-    const n = d.frames.length, k = S.playing ? Math.floor(S.playT * (d.fps || 2)) % n : S.frame, c = frameCanvas(d, flat(d, k, k === S.frame && S.float ? withFloat() : null));
+    const n = d.frames.length, k = S.playing ? Math.floor(S.playT * (d.fps || 2)) % n : S.frame, c = frameCanvas(look(d, S.tone), flat(d, k, k === S.frame && S.float ? withFloat() : null));
     const gy = kind === 'raid' ? Math.round(H * 0.72) : Math.round(H * 0.6);
     const ax = backdrop ? (W - d.w * sc) / 2 : W / 2 - d.anchor[0] * sc, ay = backdrop ? (H - d.h * sc) / 2 : (d.kind === 'dragon' ? Math.round(H * 0.42) : Math.min(gy, H - 4 - (d.h - d.anchor[1]) * sc)) - d.anchor[1] * sc;
     pg.drawImage(c, Math.round(ax), Math.round(ay), Math.round(d.w * sc), Math.round(d.h * sc));
@@ -1226,7 +1244,7 @@
       spots.push({ d, x: x + R.range(-0.3, 0.3) * step, y: y + R.range(-0.25, 0.25) * step, k: R.int(64), fl: d.flip && R.chance(0.5) });
     }
     spots.sort((a, b) => a.y - b.y);
-    for (const p of spots) { const d = p.d, c = frameCanvas(d, flat(d, p.k % d.frames.length)), s = d.scale * z; pg.save(); pg.translate(Math.round(p.x), Math.round(p.y)); if (p.fl) pg.scale(-1, 1); pg.drawImage(c, -d.anchor[0] * s, -d.anchor[1] * s, d.w * s, d.h * s); pg.restore(); }
+    for (const p of spots) { const d = p.d, c = frameCanvas(look(d, ''), flat(d, p.k % d.frames.length)), s = d.scale * z; pg.save(); pg.translate(Math.round(p.x), Math.round(p.y)); if (p.fl) pg.scale(-1, 1); pg.drawImage(c, -d.anchor[0] * s, -d.anchor[1] * s, d.w * s, d.h * s); pg.restore(); }
     pg.fillStyle = 'rgba(43,26,14,0.6)'; pg.font = '11px system-ui'; pg.fillText(`map zoom ${z} · ${maps.length} symbol${maps.length === 1 ? '' : 's'} drawn`, 6, 14);
   }
 

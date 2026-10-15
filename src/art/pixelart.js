@@ -204,7 +204,7 @@
       if (swap && !PA.hasShade(def)) swap = false;
       const ck = (tone || '') + (swap ? ':swap' : ''), cache = ck ? (def._toned = def._toned || {}) : null;
       if (ck ? cache[ck] : def._canvases) return ck ? cache[ck] : def._canvases;
-      const pal = (tone ? PA.tonedPalette(def, tone) : def.palette || []).map(hex), w = def.w | 0, h = def.h | 0;
+      const pal = PA.shownPalette(def, tone).map(hex), w = def.w | 0, h = def.h | 0;
       const vis = Array.isArray(def.layers) ? def.layers.filter(l => l && !l.hidden && !l.light && Array.isArray(l.frames)) : null;
       if (vis && vis.length) {
         const cuts = [];
@@ -252,6 +252,24 @@
     /** the wash cut-outs of a layered drawing's frames (canvases whose alpha is how much territory wash to take off), or null */
     cuts(def) { PA.canvases(def); return def._cuts || null; },
     tonedPalette(def, which) { const t = PA.tone(def, which); return (def.palette || []).map(c => PA.shiftHex(c, t)); },
+    /** the map's sepia inks, dark to light (by lightness): a colourful drawing can lean toward them (def.sepia) */
+    SEPIA: [[0, '#1c1009'], [0.22, '#2b1a0e'], [0.5, '#7a5534'], [0.76, '#b89e68'], [1, '#f1e4c2']],
+    /** how far a drawing leans to sepia (0–1) in a tone ('' normal, 'good', 'evil'): def.sepia { normal, good, evil } in
+     *  percent; a drawn good or evil version uses its own tone's value */
+    sepiaOf(def, tone) {
+      const s = def && def.sepia; if (!s || typeof s !== 'object') return 0;
+      const v = +s[tone || PA.parseId(def.id || '').tone || 'normal']; return v > 0 ? Math.min(1, v / 100) : 0;
+    },
+    /** a colour leaned toward the sepia ink of the same lightness by a (0–1), keeping its opacity */
+    sepiaHex(h, a) {
+      const c = hex(h); if (!c || !(a > 0)) return h;
+      const L = (0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255, S = PA.SEPIA; let i = 1; while (i < S.length - 1 && L > S[i][0]) i++;
+      const p = hex(S[i - 1][1]), q = hex(S[i][1]), t = Math.min(1, Math.max(0, (L - S[i - 1][0]) / (S[i][0] - S[i - 1][0])));
+      const out = [0, 1, 2].map(j => Math.round(c[j] * (1 - a) + (p[j] + (q[j] - p[j]) * t) * a));
+      return '#' + out.map(v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
+    },
+    /** the palette as the game shows a drawing in a tone: the good or evil shift, then the lean to sepia */
+    shownPalette(def, tone) { const pal = tone ? PA.tonedPalette(def, tone) : (def.palette || []), a = PA.sepiaOf(def, tone); return a > 0 ? pal.map(c => PA.sepiaHex(c, a)) : pal; },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
       const ov = HB.sprites.overrides, meta = HB.sprites.overrideMeta, defs = [...PA.entries.values()];

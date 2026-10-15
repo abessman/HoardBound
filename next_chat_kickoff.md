@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-15 · **Version 0.30.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-15 · **Version 0.31.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -23,8 +23,7 @@ The owner plays at hoardbound.netlify.app on an iPad.
 ## Editor working decisions (0.18, not confirmed by the owner)
 - Layers: frames belong to every layer; Copy/Paste frame carry all layers; the eyedropper picks what is visible; a
   hidden layer is left out of the game (eye = in game). A single plain "Layer 1" is saved as `frames` as before.
-- Converter defaults: 10 colours, dark lines 35, line pickup 22%, paper removal 30, colour boost 120%; Apply makes
-  "lines" above "colours" layers (colours filled under the lines up to 4 px); pictures sampled up to 10×10 per pixel.
+- Converter defaults: 10 colours, dark lines 35, pickup 22%, paper 30, boost 120%; Apply makes lines over colours.
 
 ## The lair (0.17, decisions not yet confirmed by the owner; details in docs/systems/lair-and-economy.md)
 - Pictures 345×194 at 2×; lair dragon about twice raid size; rooms view with fixed slots (`HB.lairArt.ROOMS`), unbuilt
@@ -65,6 +64,7 @@ The owner plays at hoardbound.netlify.app on an iPad.
   name order, empty drawings take the picture's size, smaller ones bottom middle, bigger ones shrunk, k× read at 1×.
 - 0.30 (owner: each GitHub push redeploys Netlify at a cost): editor Save locally (`hb.pixelart.local`), Settings →
   Your drawings → Local test (`artSource`, `PA.useSource`, live on `storage` events); 0.30.1 one tab each (`HB.openTab`).
+  0.31: sepia slider per version (`def.sepia`, `PA.SEPIA` inks by lightness; Claude's ramp, not confirmed).
 
 ## Next tasks (in order)
 1. The owner tries Save locally + Local test, dropping pictures onto frames, Facing, and a light layer at night.

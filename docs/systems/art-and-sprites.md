@@ -28,8 +28,7 @@ Generated pixel art, the dragon's evolving look, map glyphs, and how real sprite
   (the chunk margin, checked at both levels of detail); larger is refused.
 - Images decode once; `HB.mapAssets.revision` bumps when one is ready or the pack changes, and the map redraws
   chunks built with older art, a few per frame. Problems are logged once with `[map art]` and fall back.
-- Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps, summary). Manifest fields:
-  `assets/map/README.md`.
+- Handoff for artists: `docs/map-art/README.md` (catalog, sheets, spec, steps); manifest: `assets/map/README.md`.
 
 ### Illuminated parchment (0.15)
 - 39 transparent illustrations cover every terrain/place/traveler family and all eight home stages (96 manifest ids).
@@ -94,7 +93,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   skipped), so variants keep their own sizes; `logicalSize = cut size × scale / drawnK`, where `HB.mapDrawnK(id)` is
   the k the world usually draws that state at (small mountains 0.55, large 1.25: MAP_SPEC `drawnK`).
 - 0.21: palette colours may carry opacity (`#rrggbbaa`). Good and evil tones: `HB.pixelArt.TONES` (automatic hue, sat,
-  light, tint, mix), per drawing `def.tones`; `PA.canvases(def, tone)` recolours through `PA.shiftHex`. `apply()` adds
+  light, tint, mix), per drawing `def.tones`; `PA.canvases(def, tone)` recolours through `PA.shownPalette` (`shiftHex`,
+  then 0.31's lean to sepia: `def.sepia` { normal, good, evil } %, each colour toward `PA.SEPIA` by lightness). `apply()` adds
   `<id>.<k>.good/.evil` overrides for dragon and anim kinds; `HB.art.frame(id, k, opts, key, tone)` and the dragon's
   `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The wrap sets `q.tone`
   from `HB.mapart.tone`, which the chunk renderer sets per glyph from the cell's domain mark.

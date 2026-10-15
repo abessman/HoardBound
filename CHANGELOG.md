@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.31.0 — 2026-10-15 · A sepia slider for every version
+- **Sepia** in the pixel editor's Version row: draw in full colour, then lean the sprite toward the map's sepia inks,
+  from 0% (your colours) to 100% (all sepia). Each colour moves to the ink of the same lightness, so the shading
+  stays. **Normal, Good and Evil each have their own amount**: pick the version, then set its slider (the evil one
+  could go fully sepia while the normal one keeps a little colour). A drawn good or evil version has its own too.
+- The canvas, the frame strip and the preview show the result; the palette keeps your real colours, so you keep
+  drawing in colour. The game uses it everywhere the drawing appears. It is saved with the drawing (`"sepia"`).
+
 ## 0.30.1 — 2026-10-15 · One tab each for the game and the editor
 - **No more pile of windows.** The game's Pixel editor button switches to the editor's tab when it is already open
   (without reloading it, so your undo stays), and the editor's **Game ↗** switches back to the game's tab as it is.

@@ -33,6 +33,7 @@
       <div class="row small wrap" id="tone-row">
         <span title="Every sprite has a normal, a good and an evil version: the game uses good and evil in a kind or a cruel setting (the dragon by its deeds, the lair by its dragon, map symbols in a protector's or a tyrant's land). Until you draw one, the game tints the normal drawing.">Version</span>
         <button data-tone="" class="on" title="The normal drawing">Normal</button><button data-tone="good" title="The good version: your own drawing, or the automatic tint until you draw one">Good</button><button data-tone="evil" title="The evil version: your own drawing, or the automatic tint until you draw one">Evil</button>
+        <label id="sepia-ctl" title="Lean every colour toward the map's sepia inks (each colour to the ink of its lightness), for the version selected: Normal, Good and Evil each have their own. 0 keeps your colours; the palette keeps them too.">sepia <input type="range" id="in-sepia" min="0" max="100" step="5" value="0"> <span id="sepia-v">0%</span></label>
         <button id="tn-draw" class="primary" hidden title="Make this version its own drawing, starting from the tinted picture; change it as much as you like (another shape, lava, a curl…)">✎ Draw it</button>
         <span id="tone-own" class="muted" hidden>Your own drawing. <button id="tn-undraw" title="Remove this drawing; the game tints the normal one again">Use the automatic tint</button></span>
         <span id="tone-ctl" class="row wrap" hidden>
