@@ -321,11 +321,24 @@
       const out = [0, 1, 2].map(j => Math.round(c[j] * (1 - a) + (p[j] + (q[j] - p[j]) * t) * a));
       return '#' + out.map(v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
     },
+    /** a colour lighter (b up to 1) or darker (down to -1) as a photo's brightness does it: its perceived lightness
+     *  (OKLab) curved up or down, the darks and lights keeping their order, its hue kept and most of its colour */
+    brightHex(h, b) {
+      const c = hex(h); if (!c || !b) return h;
+      const lin = (u) => { u /= 255; return u <= 0.04045 ? u / 12.92 : Math.pow((u + 0.055) / 1.055, 2.4); }, gam = (u) => 255 * (u <= 0.0031308 ? 12.92 * u : 1.055 * Math.pow(Math.max(0, u), 1 / 2.4) - 0.055);
+      const r = lin(c[0]), g = lin(c[1]), bl = lin(c[2]);
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * bl), m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * bl), s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * bl);
+      const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+      const L2 = Math.pow(Math.max(0, L), b > 0 ? 1 / (1 + 1.6 * b) : 1 + 1.2 * -b), k = L > 0.001 ? Math.min(2.2, Math.pow(L2 / L, 0.85)) : 1; // colour follows the lightness, mostly
+      const l2 = Math.pow(L2 + 0.3963377774 * A * k + 0.2158037573 * B * k, 3), m2 = Math.pow(L2 - 0.1055613458 * A * k - 0.0638541728 * B * k, 3), s2 = Math.pow(L2 - 0.0894841775 * A * k - 1.291485548 * B * k, 3);
+      const out = [4.0767416621 * l2 - 3.3077115913 * m2 + 0.2309699292 * s2, -1.2684380046 * l2 + 2.6097574011 * m2 - 0.3413193965 * s2, -0.0041960863 * l2 - 0.7034186147 * m2 + 1.707614701 * s2].map(gam);
+      return '#' + out.map(v => Math.min(255, Math.max(0, Math.round(v))).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
+    },
     /** the palette as the game shows a drawing in a tone: the good or evil shift, the lean to sepia, then brightness */
     shownPalette(def, tone) {
       let pal = tone ? PA.tonedPalette(def, tone) : (def.palette || []); const a = PA.sepiaOf(def, tone), b = PA.brightOf(def, tone);
       if (a > 0) pal = pal.map(c => PA.sepiaHex(c, a));
-      if (b) pal = pal.map(c => PA.shiftHex(c, { light: b * 100 })); // lighter toward white, darker toward black, hue kept
+      if (b) pal = pal.map(c => PA.brightHex(c, b)); // lighter or darker, the same colours
       return pal;
     },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */

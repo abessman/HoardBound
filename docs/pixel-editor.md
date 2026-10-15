@@ -59,7 +59,7 @@ commit by hand.
 - **Sepia** (0.31, in the Version row): leans every colour toward the map's sepia inks (each to the ink of its
   lightness), 0% to 100%, for the version selected: Normal, Good and Evil each keep their own amount. The canvas,
   frames and preview show it; the palette keeps your real colours, so you can draw in colour and push it after.
-  **Brightness** (0.33, −60% to +60%, per version too) lightens or darkens after the sepia lean.
+  **Brightness** (0.33, −60% to +60%, per version too) lightens or darkens after the sepia lean, keeping the colours (0.34.2).
 - **Facing: 2, 4 or 8 directions** (dragons, lair pictures, raid sprites and the map's travellers and dragon marker).
   The plain drawing faces east (right). Pick how many directions the sprite uses, then tap a direction in the compass
   grid to draw it: each is its own drawing with its own frames (its own animation), size and anchor. A new direction

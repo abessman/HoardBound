@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.34.2 — 2026-10-15 · Brightness that just brightens
+- **Brightness works like a photo's now.** It used to lift colours in a way that also made them more colourful, so dark
+  sepia browns turned orange and the shading flattened. Now it raises (or lowers) how light each colour looks while
+  keeping its hue and most of its colour, and darks stay darker than lights, so a sepia drawing just gets lighter.
+  Drawings already saved with a brightness show the new way.
+
 ## 0.34.1 — 2026-10-15 · Smoke that looks like smoke
 - **Smoke is a rising column now**, not a few circles: many small, lumpy, soft puffs in a stream, thin and dark where
   it leaves the fire, swelling, paling and thinning as it climbs, curling and leaning with the wind. Intensity still
