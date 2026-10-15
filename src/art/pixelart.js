@@ -34,6 +34,14 @@
   const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const DRAFTS = 'hb.pixelart.drafts', LOCAL = 'hb.pixelart.local';
 
+  // the editor saved locally (or, in a preview, a draft changed) in another tab: show it here straight away
+  let relight = 0;
+  window.addEventListener('storage', (e) => {
+    const q = new URLSearchParams(location.search);
+    if (!PA.loaded || !((e.key === LOCAL && (PA.source === 'local' || q.has('localart'))) || (e.key === DRAFTS && q.has('drafts')))) return;
+    clearTimeout(relight); relight = setTimeout(() => PA.useSource(PA.source), 250);
+  });
+
   const PA = HB.pixelArt = {
     ALPHABET, DRAFTS, LOCAL, files: [], entries: new Map(), loaded: null, base: 'assets/pixelart/',
     source: 'github', // where drawings come from: 'github' (the files) or 'local' (this browser's local saves on top)

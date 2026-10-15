@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-15 · **Version 0.30.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-15 · **Version 0.30.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -63,8 +63,8 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - 0.28.1 (owner's ask): drawn animations play all frames at their fps (`HB.dragonArt.frameAt`; raids `HB.art.at`).
 - 0.29 (owner's ask): drop pictures from Explorer onto frame boxes (`loadPics` in editor.js). Choices (not confirmed):
   name order, empty drawings take the picture's size, smaller ones bottom middle, bigger ones shrunk, k× read at 1×.
-- 0.30 (owner's ask; each GitHub save redeploys Netlify, which costs the owner): editor **Save locally**
-  (`hb.pixelart.local`), game Settings → Your drawings → Local test (`artSource`, live switch `PA.useSource`).
+- 0.30 (owner: each GitHub push redeploys Netlify at a cost): editor Save locally (`hb.pixelart.local`), Settings →
+  Your drawings → Local test (`artSource`, `PA.useSource`, live on `storage` events); 0.30.1 one tab each (`HB.openTab`).
 
 ## Next tasks (in order)
 1. The owner tries Save locally + Local test, dropping pictures onto frames, Facing, and a light layer at night.

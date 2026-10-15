@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.30.1 — 2026-10-15 · One tab each for the game and the editor
+- **No more pile of windows.** The game's Pixel editor button switches to the editor's tab when it is already open
+  (without reloading it, so your undo stays), and the editor's **Game ↗** switches back to the game's tab as it is.
+  The editor's Dragons / Lair / Map in game previews share one preview tab, loaded again each time.
+- **The game follows Save locally.** With Settings → Your drawings → Local test, the game tab shows a drawing the
+  moment you save it locally in the editor, no reload; a preview tab follows your drafts the same way.
+- The editor's fps box now reads **speed … fps**, with a tip that it is saved with the drawing: the game plays it at
+  that speed once you save.
+
 ## 0.30.0 — 2026-10-15 · Save locally, test, then save to GitHub
 - **Save locally** in the pixel editor (next to Save to GitHub) keeps every changed drawing in this browser without
   sending anything to GitHub, so the site does not redeploy. Draw, save locally, try it in the game, adjust, and Save

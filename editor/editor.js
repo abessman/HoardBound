@@ -1501,9 +1501,14 @@
   $('btn-play').onclick = () => { S.playing = !S.playing; S.playT = 0; $('btn-play').textContent = S.playing ? '❚❚ Pause' : '▶ Play'; };
   $('in-pscale').onchange = drawPreview; $('in-bg').onchange = drawPreview;
   $('btn-samplemap').onclick = () => { S.sample = !S.sample; $('btn-samplemap').classList.toggle('on', S.sample); };
-  $('btn-game-map').onclick = () => { saveDrafts(); window.open('../index.html?scene=mappreview&mappack=pixel&drafts=1', '_blank'); };
-  $('btn-game-dragon').onclick = () => { saveDrafts(); window.open('../index.html?scene=dragons&drafts=1', '_blank'); };
-  $('btn-game-lair').onclick = () => { saveDrafts(); const id = S.item ? S.item.id : '', tier = (id.match(/^lair\.dragon\.(\d)/) || [])[1]; window.open(`../index.html?scene=lair&drafts=1&preset=${tier === undefined ? 'adult-kind' : ['none', 'young-kind', 'adult-kind', 'adult-kind'][+tier]}${tier === '3' ? '&tier=3' : ''}${/^lair\.(hill|room)/.test(id) ? '&view=rooms' : ''}${/\.sleep$/.test(id) ? '&sleep=1' : ''}`, '_blank'); };
+  // one tab each: the game ('hb-game', brought forward as it is: with Local test it shows your local saves as you make
+  // them) and the previews ('hb-preview', loaded again each time); this tab is 'hb-editor' for the game's button
+  window.name = 'hb-editor';
+  $('btn-game').onclick = (e) => { if (HB.openTab('../index.html', 'hb-game')) e.preventDefault(); };
+  const preview = (url) => { saveDrafts(); if (!HB.openTab(url, 'hb-preview', true)) toast('The browser blocked the preview tab'); };
+  $('btn-game-map').onclick = () => preview('../index.html?scene=mappreview&mappack=pixel&drafts=1');
+  $('btn-game-dragon').onclick = () => preview('../index.html?scene=dragons&drafts=1');
+  $('btn-game-lair').onclick = () => { const id = S.item ? S.item.id : '', tier = (id.match(/^lair\.dragon\.(\d)/) || [])[1]; preview(`../index.html?scene=lair&drafts=1&preset=${tier === undefined ? 'adult-kind' : ['none', 'young-kind', 'adult-kind', 'adult-kind'][+tier]}${tier === '3' ? '&tier=3' : ''}${/^lair\.(hill|room)/.test(id) ? '&view=rooms' : ''}${/\.sleep$/.test(id) ? '&sleep=1' : ''}`); };
   $('btn-save').onclick = saveToGitHub;
   $('btn-settings').onclick = openSettings;
   $('btn-download').onclick = () => { const d = D(); if (!d) return; commitFloat(); download(PA.fileOf(d.id), new Blob([fileText(toDef(d))], { type: 'text/javascript' })); };

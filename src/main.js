@@ -12,6 +12,7 @@
     HB.settings.load();
     HB.parchment.init();
     const params = new URLSearchParams(location.search);
+    if (!params.has('drafts')) window.name = 'hb-game'; // so the pixel editor's Game button finds this tab (HB.openTab)
     HB.debugMode = params.has('debug');
     HB.mapTimeOverride = /^(day|dusk|night)$/.test(params.get('time') || '') ? params.get('time') : null; // ?time=dusk|night: the map's time of day for this visit
     await HB.text.load();

@@ -18,7 +18,7 @@
   <button id="btn-download" title="Download the current sprite's file (to commit by hand)">Download</button>
   <button id="btn-png" title="Download the current sprite's frames as one PNG strip">PNG</button>
   <button id="btn-settings" title="Your GitHub access token and the repository">GitHub…</button>
-  <a class="btn" href="../index.html" target="_blank" rel="noopener">Game ↗</a>
+  <a class="btn" id="btn-game" href="../index.html" target="hb-game" title="Switch to the game's tab (opens it the first time)">Game ↗</a>
 </header>
 <main>
   <aside id="browser">
@@ -232,7 +232,7 @@
     <div class="panel" id="preview-panel">
       <div class="row small">
         <button id="btn-play" class="primary">▶ Play</button>
-        <label>fps <input id="in-fps" type="number" min="0.5" max="30" step="0.5"></label>
+        <label title="Saved with the drawing: the game plays it at this speed (Save locally or Save to GitHub keeps it)">speed <input id="in-fps" type="number" min="0.5" max="30" step="0.5"> fps</label>
         <select id="in-pscale"><option value="1">1×</option><option value="2">2×</option><option value="3">3×</option><option value="4" selected>4×</option></select>
         <select id="in-bg"><option value="raid">raid</option><option value="parchment">parchment</option><option value="dark">dark</option><option value="checker">checker</option></select>
       </div>

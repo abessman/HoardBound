@@ -52,13 +52,12 @@
   }
   HB.SettingsScene = SettingsScene;
 
-  /** open the pixel editor (editor/index.html): in a new tab where the browser allows it, else in this one, after
-   *  saving the campaign in progress (the game's buttons act a frame after the tap, which some browsers treat as a popup) */
+  /** open the pixel editor (editor/index.html) in its own tab, or switch to it when it is open already (no reload, so
+   *  its undo is kept); in this tab if the browser blocks it, after saving the campaign in progress (the game's
+   *  buttons act a frame after the tap, which some browsers treat as a popup) */
   HB.openEditor = function () {
     const url = 'editor/index.html';
-    let tab = null;
-    try { tab = window.open(url, '_blank'); } catch (e) { tab = null; }
-    if (tab) return;
+    if (HB.openTab(url, 'hb-editor')) return;
     const st = HB.flow && HB.flow.map && HB.flow.map.state;
     if (st && HB.save) HB.save.autosave(st);
     location.href = url;
