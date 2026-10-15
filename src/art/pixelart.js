@@ -12,7 +12,8 @@
  * marks ('1' fire, '2' window or candle, '3' lantern, '4' magic, '5' embers, '6' smoke: PA.LIGHTS; a mark is kind +
  * 8 × intensity step, PA.LEVELS): it does not change the picture by day; at night the game glows the marked pixels and
  * casts a pool of light around each patch (map symbols: the map's time of day, Settings); smoke rises from its patches
- * day and night. PA.lightsOf(def, frame) gives the patches and the glowing pixels.
+ * day and night; a layer's light.when (['day', 'dusk', 'night']) says when its marks show instead. PA.lightsOf(def, frame)
+ * gives the patches and the glowing pixels.
  * Kinds: 'sprite' replaces the HB.sprites id (raid people, animals, props; several frames play at the drawing's fps);
  *        'dragon' is dragon.<tier>.<pose>: frame k replaces dragon.<tier>.<pose>.<k> (every breed and alignment); the game
  *        plays all its frames at its fps (HB.dragonArt.frameAt), so the animation is as long as you draw it;
@@ -98,6 +99,13 @@
       { name: 'Magic', color: '#86d3ff', r: 6, pulse: 1 },
       { name: 'Embers', color: '#e0522e', r: 3, flicker: 0.6 },
       { name: 'Smoke', color: '#6a5a4a', r: 4, smoke: 1 }],
+    /** times of day as bits: when a light layer's marks show (light.when: ['day', 'dusk', 'night']) */
+    WHEN: { day: 1, dusk: 2, night: 4 },
+    /** the times a layer's marks of a kind show (bits): the layer's own Day / Dusk / Night ticks, else by kind: lights at
+     *  dusk and night, smoke all the time */
+    whenOf(set, kind) { const w = set && set.when; if (Array.isArray(w)) return w.reduce((m, k) => m | (PA.WHEN[k] || 0), 0); return PA.LIGHTS[kind] && PA.LIGHTS[kind].smoke ? 7 : 6; },
+    /** the time-of-day bit for how dark the map is (0 day … 1 night): day 1, dusk 2, night 4 */
+    timeBit(night) { return night < 0.2 ? 1 : night < 0.8 ? 2 : 4; },
     /** a light mark's intensity (bright, or for smoke thick) by its step (mark >> 3); step 0 is the plain mark, 100% */
     LEVELS: [1, 0.25, 0.5, 0.75, 1.5, 2, 3],
     /** a light mark: its kind (mark & 7, PA.LIGHTS) and intensity step (mark >> 3, PA.LEVELS), or null when it is none */
@@ -130,7 +138,7 @@
           const j = st.pop(), x = j % w, y = (j / w) | 0; sx += x + 0.5; sy += y + 0.5; n++;
           for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue; const q = yy * w + xx; if (!seen[q] && at(q) === k) { seen[q] = 1; st.push(q); } }
         }
-        out.push({ kind: m.kind, x: sx / n, y: sy / n, n, r: PA.LIGHTS[m.kind].r * size * (1 + Math.sqrt(n) * 0.18), glow: glow * m.level });
+        out.push({ kind: m.kind, x: sx / n, y: sy / n, n, r: PA.LIGHTS[m.kind].r * size * (1 + Math.sqrt(n) * 0.18), glow: glow * m.level, when: PA.whenOf(set, m.kind) });
       }
       return out;
     },
@@ -138,18 +146,23 @@
     lightsOf(def, k) {
       if (!PA.hasLights(def)) return null;
       const cache = def._lights || (def._lights = []); if (cache[k] !== undefined) return cache[k];
-      const w = def.w | 0, h = def.h | 0, all = new Int8Array(w * h), lvl = new Uint8Array(w * h); let spots = [];
+      const w = def.w | 0, h = def.h | 0, groups = new Map(); let spots = []; // glowing pixels by when they show (bits)
       for (const l of def.layers) {
         if (!l || l.hidden || !l.light) continue;
-        const kinds = new Int8Array(w * h), rows = (l.frames && l.frames[k] && l.frames[k].rows) || [];
-        rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const v = ALPHABET.indexOf(row[x]), m = PA.lightMark(v); if (m) { kinds[y * w + x] = v; if (!PA.LIGHTS[m.kind].smoke) { all[y * w + x] = m.kind; lvl[y * w + x] = m.step; } } } });
-        spots = spots.concat(PA.lightSpots(w, h, (i) => kinds[i], PA.lightOf(l)));
+        const set = PA.lightOf(l), when = PA.whenOf(set, 1), kinds = new Int8Array(w * h), rows = (l.frames && l.frames[k] && l.frames[k].rows) || [];
+        let gr = groups.get(when); if (!gr) groups.set(when, gr = { all: new Int8Array(w * h), lvl: new Uint8Array(w * h), any: false });
+        rows.forEach((row, y) => { if (y >= h) return; for (let x = 0; x < Math.min(w, row.length); x++) { const v = ALPHABET.indexOf(row[x]), m = PA.lightMark(v); if (m) { kinds[y * w + x] = v; if (!PA.LIGHTS[m.kind].smoke) { gr.all[y * w + x] = m.kind; gr.lvl[y * w + x] = m.step; gr.any = true; } } } });
+        spots = spots.concat(PA.lightSpots(w, h, (i) => kinds[i], set));
       }
       if (!spots.length) return (cache[k] = null);
-      const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
-      for (let i = 0; i < w * h; i++) if (all[i] > 0) { const col = hex(PA.LIGHTS[all[i]].color), o = i * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = Math.round(255 * Math.min(1, 0.35 + 0.65 * PA.LEVELS[lvl[i]])); } // dimmer marks glow less
-      g.putImageData(img, 0, 0);
-      return (cache[k] = { spots, glow: c });
+      const glows = [];
+      for (const [when, gr] of groups) {
+        if (!gr.any) continue;
+        const c = document.createElement('canvas'); c.width = Math.max(1, w); c.height = Math.max(1, h); const g = c.getContext('2d'), img = g.createImageData(c.width, c.height);
+        for (let i = 0; i < w * h; i++) if (gr.all[i] > 0) { const col = hex(PA.LIGHTS[gr.all[i]].color), o = i * 4; img.data[o] = col[0]; img.data[o + 1] = col[1]; img.data[o + 2] = col[2]; img.data[o + 3] = Math.round(255 * Math.min(1, 0.35 + 0.65 * PA.LEVELS[gr.lvl[i]])); } // dimmer marks glow less
+        g.putImageData(img, 0, 0); glows.push({ when, canvas: c });
+      }
+      return (cache[k] = { spots, glows });
     },
     layerOpacity(l) { return (l && l.opacity !== undefined ? Math.min(100, Math.max(0, +l.opacity || 0)) : 100) / 100; },
     layerWash(l) { return (l && l.wash !== undefined ? Math.min(100, Math.max(0, +l.wash || 0)) : 100) / 100; },
@@ -276,10 +289,12 @@
     SEPIA: [[0, '#1c1009'], [0.22, '#2b1a0e'], [0.5, '#7a5534'], [0.76, '#b89e68'], [1, '#f1e4c2']],
     /** how far a drawing leans to sepia (0–1) in a tone ('' normal, 'good', 'evil'): def.sepia { normal, good, evil } in
      *  percent; a drawn good or evil version uses its own tone's value */
-    sepiaOf(def, tone) {
-      const s = def && def.sepia; if (!s || typeof s !== 'object') return 0;
-      const v = +s[tone || PA.parseId(def.id || '').tone || 'normal']; return v > 0 ? Math.min(1, v / 100) : 0;
-    },
+    sepiaOf(def, tone) { const v = PA.adjustOf(def, 'sepia', tone); return v > 0 ? Math.min(1, v / 100) : 0; },
+    /** how much lighter (up to +1) or darker (down to -1) a drawing is shown in a tone: def.bright { normal, good, evil } %,
+     *  applied after the lean to sepia (which can darken), like the sepia per version */
+    brightOf(def, tone) { const v = PA.adjustOf(def, 'bright', tone); return Math.max(-1, Math.min(1, v / 100)) || 0; },
+    /** a per-version adjustment (def[key] { normal, good, evil }, percent) for a tone; a drawn version uses its own tone's */
+    adjustOf(def, key, tone) { const s = def && def[key]; if (!s || typeof s !== 'object') return 0; return +s[tone || PA.parseId(def.id || '').tone || 'normal'] || 0; },
     /** a colour leaned toward the sepia ink of the same lightness by a (0–1), keeping its opacity */
     sepiaHex(h, a) {
       const c = hex(h); if (!c || !(a > 0)) return h;
@@ -288,8 +303,13 @@
       const out = [0, 1, 2].map(j => Math.round(c[j] * (1 - a) + (p[j] + (q[j] - p[j]) * t) * a));
       return '#' + out.map(v => Math.min(255, Math.max(0, v)).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : '');
     },
-    /** the palette as the game shows a drawing in a tone: the good or evil shift, then the lean to sepia */
-    shownPalette(def, tone) { const pal = tone ? PA.tonedPalette(def, tone) : (def.palette || []), a = PA.sepiaOf(def, tone); return a > 0 ? pal.map(c => PA.sepiaHex(c, a)) : pal; },
+    /** the palette as the game shows a drawing in a tone: the good or evil shift, the lean to sepia, then brightness */
+    shownPalette(def, tone) {
+      let pal = tone ? PA.tonedPalette(def, tone) : (def.palette || []); const a = PA.sepiaOf(def, tone), b = PA.brightOf(def, tone);
+      if (a > 0) pal = pal.map(c => PA.sepiaHex(c, a));
+      if (b) pal = pal.map(c => PA.shiftHex(c, { light: b * 100 })); // lighter toward white, darker toward black, hue kept
+      return pal;
+    },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
       const ov = HB.sprites.overrides, meta = HB.sprites.overrideMeta, defs = [...PA.entries.values()];
@@ -371,7 +391,7 @@
       const wc = PA.cuts(def); if (wc && wc[i]) v.washCut = cut(mirrored ? flipC(wc[i]) : wc[i]); // less territory wash on this symbol (its layers' wash setting)
       // its lights (the light layer's patches, in the cut picture's pixels, mirrored with it) and the glowing pixels
       const lt = PA.lightsOf(def, i);
-      if (lt) { v.lights = lt.spots.map(p => ({ kind: p.kind, x: +((mirrored ? def.w - p.x : p.x) - x0).toFixed(2), y: +(p.y - y0).toFixed(2), r: +p.r.toFixed(2), glow: p.glow })); v.glowSrc = cut(mirrored ? flipC(lt.glow) : lt.glow); }
+      if (lt) { v.lights = lt.spots.map(p => ({ kind: p.kind, x: +((mirrored ? def.w - p.x : p.x) - x0).toFixed(2), y: +(p.y - y0).toFixed(2), r: +p.r.toFixed(2), glow: p.glow, when: p.when })); v.glows = lt.glows.map(g => ({ when: g.when, src: cut(mirrored ? flipC(g.canvas) : g.canvas) })); }
       return v;
     },
     /** the box around frame k's drawn pixels { x, y, w, h }, or null when it is empty */

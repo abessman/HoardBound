@@ -62,7 +62,7 @@
   // Documents: one per sprite id. frames are Uint8Arrays of palette indices (255 = transparent)
   // =====================================================================================================
   const docs = new Map(), saved = new Map(), deleted = new Set();
-  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, paper: false, addSel: false, tone: '', shadeVal: 2, marks: true, light: 'left', lightVal: 1, night: false, refs: [], ghosts: [] };
+  const S = { item: null, doc: null, frame: 0, tool: 'pencil', prevTool: 'pencil', color: 0, zoom: 8, ox: 0, oy: 0, sel: null, float: null, clip: null, frameClip: null, playing: false, playT: 0, sample: false, brush: 1, mirror: false, onion: true, ref: false, grid: true, paper: false, addSel: false, tone: '', shadeVal: 2, marks: true, light: 'left', lightVal: 1, time: 'day', night: false, refs: [], ghosts: [] };
   try { S.paper = localStorage.getItem('hb.editor.paper') === '1'; } catch (e) { /* private mode */ }
   const hexOf = (r, g, b) => '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
   const rgbOf = (hex) => { const v = PA.hex(hex); return v ? [v[0], v[1], v[2]] : [0, 0, 0]; };
@@ -81,7 +81,7 @@
     const layers = Array.isArray(def.layers) && def.layers.length ? def.layers.map((l, i) => ({ name: String(l.name || `Layer ${i + 1}`), hidden: !!l.hidden, opacity: pct(l.opacity), wash: pct(l.wash), shade: PA.shadeOf(l), light: PA.lightOf(l), frames: decodeFrames(l.frames, w, h) })) : [{ name: 'Layer 1', hidden: false, frames: decodeFrames(def.frames, w, h) }];
     const n = Math.max(...layers.map(l => l.frames.length)); for (const l of layers) while (l.frames.length < n) l.frames.push(new Uint8Array(w * h).fill(CLEAR));
     const doc = { id: def.id, kind: def.kind || 'sprite', w, h, anchor: (def.anchor || [w >> 1, h]).slice(), palette: (def.palette || []).slice(), layers, fps: def.fps || 2, scale: def.scale || 1, flip: !!def.mirror, bodyLength: def.bodyLength || null, tones: def.tones && typeof def.tones === 'object' ? JSON.parse(JSON.stringify(def.tones)) : null, undo: [], redo: [] };
-    doc.sepia = cleanSepia(def.sepia); // how far each version leans to sepia (percent)
+    doc.sepia = cleanSepia(def.sepia); doc.bright = cleanBright(def.bright); // per version: the lean to sepia, and lighter or darker (percent)
     if (def.dirs === 2 || def.dirs === 4 || def.dirs === 8) doc.dirs = def.dirs; // how many directions the sprite uses (the plain drawing's setting)
     useLayer(doc, layers.length - 1); return doc;
   }
@@ -93,6 +93,8 @@
   }
   /** { normal?, good?, evil? } percents above 0 (0–100), or null */
   const cleanSepia = (o) => { if (!o || typeof o !== 'object') return null; const r = {}; for (const k of ['normal', 'good', 'evil']) { const v = Math.round(+o[k] || 0); if (v > 0) r[k] = Math.min(100, v); } return Object.keys(r).length ? r : null; };
+  /** { normal?, good?, evil? } brightness percents other than 0 (-60 to 60), or null */
+  const cleanBright = (o) => { if (!o || typeof o !== 'object') return null; const r = {}; for (const k of ['normal', 'good', 'evil']) { const v = Math.round(+o[k] || 0); if (v) r[k] = Math.max(-60, Math.min(60, v)); } return Object.keys(r).length ? r : null; };
   function toDef(doc) {
     const def = { id: doc.id, kind: doc.kind, w: doc.w, h: doc.h, anchor: doc.anchor.slice(), fps: doc.fps };
     if (doc.kind === 'map') { def.scale = doc.scale; if (doc.flip) def.mirror = true; } // may be shown mirrored (shading would flip with it)
@@ -104,11 +106,12 @@
     def.palette = keep.map(i => doc.palette[i]);
     if (doc.tones && Object.keys(doc.tones).length) def.tones = JSON.parse(JSON.stringify(doc.tones)); // good and evil tones, when adjusted
     const sp = cleanSepia(doc.sepia); if (sp) def.sepia = sp; // the lean to sepia per version, when set
+    const br = cleanBright(doc.bright); if (br) def.bright = br; // lighter or darker per version, when set
     const enc = (frames, shade) => frames.map(f => ({ rows: Array.from({ length: doc.h }, (_, y) => { let s = ''; for (let x = 0; x < doc.w; x++) { const v = f[y * doc.w + x]; s += v === CLEAR ? '.' : shade ? AL[v] : AL[remap.get(v)]; } return s; }) }));
     // one plain layer: frames, as before; named, hidden or several layers: layers (the game merges the visible ones)
     const L = doc.layers;
     if (L.length === 1 && !L[0].hidden && !L[0].shade && !L[0].light && L[0].name === 'Layer 1' && lyOp(L[0]) === 100 && lyWash(L[0]) === 100) def.frames = enc(L[0].frames);
-    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, l.shade ? { shade: { light: l.shade.light, dark: l.shade.dark, hatch: !!l.shade.hatch } } : {}, l.light ? { light: { glow: l.light.glow, size: l.light.size } } : {}, !l.shade && !l.light && lyOp(l) !== 100 ? { opacity: lyOp(l) } : {}, !l.shade && !l.light && lyWash(l) !== 100 ? { wash: lyWash(l) } : {}, { frames: enc(l.frames, !!(l.shade || l.light)) }));
+    else def.layers = L.map(l => Object.assign({ name: l.name }, l.hidden ? { hidden: true } : {}, l.shade ? { shade: { light: l.shade.light, dark: l.shade.dark, hatch: !!l.shade.hatch } } : {}, l.light ? { light: Object.assign({ glow: l.light.glow, size: l.light.size }, Array.isArray(l.light.when) ? { when: l.light.when.slice() } : {}) } : {}, !l.shade && !l.light && lyOp(l) !== 100 ? { opacity: lyOp(l) } : {}, !l.shade && !l.light && lyWash(l) !== 100 ? { wash: lyWash(l) } : {}, { frames: enc(l.frames, !!(l.shade || l.light)) }));
     return def;
   }
   /** the file for one sprite: JSON with one field per line and each frame's rows as a grid (easy to read and diff) */
@@ -187,7 +190,7 @@
   // =====================================================================================================
   const D = () => S.doc, F = () => S.doc.frames[S.frame];
   /** a drawing as the game shows it in a tone ('' normal): good or evil shift and the lean to sepia (d itself when neither) */
-  const look = (d, tone) => (tone || PA.sepiaOf(d, tone) > 0 ? { w: d.w, h: d.h, palette: PA.shownPalette(d, tone) } : d);
+  const look = (d, tone) => (tone || PA.sepiaOf(d, tone) > 0 || PA.brightOf(d, tone) ? { w: d.w, h: d.h, palette: PA.shownPalette(d, tone) } : d);
   const copyLayers = (L) => L.map(l => ({ name: l.name, hidden: l.hidden, opacity: l.opacity, wash: l.wash, shade: l.shade ? Object.assign({}, l.shade) : null, light: l.light ? Object.assign({}, l.light) : null, frames: l.frames.map(f => f.slice()) }));
   // a shading layer holds marks, not colours: 1 lit, 2 shadow, 3 deep shadow (painted for a light from the left)
   const isShade = (d) => !!(d && d.layers[d.layer] && d.layers[d.layer].shade);
@@ -196,8 +199,8 @@
   const hasLightLayer = (d) => !!(d && d.layers.some(l => l.light && !l.hidden));
   const ink = () => (isLight(D()) ? S.lightVal : isShade(D()) ? S.shadeVal : S.color);
   const lyOp = (l) => (l.opacity === undefined ? 100 : l.opacity), lyWash = (l) => (l.wash === undefined ? 100 : l.wash);
-  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null, sepia: d.sepia ? Object.assign({}, d.sepia) : null }; }
-  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d.sepia = s.sepia ? Object.assign({}, s.sepia) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
+  function snapshot() { const d = D(); return { layers: copyLayers(d.layers), layer: d.layer, w: d.w, h: d.h, anchor: d.anchor.slice(), frame: S.frame, palette: d.palette.slice(), fps: d.fps, scale: d.scale, flip: d.flip, tones: d.tones ? JSON.stringify(d.tones) : null, sepia: d.sepia ? Object.assign({}, d.sepia) : null, bright: d.bright ? Object.assign({}, d.bright) : null }; }
+  function restore(s) { const d = D(); d.layers = copyLayers(s.layers); d.w = s.w; d.h = s.h; d.anchor = s.anchor.slice(); useLayer(d, s.layer); S.frame = Math.min(s.frame, d.frames.length - 1); d.palette = s.palette.slice(); d.fps = s.fps; d.scale = s.scale; d.flip = !!s.flip; d.tones = s.tones ? JSON.parse(s.tones) : null; d.sepia = s.sepia ? Object.assign({}, s.sepia) : null; d.bright = s.bright ? Object.assign({}, s.bright) : null; d._rev = (d._rev || 0) + 1; renderTone(); }
   /** how many steps back a sprite keeps: 120, fewer for very big canvases (never under 20) */
   const undoCap = (d) => Math.max(20, Math.min(120, Math.floor(24e6 / Math.max(1, d.w * d.h * d.frames.length * d.layers.length))));
   /** change every layer's frames (frame structure, size, shifting), keeping doc.frames on the active layer */
@@ -307,7 +310,7 @@
   // =====================================================================================================
   const cv = $('canvas'), ctx = cv.getContext('2d'), stage = $('stage');
   function frameCanvas(doc, f, alpha = 1) {
-    const c = document.createElement('canvas'); c.width = doc.w; c.height = doc.h; const g = c.getContext('2d'), img = g.createImageData(doc.w, doc.h), Dd = img.data, pal = doc.palette.map(rgbaOf);
+    const c = document.createElement('canvas'); c.width = doc.w; c.height = doc.h; const g = c.getContext('2d'), img = g.createImageData(doc.w, doc.h), Dd = img.data, pal = doc.palette.map(h => (h ? rgbaOf(h) : null)); // null: not drawn (smoke has no glow)
     for (let i = 0; i < f.length; i++) { const v = f[i]; if (v === CLEAR || !pal[v]) continue; const o = i * 4; Dd[o] = pal[v][0]; Dd[o + 1] = pal[v][1]; Dd[o + 2] = pal[v][2]; Dd[o + 3] = pal[v][3] * alpha; }
     g.putImageData(img, 0, 0); return c;
   }
@@ -330,24 +333,28 @@
   function smokeSpots(d, k) { const out = []; for (const l of d.layers) { if (!l.light || l.hidden || !l.frames[k]) continue; const f = l.frames[k]; for (const sp of PA.lightSpots(d.w, d.h, (i) => f[i], l.light)) if (PA.LIGHTS[sp.kind].smoke) out.push(sp); } return out; }
   /** whether frame k has smoke (remembered per edit), so the canvas only keeps redrawing while something rises */
   const hasSmoke = (d, k) => { if (!d || !hasLightLayer(d)) return false; const key = (d._rev || 0) + ':' + k; if (d._sm && d._sm.key === key) return d._sm.v; const v = smokeSpots(d, k).length > 0; d._sm = { key, v }; return v; };
-  function drawSmoke(g, d, k, X, Y, z) { const t = performance.now() / 1000; for (const sp of smokeSpots(d, k)) PA.drawSmoke(g, X + sp.x * z, Y + sp.y * z, sp.r * z, sp.glow, 1, sp.x * 7.1 + sp.y * 3.3, t); }
+  function drawSmoke(g, d, k, X, Y, z) { const t = performance.now() / 1000, bit = tBit(); for (const sp of smokeSpots(d, k)) if (sp.when & bit) PA.drawSmoke(g, X + sp.x * z, Y + sp.y * z, sp.r * z, sp.glow, 1 - 0.35 * darkK(), sp.x * 7.1 + sp.y * 3.3, t); }
   /** night preview: the drawing dimmed toward a deep blue, each light's pool and its glowing pixels (as the map shows them) */
+  // the preview's time of day (day, dusk, night: how dark, as the map's Settings → Time of day) and its bit for light.when
+  const darkK = () => ({ dusk: 0.55, night: 1 }[S.time] || 0), tBit = () => PA.timeBit(darkK());
+  /** whether a light layer shows something at the preview's time (a light ticked for day glows by day) */
+  const litNow = (d) => !!d && d.layers.some(l => l.light && !l.hidden && (PA.whenOf(l.light, 1) & tBit()));
   function drawNight(d, X, Y, z) {
-    const W = d.w * z, H = d.h * z, t = performance.now() / 1000;
-    ctx.save(); ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = 'rgb(72,80,128)'; ctx.fillRect(X, Y, W, H);
+    const W = d.w * z, H = d.h * z, t = performance.now() / 1000, k = darkK(), bit = tBit(), m = (c) => Math.round(255 + (c - 255) * k);
+    ctx.save(); if (k > 0) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgb(${m(72)},${m(80)},${m(128)})`; ctx.fillRect(X, Y, W, H); }
     ctx.globalCompositeOperation = 'lighter'; ctx.beginPath(); ctx.rect(X, Y, W, H); ctx.clip();
     for (const l of d.layers) {
       if (!l.light || l.hidden) continue; const f = l.frames[S.frame]; if (!f) continue;
       for (const sp of PA.lightSpots(d.w, d.h, (i) => f[i], l.light)) {
-        const K = PA.LIGHTS[sp.kind], c = PA.hex(K.color), seed = sp.x * 7.1 + sp.y * 3.3; if (K.smoke) continue;
+        const K = PA.LIGHTS[sp.kind], c = PA.hex(K.color), seed = sp.x * 7.1 + sp.y * 3.3; if (K.smoke || !(sp.when & bit)) continue;
         const wv = K.pulse ? 0.85 + 0.15 * Math.sin(t * 2.2 + seed) : K.flicker ? 1 + K.flicker * 0.2 * (Math.sin(t * 9.3 + seed) * 0.5 + Math.sin(t * 15.7 + seed * 1.7) * 0.3 + Math.sin(t * 4.1 + seed * 0.3) * 0.2) : 1;
-        const x = X + sp.x * z, y = Y + sp.y * z, R = Math.max(4, sp.r * z * 2.4 * (0.94 + 0.06 * wv)), a = Math.min(1.5, sp.glow) * wv;
+        const x = X + sp.x * z, y = Y + sp.y * z, R = Math.max(4, sp.r * z * 2.4 * (0.94 + 0.06 * wv)), a = Math.min(1.5, sp.glow) * wv * Math.max(k, 0.5);
         const g = ctx.createRadialGradient(x, y, 0, x, y, R); g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.5 * a})`); g.addColorStop(0.3, `rgba(${c[0]},${c[1]},${c[2]},${0.2 * a})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R, 0, Math.PI * 2); ctx.fill();
       }
     }
     ctx.globalCompositeOperation = 'source-over';
-    for (const l of d.layers) if (l.light && !l.hidden && l.frames[S.frame]) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LGLOW }, l.frames[S.frame]), X, Y, W, H);
+    for (const l of d.layers) if (l.light && !l.hidden && l.frames[S.frame] && (PA.whenOf(l.light, 1) & bit)) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LGLOW }, l.frames[S.frame]), X, Y, W, H);
     ctx.restore();
   }
   function fit() {
@@ -378,8 +385,8 @@
     ctx.drawImage(comp.canvas, X, Y, W, H);
     if (d.layers[d.layer].hidden && !isMarks(d)) { ctx.globalAlpha = 0.35; ctx.drawImage(frameCanvas(shown, F()), X, Y, W, H); ctx.globalAlpha = 1; }
     if (isShade(d) && S.marks) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: MARK }, F()), X, Y, W, H);
-    if (S.night && hasLightLayer(d)) drawNight(d, X, Y, z);
-    else if (isLight(d)) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LMARK }, F()), X, Y, W, H);
+    if (S.time !== 'day' ? hasLightLayer(d) : litNow(d)) drawNight(d, X, Y, z);
+    if (S.time === 'day' && isLight(d)) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LMARK }, F()), X, Y, W, H); // where you painted, by day
     if (hasSmoke(d, S.frame)) { ctx.save(); ctx.beginPath(); ctx.rect(X, Y - H, W, H * 2); ctx.clip(); drawSmoke(ctx, d, S.frame, X, Y, z); ctx.restore(); }
     // with parchment under and Good or Evil shown: the territory wash as on the map, on the ground and, by each layer's
     // wash setting, on the drawing
@@ -841,15 +848,19 @@
   }
   /** the version the Version row shows: 'normal', 'good' or 'evil' */
   const curTone = () => (S.item && S.item.tone) || S.tone || 'normal';
-  function renderSepia() { const d = D(), v = d && d.sepia ? Math.round(+d.sepia[curTone()] || 0) : 0; $('in-sepia').value = String(v); $('sepia-v').textContent = v + '%'; $('sepia-ctl').hidden = !d; }
-  function sepiaEdit(value, done) {
-    const d = D(); if (!d) return;
-    if (!TN.sepia) { pushUndo(); TN.sepia = true; }
-    d.sepia = cleanSepia(Object.assign({}, d.sepia, { [curTone()]: value })); $('sepia-v').textContent = Math.round(value) + '%';
-    if (done) { TN.sepia = false; changed(); } else changed(false, true);
+  // sepia and brightness, for the version showing (each version keeps its own; saved as def.sepia, def.bright)
+  const ADJ = { sepia: { clean: cleanSepia, fmt: (v) => v + '%' }, bright: { clean: cleanBright, fmt: (v) => (v > 0 ? '+' : '') + v + '%' } };
+  function renderSepia() {
+    const d = D(); $('sepia-ctl').hidden = $('bright-ctl').hidden = !d;
+    for (const k in ADJ) { const v = d && d[k] ? Math.round(+d[k][curTone()] || 0) : 0; $('in-' + k).value = String(v); $(k + '-v').textContent = ADJ[k].fmt(v); }
   }
-  $('in-sepia').addEventListener('input', (e) => sepiaEdit(+e.target.value, false));
-  $('in-sepia').addEventListener('change', (e) => sepiaEdit(+e.target.value, true));
+  function adjEdit(key, value, done) {
+    const d = D(); if (!d) return;
+    if (!TN.adj) { pushUndo(); TN.adj = true; }
+    d[key] = ADJ[key].clean(Object.assign({}, d[key], { [curTone()]: value })); $(key + '-v').textContent = ADJ[key].fmt(Math.round(value));
+    if (done) { TN.adj = false; changed(); } else changed(false, true);
+  }
+  for (const k in ADJ) { $('in-' + k).addEventListener('input', (e) => adjEdit(k, +e.target.value, false)); $('in-' + k).addEventListener('change', (e) => adjEdit(k, +e.target.value, true)); }
   function toneEdit(key, value, done) {
     const d = D(); if (!d || !S.tone) return;
     if (!TN.live) { pushUndo(); TN.live = true; }
@@ -940,7 +951,7 @@
       box.appendChild(el);
     }
     const cur = d.layers[d.layer], sh = !!cur.shade, lt = !!cur.light; $('shade-box').hidden = !sh; $('light-box').hidden = !lt; $('ly-op').parentElement.hidden = $('ly-wash').parentElement.hidden = sh || lt;
-    if (lt) { $('lt-glow').value = String(cur.light.glow); $('lt-glow-v').textContent = cur.light.glow + '%'; $('lt-size').value = String(cur.light.size); $('lt-size-v').textContent = cur.light.size + '%'; document.querySelectorAll('#light-box [data-light]').forEach(b => b.classList.toggle('on', +b.dataset.light === (S.lightVal & 7))); const pos = Math.max(0, LSTEPS.indexOf(S.lightVal >> 3)); $('lt-int').value = String(pos); $('lt-int-v').textContent = Math.round(PA.LEVELS[LSTEPS[pos]] * 100) + '%'; }
+    if (lt) { $('lt-glow').value = String(cur.light.glow); $('lt-glow-v').textContent = cur.light.glow + '%'; $('lt-size').value = String(cur.light.size); $('lt-size-v').textContent = cur.light.size + '%'; document.querySelectorAll('#light-box [data-light]').forEach(b => b.classList.toggle('on', +b.dataset.light === (S.lightVal & 7))); const pos = Math.max(0, LSTEPS.indexOf(S.lightVal >> 3)); $('lt-int').value = String(pos); $('lt-int-v').textContent = Math.round(PA.LEVELS[LSTEPS[pos]] * 100) + '%'; renderWhen(cur); }
     if (sh) { $('sh-light').value = String(cur.shade.light); $('sh-light-v').textContent = cur.shade.light + '%'; $('sh-dark').value = String(cur.shade.dark); $('sh-dark-v').textContent = cur.shade.dark + '%'; $('sh-hatch').checked = !!cur.shade.hatch; document.querySelectorAll('#shade-box [data-shade]').forEach(b => b.classList.toggle('on', +b.dataset.shade === S.shadeVal)); $('sh-left').classList.toggle('on', S.light !== 'right'); $('sh-right').classList.toggle('on', S.light === 'right'); }
     $('ly-op').value = String(lyOp(cur)); $('ly-op-v').textContent = lyOp(cur) + '%'; $('ly-wash').value = String(lyWash(cur)); $('ly-wash-v').textContent = lyWash(cur) + '%';
     $('ly-merge').disabled = d.layer === 0; $('ly-del').disabled = d.layers.length < 2;
@@ -964,12 +975,22 @@
   $('sh-hatch').onchange = (e) => { const d = D(); if (!isShade(d)) return; pushUndo(); d.layers[d.layer].shade.hatch = e.target.checked; changed(); };
   $('sh-marks').onchange = (e) => { S.marks = e.target.checked; draw(); };
   // lights: a layer of marks for where light comes from (fire, windows, a lantern); the game glows them at dusk and night
-  $('ly-light').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.push({ name: 'lights', hidden: false, light: { glow: 100, size: 100 }, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layers.length - 1); if (!DRAWING.includes(S.tool) && S.tool !== 'eraser') setTool('pencil'); changed(); toast('Light layer: paint where light comes from (a fire, lit windows, a lantern) or where smoke rises. Pick an intensity before you paint. Tick night to see the lights glow, as the map shows them at dusk and night.', 7000); };
+  $('ly-light').onclick = () => { const d = D(); if (!d) return; commitFloat(); pushUndo(); d.layers.push({ name: 'lights', hidden: false, light: { glow: 100, size: 100 }, frames: d.frames.map(() => blank(d)) }); useLayer(d, d.layers.length - 1); if (!DRAWING.includes(S.tool) && S.tool !== 'eraser') setTool('pencil'); changed(); toast('Light layer: paint where light comes from (a fire, lit windows, a lantern) or where smoke rises. Pick an intensity before you paint, and when it shows (day, dusk, night). Pick time above the canvas to see it as the map shows it.', 7000); };
+  // when a light layer's marks show: its Day / Dusk / Night ticks (light.when), else automatic: lights at dusk and night,
+  // smoke all the time (a layer with both shows Day half-ticked)
+  const WHENS = ['day', 'dusk', 'night'];
+  function renderWhen(l) {
+    const w = l.light.when, auto = !Array.isArray(w), kinds = new Set(); for (const f of l.frames) for (const v of f) { const m = PA.lightMark(v); if (m) kinds.add(PA.LIGHTS[m.kind].smoke ? 's' : 'l'); }
+    for (const k of WHENS) { const b = document.querySelector(`#lt-when [data-when="${k}"]`); b.indeterminate = false; b.checked = auto ? (k !== 'day' || (kinds.has('s') && !kinds.has('l'))) : w.includes(k); if (auto && k === 'day' && kinds.has('s') && kinds.has('l')) b.indeterminate = true; }
+    $('lt-when-auto').hidden = !auto; $('lt-when-reset').hidden = auto;
+  }
+  document.querySelectorAll('#lt-when [data-when]').forEach(b => { b.onchange = () => { const d = D(), l = d && d.layers[d.layer]; if (!l || !l.light) return; pushUndo(); l.light = Object.assign({}, l.light, { when: WHENS.filter(k => document.querySelector(`#lt-when [data-when="${k}"]`).checked) }); renderLayers(); changed(); }; });
+  $('lt-when-reset').onclick = () => { const d = D(), l = d && d.layers[d.layer]; if (!l || !l.light) return; pushUndo(); l.light = Object.assign({}, l.light); delete l.light.when; renderLayers(); changed(); };
   // a kind keeps the intensity picked, and the intensity keeps the kind: a mark is kind + 8 × intensity step
   document.querySelectorAll('#light-box [data-light]').forEach(b => { b.onclick = () => { S.lightVal = +b.dataset.light + (S.lightVal & ~7); if (!DRAWING.includes(S.tool)) setTool('pencil'); renderLayers(); }; });
   $('lt-int').oninput = (e) => { S.lightVal = (S.lightVal & 7) + 8 * LSTEPS[+e.target.value]; if (!DRAWING.includes(S.tool)) setTool('pencil'); renderLayers(); };
   for (const key of ['glow', 'size']) { const el = $('lt-' + key); const set = (done) => { const d = D(); if (!isLight(d)) return; if (!SH.live) { pushUndo(); SH.live = true; } d.layers[d.layer].light[key] = +el.value; $('lt-' + key + '-v').textContent = el.value + '%'; if (done) { SH.live = false; changed(); } else changed(false, true); }; el.addEventListener('input', () => set(false)); el.addEventListener('change', () => set(true)); }
-  $('chk-night').onchange = (e) => { S.night = e.target.checked; draw(); };
+  $('sel-time').onchange = (e) => { S.time = e.target.value; draw(); };
   $('sh-left').onclick = () => { S.light = 'left'; renderLayers(); draw(); }; $('sh-right').onclick = () => { S.light = 'right'; renderLayers(); draw(); };
   /** a start for the shading, from the shape: in each row, each drawn run is lit on its left, in shadow on its right */
   $('sh-suggest').onclick = () => {
@@ -1218,7 +1239,7 @@
   let lastT = performance.now();
   function previewLoop(t) {
     const dt = (t - lastT) / 1000; lastT = t; if (S.playing) S.playT += dt;
-    drawPreview(); if (S.float || S.sel || ((S.night ? hasLightLayer(D()) : hasSmoke(D(), S.frame)) && t - (previewLoop.night || 0) > 66 && (previewLoop.night = t))) draw(); // the night preview flickers; smoke rises
+    drawPreview(); if (S.float || S.sel || ((S.time !== 'day' ? hasLightLayer(D()) : hasSmoke(D(), S.frame) || litNow(D())) && t - (previewLoop.night || 0) > 66 && (previewLoop.night = t))) draw(); // the night preview flickers; smoke rises
     requestAnimationFrame(previewLoop);
   }
   function bg(kind) {

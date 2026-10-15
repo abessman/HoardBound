@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.33.0 — 2026-10-15 · Brightness, and when lights and smoke show
+- **Brightness** next to **sepia** in the Version row: lighter (up to +60%) or darker (down to −60%), applied after the
+  sepia lean (which can darken a drawing). Like sepia, Normal, Good and Evil each keep their own.
+- **Shows at: day / dusk / night** on each light layer. Untouched it is automatic, as before: lights at dusk and night,
+  smoke all the time. Tick the times you want and the whole layer follows: a forge fire that glows by day too, smoke
+  only at night, lanterns only at night. For smoke by day and a fire only at night, put them on two light layers.
+  A light ticked for day glows by day (its coloured pixels and a soft warm halo) on the map and in the editor.
+- The editor's **night** checkbox is now **time: day / dusk / night**, to see a drawing as the map shows it then.
+- Fix: smoke marks showed as black pixels in the editor's night preview.
+
 ## 0.32.0 — 2026-10-15 · Light intensity and smoke
 - **Intensity for each light.** On a light layer, pick an **Intensity** (25% to 300%) before you paint: each patch keeps
   its own, so one drawing can hold a dim candle and a roaring bonfire. A dimmer patch glows less and casts a smaller

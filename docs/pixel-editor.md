@@ -59,6 +59,7 @@ commit by hand.
 - **Sepia** (0.31, in the Version row): leans every colour toward the map's sepia inks (each to the ink of its
   lightness), 0% to 100%, for the version selected: Normal, Good and Evil each keep their own amount. The canvas,
   frames and preview show it; the palette keeps your real colours, so you can draw in colour and push it after.
+  **Brightness** (0.33, −60% to +60%, per version too) lightens or darkens after the sepia lean.
 - **Facing: 2, 4 or 8 directions** (dragons, lair pictures, raid sprites and the map's travellers and dragon marker).
   The plain drawing faces east (right). Pick how many directions the sprite uses, then tap a direction in the compass
   grid to draw it: each is its own drawing with its own frames (its own animation), size and anchor. A new direction
@@ -105,6 +106,8 @@ commit by hand.
   around each patch. **Intensity** (0.32, 25%–300%, picked before you paint) is each patch's own brightness; **Layer
   glow** and **Reach** set the whole layer's brightness and size; tick **night** above the canvas to preview it.
   **Smoke** (0.32) rises from its patches day and night (intensity = how thick), on the canvas and in the preview.
+  **Shows at: day / dusk / night** (0.33) sets when the whole layer shows (untouched: lights at dusk and night, smoke
+  always); use two light layers for smoke by day and a fire at night. **time** above the canvas previews day, dusk or night.
 - **Picture → pixels:** **Convert to pixels…** turns your picture into pixel art on this sprite's grid, exactly where
   the picture sits behind the pixels (size and move it first with the Image behind controls; set the canvas size with
   **Resize**). With no picture yet it asks for one. Each pixel looks at the part of the picture under it:
@@ -212,7 +215,8 @@ hold marks: `1` lit, `2` shadow, `3` deep shadow. A light layer adds `"light": {
 `1` fire, `2` window, `3` lantern, `4` magic, `5` embers. Directions are their own files too: `dragon.2.fly>n` in
 `dragon.2.fly~n.js` (`>ne`, `>e`… `>nw`; the plain file faces east and holds `"dirs": 8`, or 2 or 4). A palette colour may carry opacity
 (`#rrggbbaa`), and `"tones": { "good": {…}, "evil": {…} }` holds adjusted good and evil tints (hue, sat, light, tint, mix);
-`"sepia": { "normal": 40, "evil": 100 }` how far each version leans to sepia (percent; left out = 0).
+`"sepia": { "normal": 40, "evil": 100 }` how far each version leans to sepia and `"bright": { "normal": 20 }` how much
+lighter or darker (percent; left out = 0). A light layer's `"when": ["day", "dusk", "night"]` says when it shows.
 Variants and versions are their own files: `map.terrain.mountain#2` in `map.terrain.mountain~2.js`, its evil version
 `map.terrain.mountain#2@evil` in `map.terrain.mountain~2~evil.js`, a dragon pose's good version `dragon.2.idle@good`.
 Each row is one character per pixel: `.` is clear, `0-9 a-z A-Z` index the palette. Map symbols add `scale` and

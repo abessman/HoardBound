@@ -117,8 +117,10 @@
       if (typeof v.tintMask === 'string') MA.loadImage(out, /^(assets\/|data:)/.test(v.tintMask) ? v.tintMask : base + v.tintMask, (m) => { out.tintImg = m; MA.bump(); }, () => MA.warn(`${where}: could not load tintMask`));
       // lights (the editor's light layers): spots in the frame's pixels, and the glowing pixels, shown at dusk and night
       if (Array.isArray(v.lights)) {
-        out.lights = v.lights.filter(l => l && isFinite(l.x) && isFinite(l.y) && l.kind >= 1).map(l => ({ kind: l.kind | 0, x: +l.x, y: +l.y, r: +l.r > 0 ? +l.r : 4, glow: l.glow === undefined ? 1 : +l.glow }));
-        if (typeof v.glowSrc === 'string') MA.loadImage(out, /^(assets\/|https?:|data:)/.test(v.glowSrc) ? v.glowSrc : base + v.glowSrc, (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) out.glowImg = img; }, () => {});
+        out.lights = v.lights.filter(l => l && isFinite(l.x) && isFinite(l.y) && l.kind >= 1).map(l => ({ kind: l.kind | 0, x: +l.x, y: +l.y, r: +l.r > 0 ? +l.r : 4, glow: l.glow === undefined ? 1 : +l.glow, when: (l.when | 0) || 0 }));
+        // the glowing pixels, one picture per time of day they show at (when: bits day 1, dusk 2, night 4; glowSrc = dusk and night)
+        const gl = Array.isArray(v.glows) ? v.glows : typeof v.glowSrc === 'string' ? [{ when: 6, src: v.glowSrc }] : []; out.glowImgs = [];
+        for (const g of gl) if (g && typeof g.src === 'string') MA.loadImage(out, /^(assets\/|https?:|data:)/.test(g.src) ? g.src : base + g.src, (img) => { if (img.naturalWidth === out.sw && img.naturalHeight === out.sh) out.glowImgs.push({ when: (g.when | 0) || 6, img }); }, () => {});
       }
       return out;
     },
@@ -231,8 +233,8 @@
       // lights and smoke: while the map collects them (MA.lights), each spot and the glowing pixels in device pixels
       if (v.lights && MA.lights && ctx.getTransform) {
         const T = ctx.getTransform(), k = Math.hypot(T.a, T.b);
-        for (const l of v.lights) { const lx = dx + l.x * sx, ly = dy + l.y * sy; MA.lights.push({ x: T.a * lx + T.c * ly + T.e, y: T.b * lx + T.d * ly + T.f, r: l.r * Math.abs(sx) * k, kind: l.kind, glow: l.glow, alpha: ctx.globalAlpha, seed: lx * 7.1 + ly * 3.3 + HB.hash32(String(o.key)) % 997 }); }
-        if (v.glowImg) MA.lights.push({ img: v.glowImg, m: [T.a, T.b, T.c, T.d, T.e, T.f], dx, dy, dw, dh, alpha: ctx.globalAlpha });
+        for (const l of v.lights) { const lx = dx + l.x * sx, ly = dy + l.y * sy; MA.lights.push({ x: T.a * lx + T.c * ly + T.e, y: T.b * lx + T.d * ly + T.f, r: l.r * Math.abs(sx) * k, kind: l.kind, glow: l.glow, when: l.when, alpha: ctx.globalAlpha, seed: lx * 7.1 + ly * 3.3 + HB.hash32(String(o.key)) % 997 }); }
+        if (v.glowImgs) for (const gi of v.glowImgs) MA.lights.push({ img: gi.img, when: gi.when, m: [T.a, T.b, T.c, T.d, T.e, T.f], dx, dy, dw, dh, alpha: ctx.globalAlpha });
       }
       ctx.restore();
       return { id: r.id, v, sx, sy, dx, dy, dw, dh, flip };

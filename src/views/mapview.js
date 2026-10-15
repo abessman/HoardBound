@@ -611,7 +611,7 @@
       this.drawFog(ctx, tl, br);
       this.drawHazyPlaces(ctx, tl, br);
       this.drawSmoke(ctx); // over the mist, so a plume rises out of it (only from places you can see)
-      if (night > 0.01) this.drawNight(ctx, night);
+      if (night > 0.01 || this.lights.some(l => !this.isSmoke(l) && (l.when || 6) & 1)) this.drawNight(ctx, night); // lights ticked for day glow by day too
       this.drawThreats(ctx, tl, br);
       this.drawStoryMarks(ctx, tl, br);
       this.drawStruggleMarks(ctx, tl, br);
@@ -739,33 +739,35 @@
     }
     /** smoke rising from the smoke marks of the symbols drawn this frame (day and night; still with Reduce motion) */
     drawSmoke(ctx) {
-      const PA = HB.pixelArt, LT = (PA && PA.LIGHTS) || [], lights = this.lights || [], t = HB.settings.reduceMotion ? 1.2 : this.t;
-      let any = false; for (const l of lights) if (!l.img && LT[l.kind] && LT[l.kind].smoke) { any = true; break; } if (!any) return;
+      const PA = HB.pixelArt, LT = (PA && PA.LIGHTS) || [], t = HB.settings.reduceMotion ? 1.2 : this.t, bit = PA ? PA.timeBit(this.night || 0) : 1;
+      const lights = (this.lights || []).filter(l => !l.img && LT[l.kind] && LT[l.kind].smoke && (l.when || 7) & bit); if (!lights.length) return; // its layer's Day / Dusk / Night ticks
       // a plume stays readable on a small symbol: puffs at least about 2.4 screen px per zoom step across
       const minR = 2.4 * (ctx.canvas.width / HB.W) * Math.max(0.6, this.cam.zoom);
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
-      for (const l of lights) if (!l.img && LT[l.kind] && LT[l.kind].smoke) PA.drawSmoke(ctx, l.x, l.y, Math.max(minR, l.r), l.glow, l.alpha * (1 - 0.35 * (this.night || 0)), l.seed || 0, t);
+      for (const l of lights) PA.drawSmoke(ctx, l.x, l.y, Math.max(minR, l.r), l.glow, l.alpha * (1 - 0.35 * (this.night || 0)), l.seed || 0, t);
       ctx.restore();
     }
     /** dusk and night: the map dimmed toward a deep blue, then each light's pool added and its glowing pixels drawn
      *  bright (fires flicker, magic pulses). Lights come from the symbols' light layers (drawn in the editor) */
     drawNight(ctx, night) {
-      const PA = HB.pixelArt, LT = (PA && PA.LIGHTS) || [], t = this.t, lights = this.lights || [], reduced = HB.settings.reduceMotion;
+      const PA = HB.pixelArt, LT = (PA && PA.LIGHTS) || [], t = this.t, reduced = HB.settings.reduceMotion, bit = PA ? PA.timeBit(night) : 4;
+      // only what shows at this time of day (a light layer's Day / Dusk / Night ticks; by default lights at dusk and night)
+      const lights = (this.lights || []).filter(l => (l.when || 6) & bit), lit = Math.max(night, 0.5); // a light ticked for day still glows
       const wave = (K, seed) => { if (reduced) return 1; if (K.pulse) return 0.85 + 0.15 * Math.sin(t * 2.2 + seed); if (!K.flicker) return 1; return 1 + K.flicker * 0.2 * (Math.sin(t * 9.3 + seed) * 0.5 + Math.sin(t * 15.7 + seed * 1.7) * 0.3 + Math.sin(t * 4.1 + seed * 0.3) * 0.2); };
       ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
       const W = ctx.canvas.width, H = ctx.canvas.height, dk = [72, 80, 128], m = (c) => Math.round(255 + (c - 255) * night);
-      ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgb(${m(dk[0])},${m(dk[1])},${m(dk[2])})`; ctx.fillRect(0, 0, W, H);
+      if (night > 0.01) { ctx.globalCompositeOperation = 'multiply'; ctx.fillStyle = `rgb(${m(dk[0])},${m(dk[1])},${m(dk[2])})`; ctx.fillRect(0, 0, W, H); }
       ctx.globalCompositeOperation = 'lighter';
       for (const l of lights) {
         const K = LT[l.kind]; if (l.img || !K || K.smoke) continue;
-        const f = wave(K, l.seed), a = Math.min(1.5, l.glow) * night * l.alpha * f, R = Math.max(5, l.r * 2.4 * (0.94 + 0.06 * f)), c = PA.hex(K.color);
+        const f = wave(K, l.seed), a = Math.min(1.5, l.glow) * lit * l.alpha * f, R = Math.max(5, l.r * 2.4 * (0.94 + 0.06 * f)), c = PA.hex(K.color);
         const g = ctx.createRadialGradient(l.x, l.y, 0, l.x, l.y, R);
         g.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${0.5 * a})`); g.addColorStop(0.3, `rgba(${c[0]},${c[1]},${c[2]},${0.2 * a})`); g.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(l.x, l.y, R, 0, Math.PI * 2); ctx.fill();
       }
       ctx.globalCompositeOperation = 'source-over'; ctx.imageSmoothingEnabled = false;
       for (const l of lights) {
-        if (l.img) { ctx.setTransform(l.m[0], l.m[1], l.m[2], l.m[3], l.m[4], l.m[5]); ctx.globalAlpha = l.alpha * Math.min(1, 0.35 + night); ctx.drawImage(l.img, l.dx, l.dy, l.dw, l.dh); ctx.setTransform(1, 0, 0, 1, 0, 0); continue; }
+        if (l.img) { ctx.setTransform(l.m[0], l.m[1], l.m[2], l.m[3], l.m[4], l.m[5]); ctx.globalAlpha = l.alpha * Math.min(1, 0.35 + Math.max(night, 0.65)); ctx.drawImage(l.img, l.dx, l.dy, l.dw, l.dh); ctx.setTransform(1, 0, 0, 1, 0, 0); continue; }
         if (!l.core || !LT[l.kind] || LT[l.kind].smoke) continue; // a lit window or flame for a place without drawn lights
         const K = LT[l.kind], f = wave(K, l.seed); ctx.globalAlpha = l.alpha * Math.min(1, night * 1.4) * Math.min(1, f); ctx.fillStyle = K.color;
         const q = l.core * (l.kind === 1 ? 1.3 * f : 1); ctx.fillRect(Math.round(l.x - q / 2), Math.round(l.y - q / 2), Math.max(1, Math.round(q)), Math.max(1, Math.round(q * (l.kind === 1 ? 1.4 : 1))));

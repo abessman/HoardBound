@@ -94,7 +94,7 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   the k the world usually draws that state at (small mountains 0.55, large 1.25: MAP_SPEC `drawnK`).
 - 0.21: palette colours may carry opacity (`#rrggbbaa`). Good and evil tones: `HB.pixelArt.TONES` (automatic hue, sat,
   light, tint, mix), per drawing `def.tones`; `PA.canvases(def, tone)` recolours through `PA.shownPalette` (`shiftHex`,
-  then 0.31's lean to sepia: `def.sepia` { normal, good, evil } %, each colour toward `PA.SEPIA` by lightness). `apply()` adds
+  then 0.31's lean to sepia `def.sepia` and 0.33's `def.bright`, each { normal, good, evil } %, `PA.adjustOf`). `apply()` adds
   `<id>.<k>.good/.evil` overrides for dragon and anim kinds; `HB.art.frame(id, k, opts, key, tone)` and the dragon's
   `sprite()` pick them (`HB.art.toneOf(alignment)`: ±30); the lair passes its dragon's tone. The wrap sets `q.tone`
   from `HB.mapart.tone`, which the chunk renderer sets per glyph from the cell's domain mark.
@@ -113,8 +113,8 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   `PA.canvases(def, tone, swap)`; the pixel pack gives a mirrorable shaded symbol a pre-mirrored, relit variant
   instead of `allowFlipX`. Shading marks stay out of `flatten` (crop boxes) and of the palette.
 - 0.27: light layers (`light: { glow, size }`; mark = kind + 8 × intensity step, `PA.lightMark`, `PA.LEVELS`: 1 fire,
-  2 window, 3 lantern, 4 magic, 5 embers, 0.32: 6 smoke, `PA.drawSmoke`) stay out of the picture; `PA.lightsOf(def, k)`
-  gives patches and a glow canvas, shipped per variant (`lights`, `glowSrc`); `MA.drawResolved` adds them to `MA.lights`.
+  2 window, 3 lantern, 4 magic, 5 embers, 0.32: 6 smoke, `PA.drawSmoke`; 0.33: `when` → bits `PA.whenOf`) stay out of the picture; `PA.lightsOf(def, k)`
+  gives patches and glow canvases by `when`, shipped per variant (`lights`, `glows`); `MA.drawResolved` adds them to `MA.lights`.
 - Layers (0.18): `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`; `add` flattens the visible
   colour layers into `frames` for bookkeeping (crop boxes). `?drafts=1` applies the editor's drafts (`hb.pixelart.drafts`,
   `null` = deleted); 0.30: Settings → Your drawings → Local test (`artSource`, `?localart=1`) applies its Save locally
