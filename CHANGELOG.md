@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.35.0 — 2026-10-15 · Map look test
+- **Map look test** in the pixel editor (preview panel, next to Sample map): one small patch of map (a mountain chain,
+  hills, a wood, roads and five named places) drawn three ways side by side, to choose a direction for the map:
+  - **As now:** your drawings pixel-sharp, undrawn places in the Illuminated art's colours, heavy black roads.
+  - **Suggested:** terrain quiet (all sepia, lighter, closer to the paper, smoothed), roads thin and soft, places
+    standing out with a halo of paper behind them and their reds and golds kept as the one accent.
+  - **Suggested, full-resolution terrain:** the same with the terrain at full resolution (the game's ink drawings
+    standing in for bigger, higher-resolution art).
+  It uses your drawings where you have them (saved, local or unsaved), so it changes as you draw. A test only: the
+  game's map is unchanged until you choose.
+
 ## 0.34.2 — 2026-10-15 · Brightness that just brightens
 - **Brightness works like a photo's now.** It used to lift colours in a way that also made them more colourful, so dark
   sepia browns turned orange and the shading flattened. Now it raises (or lowers) how light each colour looks while

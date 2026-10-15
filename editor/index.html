@@ -244,6 +244,7 @@
       <canvas id="preview" width="300" height="200"></canvas>
       <div class="row small wrap">
         <button id="btn-samplemap" title="Your map symbols on a small sample map">Sample map</button>
+        <button id="btn-maplook" title="One patch of map three ways: as it looks now, the suggested look (quiet terrain, light roads, places that stand out) and the same with full-resolution terrain">Map look test</button>
         <button id="btn-game-map" title="Open the game's map preview with your unsaved art (this browser)">Map in game ↗</button>
         <button id="btn-game-dragon" title="Open the game's dragon sheet with your unsaved art (this browser)">Dragons in game ↗</button>
         <button id="btn-game-lair" title="Open a test campaign's lair with your unsaved art (this browser)">Lair in game ↗</button>
@@ -272,6 +273,13 @@
     <div id="cmp-list" class="row wrap small"></div>
     <div id="cmp-empty" class="muted small">Add sprites to see them side by side: your drawing as the game shows it, or the game's own art where you have not drawn yet. Tap one to draw it.</div>
     <div id="cmp-wrap"><canvas id="cmp-canvas"></canvas></div>
+  </div>
+</dialog>
+<dialog id="dlg-maplook">
+  <div class="col">
+    <div class="row wrap small"><b>Map look test</b><span class="muted">One patch of map, three ways. Your drawings are used where you have them (saved, local or unsaved); the game's ink drawings elsewhere. Nothing in the game changes.</span><span class="grow"></span>
+      <label>zoom <select id="ml-zoom"><option value="1.4">1.4</option><option value="1.9" selected>1.9</option><option value="2.6">2.6</option></select></label><button id="ml-close">Close</button></div>
+    <div id="ml-wrap"></div>
   </div>
 </dialog>
 <dialog id="dlg-settings">

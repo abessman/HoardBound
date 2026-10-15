@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-15 · **Version 0.34.2** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-15 · **Version 0.35.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -75,8 +75,8 @@ The owner plays at hoardbound.netlify.app on an iPad.
 5. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
+- Map look: quiet sepia terrain drawn bigger, thin roads, places with one accent colour? (editor's Map look test, 0.35)
 - Are the automatic good and evil tints right? Should raid sprites (villagers, knights) take tones too, and from what?
-- Converter: are the defaults close for your drawings (pencil vs ink, paper colour)? Want a dithering option?
 - Is the lair dragon big enough? Should it sit (folded wings, curled tail) rather than stand on the pile?
 - With a sleeping chamber built, should the dragon sleep there instead of on the hoard?
 - Rooms view: is a hill cross-section the right picture, or a map of chambers, or room cards?

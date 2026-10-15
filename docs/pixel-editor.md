@@ -124,6 +124,9 @@ commit by hand.
     hidden without touching the colours. Under the lines the colour layer carries on the neighbouring colours, so it
     has no gaps on its own. Or put it all in one new layer, or replace this layer's frame. Touch it up by hand, or undo
     and try other settings. ⇆ moves the panel to the other side.
+- **Map look test** (0.35, preview panel): one patch of map three ways (as now; suggested: quiet sepia terrain, thin
+  roads, places with one accent colour; and suggested with full-resolution terrain), with your drawings where you have
+  them. A test to choose a direction; the game is unchanged.
 - **Compare** (0.34, top bar): sprites side by side on one ground line, to check proportions. **＋ This sprite** or
   type a name; your drawing as the game shows it, else the game's art. **As in the game** = size on the 1280×720
   screen (raid sprites and dragons ×4, the lair ×2, map symbols their scale), or **pixel for pixel**; zoom, a height

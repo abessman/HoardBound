@@ -1701,6 +1701,112 @@
   // tap a sprite to draw it
   $('cmp-canvas').addEventListener('click', (e) => { const r = $('cmp-canvas').getBoundingClientRect(), x = e.clientX - r.left, hit = cmpHits.find(h => x >= h.x && x < h.x + h.w); if (!hit) return; const it = itemOf(hit.id); if (!it) return; $('dlg-compare').close(); S.tone = ''; open(it); });
 
+  // =====================================================================================================
+  // Map look test: one patch of map (mountains, hills, a wood, roads, a few places) three ways, to judge a direction:
+  // as now (pixel-sharp, heavy roads), the suggested look (quiet sepia terrain, light roads, places that stand out
+  // with one accent colour) and the same with full-resolution terrain (the game's ink drawings standing in for
+  // higher-resolution art). A test only: nothing in the game changes.
+  // =====================================================================================================
+  const ML = { fonts: null, ill: null };
+  /** the Illuminated map art's place pictures (coloured, as the game shows places by default): { id: { img, size, anchor } } */
+  function mlIlluminated() {
+    if (ML.ill) return ML.ill;
+    const base = '../assets/map/packs/illuminated/';
+    ML.ill = fetch(base + 'pack.json').then(r => r.json()).then(pack => Promise.all(['map.place.farm', 'map.place.village', 'map.place.town', 'map.place.castle'].map(id => {
+      const v = pack.assets && pack.assets[id] && pack.assets[id].variants && pack.assets[id].variants[0]; if (!v) return null;
+      return new Promise(ok => { const img = new Image(); img.onload = () => ok([id, { img, size: v.logicalSize, src: v.sourceSize, anchor: v.anchorPx }]); img.onerror = () => ok(null); img.src = base + v.src; });
+    }))).then(list => Object.fromEntries(list.filter(Boolean))).catch(() => ({}));
+    return ML.ill;
+  }
+  /** a picture leaned to sepia except its reds and golds (the one accent), for the suggested look; cached on the entry */
+  function mlAccentOnly(e) {
+    if (e.leaned) return e.leaned;
+    const c = document.createElement('canvas'); c.width = e.img.naturalWidth; c.height = e.img.naturalHeight; const g = c.getContext('2d'); g.drawImage(e.img, 0, 0);
+    const im = g.getImageData(0, 0, c.width, c.height), px = im.data, S = PA.SEPIA.map(([l, h]) => [l, PA.hex(h)]);
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i + 3] < 8) continue; const r = px[i], gg = px[i + 1], b = px[i + 2], mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), sat = mx ? (mx - mn) / mx : 0;
+      let hue = 0; if (mx !== mn) { const d2 = mx - mn; hue = ((mx === r ? (gg - b) / d2 : mx === gg ? 2 + (b - r) / d2 : 4 + (r - gg) / d2) * 60 + 360) % 360; }
+      if (sat > 0.4 && (hue < 22 || hue > 335 || (hue > 38 && hue < 55))) continue; // the accent stays
+      const L = (0.299 * r + 0.587 * gg + 0.114 * b) / 255; let j = 1; while (j < S.length - 1 && L > S[j][0]) j++;
+      const t = Math.min(1, Math.max(0, (L - S[j - 1][0]) / (S[j][0] - S[j - 1][0]))), p0 = S[j - 1][1], p1 = S[j][1], a = 0.65;
+      for (let q = 0; q < 3; q++) px[i + q] = Math.round(px[i + q] * (1 - a) + (p0[q] + (p1[q] - p0[q]) * t) * a);
+    }
+    g.putImageData(im, 0, 0); return (e.leaned = c);
+  }
+  function mlFonts() {
+    if (ML.fonts) return ML.fonts; const F = [['Alegreya', 'Alegreya-400.woff', {}], ['Alegreya', 'Alegreya-400i.woff', { style: 'italic' }], ['Alegreya SC', 'AlegreyaSC-400.woff', {}]];
+    ML.fonts = Promise.all(F.map(([f, file, d]) => { try { const ff = new FontFace(f, `url(../assets/fonts/${file})`, d); return ff.load().then(x => document.fonts.add(x)).catch(() => {}); } catch (e) { return null; } }));
+    return ML.fonts;
+  }
+  /** the drawings of a map symbol you have (its variants, not empty), or [] */
+  const mlDrawn = (id) => [...docs.values()].filter(d => d.kind === 'map' && pid(d.id).base === id && !pid(d.id).tone && !pid(d.id).dir && !isEmpty(d));
+  // a palette, leaned for the suggested look: terrain quiet (all sepia, lighter, lower contrast toward the paper);
+  // places in sepia but keeping their reds and golds as the one accent
+  const PAPER = [230, 213, 173];
+  function mlPalette(d, role) {
+    let pal = PA.shownPalette(d, '');
+    if (role === 'terrain') return pal.map(h => { const c = PA.hex(PA.brightHex(PA.sepiaHex(h, 1), 0.3)); return '#' + [0, 1, 2].map(i => Math.round(c[i] * 0.72 + PAPER[i] * 0.28).toString(16).padStart(2, '0')).join('') + (c[3] < 255 ? c[3].toString(16).padStart(2, '0') : ''); });
+    return pal.map(h => { const c = PA.hex(h), mx = Math.max(c[0], c[1], c[2]), mn = Math.min(c[0], c[1], c[2]), sat = mx ? (mx - mn) / mx : 0, hue = (() => { if (mx === mn) return 0; const d2 = mx - mn; let H = mx === c[0] ? (c[1] - c[2]) / d2 : mx === c[1] ? 2 + (c[2] - c[0]) / d2 : 4 + (c[0] - c[1]) / d2; return (H * 60 + 360) % 360; })();
+      const accent = sat > 0.4 && (hue < 22 || hue > 335 || (hue > 38 && hue < 55)); return accent ? h : PA.sepiaHex(h, 0.65); });
+  }
+  /** one symbol at (x, y) on g (feet at y), z screen px per map px: your drawing (a variant by seed) or the game's ink */
+  function mlSym(g, id, x, y, z, style, role, seed, forceInk) {
+    const ds = forceInk ? [] : mlDrawn(id), it = catalog.find(c => c.id === id), ill = ML.illReady && ML.illReady[id];
+    if (!ds.length && role === 'place' && ill) { // no drawing of yours: the Illuminated art's coloured picture, as the game shows places by default
+      const pic = style === 'now' ? ill.img : mlAccentOnly(ill), s = ill.size[0] / ill.src[0] * z;
+      g.save(); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(pic, Math.round(x - ill.anchor[0] * s), Math.round(y - ill.anchor[1] * s), ill.src[0] * s, ill.src[1] * s); g.restore(); return;
+    }
+    if (ds.length) {
+      const d = ds[seed % ds.length], pal = style === 'now' ? PA.shownPalette(d, '') : mlPalette(d, role), c = composeFrame(d, 0, pal).canvas, s = d.scale * z;
+      g.save(); g.imageSmoothingEnabled = style !== 'now'; g.imageSmoothingQuality = 'high'; g.drawImage(c, Math.round(x - d.anchor[0] * s), Math.round(y - d.anchor[1] * s), d.w * s, d.h * s); g.restore(); return;
+    }
+    if (!it || !it.rec) return;
+    g.save(); g.translate(x, y); g.scale(z, z); HB.mapart.proc.setup(g); g.lineCap = 'round'; g.lineJoin = 'round';
+    if (style !== 'now' && role === 'terrain') g.globalAlpha = 0.72; // the stage stays quiet
+    it.rec.draw(g, 0, 0, 1, new HB.RNG(seed * 7919 + 13)); g.restore();
+  }
+  function drawMapLook(cv, style, z) {
+    const W = 560, H = 400, dpr = window.devicePixelRatio || 1, g = cv.getContext('2d'); cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // paper: the game's parchment colour with a little grain
+    g.fillStyle = '#e6d5ad'; g.fillRect(0, 0, W, H); const R = new HB.RNG(5);
+    for (let i = 0; i < 900; i++) { g.fillStyle = R.chance(0.5) ? 'rgba(200,176,124,0.18)' : 'rgba(245,234,206,0.28)'; g.fillRect(R.int(W), R.int(H), 1 + R.int(3), 1); }
+    const k = z / 1.9, P = (x, y) => [W / 2 + (x - W / 2) * k, H / 2 + (y - H / 2) * k]; // the layout is set for zoom 1.9
+    const quiet = style !== 'now', inkTerrain = style === 'hires';
+    // roads (under everything): heavy black dashes now; thin, softer sepia suggested
+    const roads = [[[130, 196], [210, 150], [300, 178]], [[300, 178], [400, 182], [470, 182], [500, 236]], [[300, 178], [330, 120], [420, 112]], [[130, 196], [128, 260], [160, 330], [190, 400]], [[92, 120], [128, 186]]];
+    g.save(); g.lineCap = 'butt'; g.lineJoin = 'round';
+    if (quiet) { g.strokeStyle = 'rgba(74,52,30,0.55)'; g.lineWidth = 1.5 * k; g.setLineDash([6 * k, 5 * k]); } else { g.strokeStyle = 'rgba(30,20,12,0.88)'; g.lineWidth = 3.4 * k; g.setLineDash([13 * k, 8 * k]); }
+    for (const r of roads) { g.beginPath(); r.forEach(([x, y], i) => { const p = P(x, y); i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1]); }); g.stroke(); }
+    g.restore();
+    // terrain, back to front: a mountain chain, hills, a wood
+    const items = [];
+    [[60, 66], [128, 58], [196, 70], [270, 54], [342, 66], [415, 52], [488, 64], [548, 72], [96, 96], [236, 92], [390, 94], [520, 100]].forEach(([x, y], i) => items.push({ id: 'map.terrain.mountain', x, y, role: 'terrain', seed: i }));
+    [[205, 248], [255, 288], [150, 300], [355, 330], [425, 300], [470, 140]].forEach(([x, y], i) => items.push({ id: 'map.terrain.hill', x, y, role: 'terrain', seed: i + 20 }));
+    const T = new HB.RNG(31); for (let i = 0; i < 22; i++) items.push({ id: 'map.terrain.tree.round', x: 20 + T.range(0, 120), y: 300 + T.range(0, 95), role: 'terrain', seed: i + 40 });
+    for (let i = 0; i < 6; i++) items.push({ id: 'map.terrain.grass', x: 300 + T.range(0, 230), y: 230 + T.range(0, 160), role: 'terrain', seed: i + 70 });
+    items.sort((a, b) => a.y - b.y);
+    for (const s of items) { const p = P(s.x, s.y); mlSym(g, s.id, p[0], p[1], z, style, s.role, s.seed, inkTerrain); }
+    // places: a halo of paper behind them in the suggested look, so they read over the terrain
+    const places = [['map.place.town', 130, 196, 'Witherbury', true], ['map.place.village', 300, 178, 'Fulbourne'], ['map.place.farm', 92, 120, 'Aldric’s Steading'], ['map.place.castle', 420, 112, 'Keep of Barrowbridge'], ['map.place.town', 500, 236, 'Fulholt']];
+    places.forEach(([id, x, y, name, big], i) => {
+      const p = P(x, y);
+      if (quiet) { const gr = g.createRadialGradient(p[0], p[1] - 8 * k, 0, p[0], p[1] - 8 * k, 26 * k); gr.addColorStop(0, 'rgba(238,226,196,0.92)'); gr.addColorStop(0.6, 'rgba(238,226,196,0.6)'); gr.addColorStop(1, 'rgba(238,226,196,0)'); g.fillStyle = gr; g.beginPath(); g.arc(p[0], p[1] - 8 * k, 26 * k, 0, Math.PI * 2); g.fill(); }
+      mlSym(g, id, p[0], p[1], z, style, 'place', i, false);
+      g.textAlign = 'center'; g.fillStyle = quiet ? '#2b1a0e' : '#2b1a0e'; g.font = `${big ? '' : ''}${Math.round(15 * k)}px ${big ? '"Alegreya SC"' : 'Alegreya'}, Georgia, serif`;
+      if (quiet) { g.lineWidth = 3 * k; g.strokeStyle = 'rgba(238,226,196,0.85)'; g.strokeText(name, p[0], p[1] + 20 * k); }
+      g.fillText(name, p[0], p[1] + 20 * k);
+    });
+    g.textAlign = 'left'; g.font = 'italic 13px Alegreya, Georgia, serif'; g.fillStyle = 'rgba(43,26,14,0.6)'; g.fillText(`map zoom ${z}`, 8, H - 8);
+  }
+  async function openMapLook() {
+    commitFloat(); $('dlg-maplook').showModal(); await mlFonts(); ML.illReady = await mlIlluminated(); const z = +$('ml-zoom').value, wrap = $('ml-wrap'); wrap.innerHTML = '';
+    const V = [['now', '<b>As now.</b> Your drawings pixel-sharp at their scale; places you have not drawn in the Illuminated art\'s colours; terrain you have not drawn in the game\'s ink; heavy black roads.'],
+      ['suggested', '<b>Suggested.</b> Terrain quiet: all sepia, lighter, closer to the paper, smoothed. Roads thin and soft. Places stand out: a halo of paper behind them, their reds and golds kept as the one accent, the rest leaned to sepia.'],
+      ['hires', '<b>Suggested, full-resolution terrain.</b> As Suggested, with the terrain drawn at full resolution (the game\'s ink drawings standing in for higher-resolution art): what drawing mountains and hills bigger would give.']];
+    for (const [style, cap] of V) { const f = document.createElement('figure'), c = document.createElement('canvas'), fc = document.createElement('figcaption'); fc.innerHTML = cap; f.appendChild(c); f.appendChild(fc); wrap.appendChild(f); drawMapLook(c, style, z); }
+  }
+  $('btn-maplook').onclick = openMapLook; $('ml-close').onclick = () => $('dlg-maplook').close(); $('ml-zoom').onchange = openMapLook;
+
   // Start: the art on this site, then your unsaved drafts from this browser, then (with a token) newer art on GitHub
   // =====================================================================================================
   (async function start() {
