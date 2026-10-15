@@ -110,18 +110,36 @@
     LEVELS: [1, 0.25, 0.5, 0.75, 1.5, 2, 3],
     /** a light mark: its kind (mark & 7, PA.LIGHTS) and intensity step (mark >> 3, PA.LEVELS), or null when it is none */
     lightMark(v) { const k = v & 7, s = v >> 3; return v >= 1 && k >= 1 && k < PA.LIGHTS.length && s < PA.LEVELS.length ? { kind: k, step: s, level: PA.LEVELS[s] } : null; },
-    /** puffs of smoke rising from (x, y) on g, in g's pixels: r the patch's reach, dens its thickness, a its opacity;
-     *  t the time (s), seed to keep spots out of step. Hand-drawn style: soft ink-brown puffs that swell and drift */
+    /** a column of smoke rising from (x, y) on g, in g's pixels: r the patch's reach, dens its thickness, a its opacity;
+     *  t the time (s), seed to keep spots out of step. Many small, irregular soft puffs in a stream: thin and dark at the
+     *  source, swelling, lightening and thinning as they rise, curling and leaning with the wind */
     drawSmoke(g, x, y, r, dens, a, seed, t) {
-      const n = Math.max(2, Math.round(3 + 2 * Math.min(3, dens))), life = 3.4, R = Math.max(1.5, r), c = hex(PA.LIGHTS[6].color);
+      const R = Math.max(1.5, r), d = Math.min(3, Math.max(0.25, dens || 1)), n = Math.round(18 + 8 * d), life = 4.8, H = R * 7.5, spr = PA.smokeSprites(), ga = g.globalAlpha;
+      const fr = (v) => v - Math.floor(v), hs = (i, k) => fr(Math.sin(seed * 12.9898 + i * 78.233 + k * 37.719) * 43758.5453); // steady per-puff randomness
       for (let i = 0; i < n; i++) {
-        const ph = (t / life + i / n + (seed * 0.137) % 1 + 1) % 1, wob = Math.sin(ph * 5 + seed + i * 1.7);
-        const px = x + ph * ph * R * 1.8 + wob * R * 0.22, py = y - ph * R * 4.2, rr = R * (0.32 + ph * 0.85);
-        const al = a * Math.min(1, 0.4 + 0.25 * dens) * Math.min(1, ph / 0.12) * (1 - ph); if (al <= 0.005) continue;
-        const gr = g.createRadialGradient(px, py, 0, px, py, rr);
-        gr.addColorStop(0, `rgba(${c[0]},${c[1]},${c[2]},${al})`); gr.addColorStop(0.6, `rgba(${c[0]},${c[1]},${c[2]},${al * 0.55})`); gr.addColorStop(1, `rgba(${c[0]},${c[1]},${c[2]},0)`);
-        g.fillStyle = gr; g.beginPath(); g.arc(px, py, rr, 0, Math.PI * 2); g.fill();
+        const ph = fr(t / life + (i + hs(i, 1) * 0.6) / n + hs(0, 9)); // age 0 (just out) … 1 (gone)
+        const rise = (1 - Math.pow(1 - ph, 1.35)) * H, y1 = y - rise; // quick out of the fire, slower higher up
+        const lean = ph * ph * R * 2.6; // the wind takes it as it rises
+        const curl = Math.sin(t * 0.8 + rise / R * 0.55 + seed) * R * 0.45 * ph + Math.sin(t * 1.9 + i * 2.1 + seed * 0.3) * R * 0.18 * ph;
+        const x1 = x + lean + curl + (hs(i, 2) - 0.5) * R * 0.5 * Math.sqrt(ph);
+        const size = R * (0.36 + 1.45 * ph) * (0.75 + 0.5 * hs(i, 3));
+        const al = Math.min(1, (0.16 + 0.09 * d) * Math.min(1, ph / 0.06) * Math.pow(1 - ph, 1.35) * (0.65 + 0.7 * hs(i, 4)) * a); if (al < 0.01) continue;
+        const sp = spr[ph < 0.22 ? 0 : ph < 0.55 ? 1 : 2][Math.floor(hs(i, 5) * spr[0].length)], ang = hs(i, 6) * 6.283 + t * (hs(i, 7) - 0.5) * 0.6;
+        g.save(); g.globalAlpha = ga * al; g.translate(x1, y1); g.rotate(ang); g.drawImage(sp, -size, -size, size * 2, size * 2); g.restore();
       }
+    },
+    /** soft, lumpy smoke puffs (a few overlapping blobs each), in three tones from the fire's dark to a pale grey-brown;
+     *  made once: [tone][shape] canvases */
+    smokeSprites() {
+      if (PA._smoke) return PA._smoke;
+      let q = 917; const rnd = () => ((q = (q * 16807) % 2147483647) / 2147483647), S = 64, tones = ['#4b3e32', '#6e6152', '#9c8f7d'];
+      const shapes = Array.from({ length: 5 }, () => Array.from({ length: 4 + Math.floor(rnd() * 3) }, (_, k) => ({ x: (rnd() - 0.5) * (k ? 0.5 : 0.15), y: (rnd() - 0.5) * (k ? 0.45 : 0.15), r: 0.22 + rnd() * 0.2 })));
+      return (PA._smoke = tones.map(tone => { const c0 = hex(tone); return shapes.map(blobs => {
+        const c = document.createElement('canvas'); c.width = c.height = S; const g = c.getContext('2d');
+        for (const b of blobs) { const bx = S / 2 + b.x * S, by = S / 2 + b.y * S, br = b.r * S, gr = g.createRadialGradient(bx, by, 0, bx, by, br);
+          gr.addColorStop(0, `rgba(${c0[0]},${c0[1]},${c0[2]},0.55)`); gr.addColorStop(0.55, `rgba(${c0[0]},${c0[1]},${c0[2]},0.28)`); gr.addColorStop(1, `rgba(${c0[0]},${c0[1]},${c0[2]},0)`);
+          g.fillStyle = gr; g.beginPath(); g.arc(bx, by, br, 0, Math.PI * 2); g.fill(); }
+        return c; }); }));
     },
     /** a layer's light settings ({ glow, size }, percent), or null for a layer that is not a light layer */
     lightOf(l) { return l && l.light ? Object.assign({ glow: 100, size: 100 }, typeof l.light === 'object' ? l.light : {}) : null; },

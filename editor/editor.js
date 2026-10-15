@@ -387,7 +387,7 @@
     if (isShade(d) && S.marks) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: MARK }, F()), X, Y, W, H);
     if (S.time !== 'day' ? hasLightLayer(d) : litNow(d)) drawNight(d, X, Y, z);
     if (S.time === 'day' && isLight(d)) ctx.drawImage(frameCanvas({ w: d.w, h: d.h, palette: LMARK }, F()), X, Y, W, H); // where you painted, by day
-    if (hasSmoke(d, S.frame)) { ctx.save(); ctx.beginPath(); ctx.rect(X, Y - H, W, H * 2); ctx.clip(); drawSmoke(ctx, d, S.frame, X, Y, z); ctx.restore(); }
+    if (hasSmoke(d, S.frame)) drawSmoke(ctx, d, S.frame, X, Y, z); // not cut to the drawing: smoke rises past its top, as on the map
     // with parchment under and Good or Evil shown: the territory wash as on the map, on the ground and, by each layer's
     // wash setting, on the drawing
     if (pp && S.tone) {

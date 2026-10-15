@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.34.1 — 2026-10-15 · Smoke that looks like smoke
+- **Smoke is a rising column now**, not a few circles: many small, lumpy, soft puffs in a stream, thin and dark where
+  it leaves the fire, swelling, paling and thinning as it climbs, curling and leaning with the wind. Intensity still
+  sets how thick it is and Reach how big.
+- **Smoke rises past the top of the drawing**: on the map it always did (it is drawn over the map, not cut to the
+  sprite); the editor's canvas now shows it that way too instead of cutting it at the drawing's edges.
+
 ## 0.34.0 — 2026-10-15 · Compare sprites side by side
 - **Compare** (top bar of the pixel editor) opens a big panel where you line sprites up on one ground line to check
   their sizes and proportions. **＋ This sprite** adds the one you have open (a variant, a direction or a version
