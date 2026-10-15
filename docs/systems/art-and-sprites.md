@@ -92,8 +92,7 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   art pack (`HB.pixelArt.mapPack()`, built in memory by `HB.mapAssets.use('pixel')`; frames are variants, pixel
   sampling). 0.20: each variant is cut to the box drawn in its frame (stretched to hold the anchor; empty frames are
   skipped), so variants keep their own sizes; `logicalSize = cut size × scale / drawnK`, where `HB.mapDrawnK(id)` is
-  the k the world usually draws that state at (small mountains 0.55, large 1.25: MAP_SPEC `drawnK`), so a drawing
-  shows at about its drawn size.
+  the k the world usually draws that state at (small mountains 0.55, large 1.25: MAP_SPEC `drawnK`).
 - 0.21: palette colours may carry opacity (`#rrggbbaa`). Good and evil tones: `HB.pixelArt.TONES` (automatic hue, sat,
   light, tint, mix), per drawing `def.tones`; `PA.canvases(def, tone)` recolours through `PA.shiftHex`. `apply()` adds
   `<id>.<k>.good/.evil` overrides for dragon and anim kinds; `HB.art.frame(id, k, opts, key, tone)` and the dragon's
@@ -117,8 +116,9 @@ overridden the same way. Keep sprite ids stable. Details: `assets/sprites/README
   out of the picture; `PA.lightsOf(def, k)` gives patches (`lightSpots`) and a glow canvas, which the pixel pack ships
   per variant (`lights`, `glowSrc`). `MA.drawResolved` reports them into `MA.lights` (device px) while mapview collects.
 - Layers (0.18): `layers: [{ name, hidden?, frames }]` (bottom first) instead of `frames`; `add` flattens the visible
-  colour layers into `frames` for bookkeeping (crop boxes). `?drafts=1` applies the editor's unsaved drafts
-  (localStorage `hb.pixelart.drafts`, only drawings with something visible, `null` for a deletion; 0.26.1).
+  colour layers into `frames` for bookkeeping (crop boxes). `?drafts=1` applies the editor's drafts (`hb.pixelart.drafts`,
+  `null` = deleted); 0.30: Settings → Your drawings → Local test (`artSource`, `?localart=1`) applies its Save locally
+  (`hb.pixelart.local`) first; `PA.useSource` switches live (`apply()` takes back its earlier overrides).
 
 ## Code
 - `src/art/` (palette, pixel helpers + sprite registry, sprites, dragon, mapart, parchment, illustrations).

@@ -1081,7 +1081,7 @@
   }
   function renderInfo() {
     const d = D(), it = S.item; if (!d) return;
-    $('title').textContent = `${it.group} · ${it.label}${deleted.has(d.id) ? '  •  deleted on your next save (Revert keeps it)' : isDirty(d) ? '  •  unsaved' : saved.has(d.id) ? '  •  saved' : ''}`;
+    $('title').textContent = `${it.group} · ${it.label}${deleted.has(d.id) ? '  •  deleted on your next save (Revert keeps it)' : isDirty(d) ? (isLocal(d.id) ? '  •  saved locally, not on GitHub yet' : '  •  unsaved') : saved.has(d.id) ? '  •  saved' : ''}`;
     const warn = d.kind === 'map' ? terrainWarning(d) : '', fam = d.kind === 'map' && HB.mapSpecFamily ? HB.mapSpecFamily(d.id) : null;
     const nv = d.kind === 'map' ? variantNs(baseOf(it)).length : 0;
     const sizes = (it.tone ? ` Your own ${it.tone} version: the game uses it ${it.tone === 'good' ? 'in a kind setting' : 'in a cruel setting'} instead of tinting the normal drawing.` : '') + (nv > 1 ? ` Variant ${it.n || 1} of ${nv}: each spot gets one at random.` : '');
@@ -1105,15 +1105,58 @@
       if (it.group !== lastGroup) { const g = document.createElement('div'); g.className = 'group'; g.textContent = it.group; box.appendChild(g); lastGroup = it.group; }
       const el = document.createElement('div'); el.className = 'item' + (cur === it.id ? ' cur' : '');
       const n = ids.filter(id => saved.has(id) || (docs.get(id) && !docs.get(id).fresh)).length;
-      const tag = ids.some(id => docs.get(id) && isDirty(docs.get(id)) && !docs.get(id).fresh) ? '✎ unsaved' : n > 1 ? `● ${n} drawings` : n ? '● drawn' : '';
+      const pend = ids.filter(id => (docs.get(id) && isDirty(docs.get(id)) && !docs.get(id).fresh) || deleted.has(id));
+      const tag = pend.some(id => !isLocal(id)) ? '✎ unsaved' : pend.length ? '⌂ saved locally' : n > 1 ? `● ${n} drawings` : n ? '● drawn' : '';
       el.innerHTML = `<span>${it.label}</span><span class="tag">${tag}</span>`; el.onclick = () => open(it); box.appendChild(el);
     }
   }
   function status() {
-    const n = dirtyIds().length + deleted.size + (palDirty() ? 1 : 0), gh = ghConfig();
-    $('status').textContent = `${n ? n + ' unsaved' : 'all saved'} · ${gh.token ? 'GitHub ready' : 'GitHub token not set'}`;
-    $('btn-save').disabled = !n;
+    const n = dirtyIds().length + deleted.size + (palDirty() ? 1 : 0), gh = ghConfig(), nl = localSaves.size;
+    $('status').textContent = `${n ? `${n} not on GitHub${nl ? ` (${nl} saved locally)` : ''}` : 'all on GitHub'} · ${gh.token ? 'GitHub ready' : 'GitHub token not set'}`;
+    $('btn-save').disabled = !n; $('btn-local').disabled = !localPending().length;
   }
+  // ---- local saves: drawings kept in this browser for the game to show (Settings → Your drawings → Local test) before
+  // they go to GitHub, where each save makes the site redeploy. { id: definition, or null for a deleted drawing }.
+  // Drafts are different: they keep every stroke (so nothing is lost); a local save is what you chose to test.
+  const localSaves = new Map(), localTexts = new Map();
+  /** a drawing's file text, remembered per edit */
+  const docText = (d) => { if (d._tx && d._tx.rev === d._rev) return d._tx.t; const t = fileText(toDef(d)); d._tx = { rev: d._rev, t }; return t; };
+  function storeLocal() {
+    const o = {}; for (const [id, v] of localSaves) o[id] = v;
+    try { localStorage.setItem(PA.LOCAL, JSON.stringify(o)); return true; } catch (e) { toast('Could not save on this device (browser storage full?)', 6000); return false; }
+  }
+  /** at start: the local saves; one without a newer draft opens as it was saved; ones now on GitHub are forgotten */
+  function loadLocal() {
+    let o = {}; try { o = JSON.parse(localStorage.getItem(PA.LOCAL) || '{}') || {}; } catch (e) { /* none */ }
+    for (const id in o) {
+      const v = o[id];
+      if (v === null) { if (!saved.has(id)) continue; localSaves.set(id, null); localTexts.set(id, null); if (!docs.has(id) || !isDirty(docs.get(id))) { deleted.add(id); docs.delete(id); } continue; }
+      let t; try { t = fileText(v); } catch (e) { continue; } if (t === saved.get(id)) continue;
+      localSaves.set(id, v); localTexts.set(id, t);
+      if (!(docs.has(id) && isDirty(docs.get(id))) && !deleted.has(id)) docs.set(id, fromDef(v));
+    }
+    if (localSaves.size !== Object.keys(o).length) storeLocal();
+  }
+  /** the drawings Save locally would change: unsaved ones that differ from their local save, and local saves now back to GitHub's */
+  function localPending() {
+    const out = [];
+    for (const id of dirtyIds()) if (localTexts.get(id) !== docText(docs.get(id))) out.push(id);
+    for (const id of deleted) if (localTexts.get(id) !== null || !localSaves.has(id)) out.push(id);
+    for (const id of localSaves.keys()) if (!deleted.has(id) && !(docs.has(id) && isDirty(docs.get(id)))) out.push(id);
+    return out;
+  }
+  const isLocal = (id) => localSaves.has(id) && (localSaves.get(id) === null ? deleted.has(id) : docs.has(id) && localTexts.get(id) === docText(docs.get(id)));
+  function saveLocal() {
+    commitFloat();
+    const n = dirtyIds().filter(id => localTexts.get(id) !== docText(docs.get(id))).length + [...deleted].filter(id => localSaves.get(id) !== null).length;
+    for (const id of dirtyIds()) { const d = docs.get(id); localSaves.set(id, toDef(d)); localTexts.set(id, docText(d)); }
+    for (const id of deleted) { localSaves.set(id, null); localTexts.set(id, null); }
+    for (const id of [...localSaves.keys()]) if (!deleted.has(id) && !(docs.has(id) && isDirty(docs.get(id)))) { localSaves.delete(id); localTexts.delete(id); } // back to GitHub's
+    if (!storeLocal()) return;
+    saveDrafts(); status(); renderInfo(); renderList();
+    toast(n ? `Saved ${n} drawing${n === 1 ? '' : 's'} locally (this browser). In the game: Settings → Your drawings → Local test. When you are happy, Save to GitHub sends everything in one commit (one redeploy).` : 'Your local saves are up to date', n ? 8000 : 3000);
+  }
+  $('btn-local').onclick = saveLocal;
   let draftTimer = 0;
   function changed(structure, light) {
     if (D()) { D().fresh = false; D()._rev = (D()._rev || 0) + 1; }
@@ -1229,6 +1272,7 @@
       await gh(`/git/refs/heads/${refPath(branch)}`, { method: 'PATCH', body: JSON.stringify({ sha: nc.sha }) });
       for (const id of ids) saved.set(id, fileText(toDef(docs.get(id))));
       for (const id of deleted) saved.delete(id);
+      for (const id of [...ids, ...deleted]) { localSaves.delete(id); localTexts.delete(id); } storeLocal();
       deleted.clear(); PA.files = list; saveDrafts();
       if (palChanged) { PAL.savedText = palText; palettesEdited(); }
       const big = ids.filter(id => terrainWarning(docs.get(id)));
@@ -1445,7 +1489,8 @@
     const d = D(); if (!d) return; if (!isDirty(d) && !deleted.has(d.id)) { toast('No unsaved changes here'); return; }
     deleted.delete(d.id); const s = saved.get(d.id);
     if (s) docs.set(d.id, fromDef(parseCall(s))); else docs.delete(d.id);
-    saveDrafts(); open(S.item); status(); toast('Reverted to the saved version');
+    if (localSaves.delete(d.id)) { localTexts.delete(d.id); storeLocal(); }
+    saveDrafts(); open(S.item); status(); toast('Reverted to the version on GitHub');
   };
   $('btn-delete-art').onclick = () => {
     const d = D(); if (!d) return;
@@ -1495,7 +1540,7 @@
   (async function start() {
     renderGamePalette(); setTool('pencil');
     await PA.load('../assets/pixelart/');
-    for (const def of PA.entries.values()) { const doc = fromDef(def); docs.set(def.id, doc); saved.set(def.id, fileText(toDef(doc))); }
+    for (const def of (PA.fileEntries || PA.entries).values()) { const doc = fromDef(def); docs.set(def.id, doc); saved.set(def.id, fileText(toDef(doc))); }
     await PA.script('../assets/pixelart/palettes.js'); // saved palettes (missing until the first one is saved)
     PAL.list = cleanPalettes(PA.savedPalettes); PAL.savedText = palettesText(PAL.list);
     try { const pd = JSON.parse(localStorage.getItem(PAL_DRAFT) || 'null'); if (pd) PAL.list = cleanPalettes(pd); } catch (e) { /* no draft */ }
@@ -1503,6 +1548,7 @@
     let restored = 0, dropped = 0;
     try { const dr = JSON.parse(localStorage.getItem(PA.DRAFTS) || '{}'); for (const id in dr) { if (dr[id] && saved.has(id)) { try { if (isEmpty(fromDef(dr[id]))) { dropped++; continue; } } catch (e) { dropped++; continue; } } if (dr[id] === null) { if (saved.has(id)) { deleted.add(id); docs.delete(id); restored++; } } else { docs.set(id, fromDef(dr[id])); restored++; } } } catch (e) { /* no drafts */ }
     if (dropped) saveDrafts(); // forget empty drafts that were hiding saved drawings
+    loadLocal();
     buildCatalog();
     let last = null; try { last = localStorage.getItem('hb.editor.last'); } catch (e) { /* private mode */ }
     const lp = last ? pid(last) : null, lb = lp && catalog.find(i => i.id === lp.base);

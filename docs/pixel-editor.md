@@ -168,6 +168,13 @@ Delete, Enter (drop a paste), Esc (cancel it), Ctrl/Cmd+S save.
   until drawn it is made of three of your mountains with a gold pennant.
 
 ## Saving
+**Save locally** (0.30) keeps every changed drawing in this browser and sends nothing, so the site does not redeploy.
+In the game, **Settings → Your drawings → Local test** shows them (this browser only; From GitHub goes back), and the
+title screen says so while it is on. The status counts what is not on GitHub and how much of it is saved locally; the
+list marks ⌂ saved locally, or ✎ when changed since. Your strokes are also kept as drafts all the time (so nothing is
+lost), but the game only shows what you saved locally. Test, then **Save to GitHub** once: one commit, one redeploy.
+Revert drops the local save with your changes; saving to GitHub clears the local saves it sent.
+
 **Save to GitHub** commits every changed sprite in one commit to the repository's default branch (or the branch set
 in GitHub…), with a message naming them. The site redeploys from it in a minute or two. Opening the editor with a
 token also brings in drawings saved from another device that the site does not have yet. Unsaved changes stay in this

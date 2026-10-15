@@ -12,6 +12,7 @@
     showGrid: false,
     mapPack: 'illuminated',  // map art pack in assets/map/packs/<name>/ ('none' = the original ink drawing)
     mapLight: 'day',         // time of day on the map: 'day' | 'dusk' | 'night' (a preview of the map's lights)
+    artSource: 'github',     // drawings from the pixel editor: 'github' (the site's files) | 'local' (saved locally in this browser)
   };
   const settings = HB.settings = Object.assign({}, DEFAULTS);
   settings.load = function () {

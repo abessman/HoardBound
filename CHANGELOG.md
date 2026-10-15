@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.30.0 — 2026-10-15 · Save locally, test, then save to GitHub
+- **Save locally** in the pixel editor (next to Save to GitHub) keeps every changed drawing in this browser without
+  sending anything to GitHub, so the site does not redeploy. Draw, save locally, try it in the game, adjust, and Save
+  to GitHub once you are happy: that sends everything in one commit (one redeploy).
+- **Settings → Your drawings: From GitHub / Local test.** Local test shows your locally saved drawings in the game
+  (dragons, lair, raid sprites, and map symbols with Map art: Pixel art), in this browser only; it switches straight
+  away, no reload. The title screen says when local drawings are showing.
+- The editor's status says how many drawings are not on GitHub yet and how many of those are saved locally; the list
+  marks them ⌂ saved locally (✎ when changed since). Revert goes back to the GitHub version and drops the local save;
+  saving to GitHub clears the local saves it sent.
+
 ## 0.29.0 — 2026-10-14 · Drop pictures onto frames
 - **Drag a saved picture from Explorer onto a frame box** in the pixel editor and it loads into that frame. Drop
   several at once and they fill that frame and the next ones in file-name order (frame2 before frame10), adding frames

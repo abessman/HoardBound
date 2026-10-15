@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-14 · **Version 0.29.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-15 · **Version 0.30.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
@@ -11,13 +11,13 @@ The owner plays at hoardbound.netlify.app on an iPad.
 - 0.17–0.19: lair dragon on its hoard and the rooms view; editor picture behind, undo/redo, layers, converter, colour
   wheel, saved palettes. 0.20: mountains in three sizes, one legendary peak per region (`map.landmark.peak`, idea doc
   `docs/ideas/landmarks.md`), crop and anchor buttons, variants at their drawn size (MAP_SPEC `drawnK`).
-- The owner's art so far: `map.terrain.mountain` (55×30, scale 0.5, anchor at the foot), its variant `#2`, and
-  `map.terrain.mountain.small` (32×15). The mountain draws on every mountain kind until the others are drawn.
-- 291 headless checks pass on both seeds (one more per drawn art file).
+- The owner's art so far: `map.terrain.mountain` (+ `#2`), `map.terrain.mountain.small`, `map.terrain.hill` and
+  `dragon.0.idle` (60×60, 7 frames). The mountain draws on every mountain kind until the others are drawn.
+- 292 headless checks pass on both seeds (one more per drawn art file).
 - World generation is version 2 (seven regions); saves keep their version and older campaigns load their old world.
 
 ## Several writers push to this branch
-- Codex sessions (0.14–0.15), Claude (0.16–0.28), and the owner's editor (art commits to `assets/pixelart/`).
+- Codex sessions (0.14–0.15), Claude (0.16–0.30), and the owner's editor (art commits to `assets/pixelart/`).
 - **Always `git fetch` and rebase or merge before pushing; never reformat files in `assets/pixelart/`.**
 
 ## Editor working decisions (0.18, not confirmed by the owner)
@@ -60,13 +60,14 @@ The owner plays at hoardbound.netlify.app on an iPad.
   The overworld dragon turns 8 ways when `dragon.<tier>.fly` is drawn in directions (the drawn pose wins over the
   pack's marker); travellers turn with pixel-pack markers. Choices (not confirmed): 4 = E W N S (diagonals go to the
   side), new directions start as copies, map markers stay unanimated (frames are variants), raids face left or right.
-- 0.28.1 (owner's ask): drawn animations play all their frames at the drawing's fps (`HB.dragonArt.frameAt` in every
-  view; raid sprites loop their frames via `HB.art.at`). The generated art keeps its old timings.
+- 0.28.1 (owner's ask): drawn animations play all frames at their fps (`HB.dragonArt.frameAt`; raids `HB.art.at`).
 - 0.29 (owner's ask): drop pictures from Explorer onto frame boxes (`loadPics` in editor.js). Choices (not confirmed):
   name order, empty drawings take the picture's size, smaller ones bottom middle, bigger ones shrunk, k× read at 1×.
+- 0.30 (owner's ask; each GitHub save redeploys Netlify, which costs the owner): editor **Save locally**
+  (`hb.pixelart.local`), game Settings → Your drawings → Local test (`artSource`, live switch `PA.useSource`).
 
 ## Next tasks (in order)
-1. The owner tries Facing on the dragon's fly pose and a light layer on a camp or castle (Settings → Time of day).
+1. The owner tries Save locally + Local test, dropping pictures onto frames, Facing, and a light layer at night.
 2. Owner looks at the lair (hoard and all rooms) and the sleep screen on the iPad, then draws: the lair dragon poses
    first (Lair · dragon), then the chamber and rooms. Adjust slots and sizes to the owner's drawings.
 3. How upgrades should look in the rooms view (owner's design to come): possibly drawn room cards per level.

@@ -25,16 +25,19 @@
  * same sprite facing other ways, each with its own frames (its own animation). The base drawing's dirs (2, 4 or 8) says
  * how many the sprite uses; a missing one mirrors the other side ('w' from 'e', 'nw' from 'ne') or takes the nearest
  * drawn direction (PA.pickDir). The map's dragon and travellers turn this way as they move.
- * Loaded at boot with script tags, so it also works from file://. With ?drafts=1 the editor's unsaved drafts in this
- * browser are applied on top (the editor's "preview in game" buttons use it). Guide: docs/pixel-editor.md. */
+ * Loaded at boot with script tags, so it also works from file://. With Settings → Your drawings → Local test (or
+ * ?localart=1) the drawings saved locally in the editor (this browser, not yet on GitHub) are applied on top; with
+ * ?drafts=1 the editor's unsaved drafts (its "preview in game" buttons). Guide: docs/pixel-editor.md. */
 (function () {
   const HB = globalThis.HB;
   if (!HB.isBrowser) return;
   const ALPHABET = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  const DRAFTS = 'hb.pixelart.drafts';
+  const DRAFTS = 'hb.pixelart.drafts', LOCAL = 'hb.pixelart.local';
 
   const PA = HB.pixelArt = {
-    ALPHABET, DRAFTS, files: [], entries: new Map(), loaded: null, base: 'assets/pixelart/',
+    ALPHABET, DRAFTS, LOCAL, files: [], entries: new Map(), loaded: null, base: 'assets/pixelart/',
+    source: 'github', // where drawings come from: 'github' (the files) or 'local' (this browser's local saves on top)
+    fileEntries: null, // the drawings as the files have them (to switch source without reloading)
     /** the editor's saved palettes (assets/pixelart/palettes.js, loaded by the editor only): [{ name, colors: ['#rrggbb'] }] */
     palettes(list) { PA.savedPalettes = Array.isArray(list) ? list : []; },
     index(list) { PA.files = Array.isArray(list) ? list.filter(f => typeof f === 'string' && /^[\w.~-]+\.js$/.test(f)) : []; },
@@ -154,16 +157,37 @@
     load(base) {
       if (PA.loaded) return PA.loaded;
       if (base) PA.base = base;
+      if (HB.settings && HB.settings.artSource === 'local') PA.source = 'local';
       PA.loaded = (async () => {
         if (await PA.script(PA.base + 'index.js')) await Promise.all(PA.files.map(f => PA.script(PA.base + f)));
-        if (typeof location !== 'undefined' && new URLSearchParams(location.search).has('drafts')) PA.applyDrafts();
+        PA.fileEntries = new Map(PA.entries);
+        PA.overlay();
         PA.apply();
         return true;
       })();
       return PA.loaded;
     },
-    applyDrafts() {
-      try { const d = JSON.parse(localStorage.getItem(DRAFTS) || '{}'); for (const id in d) { if (d[id] === null) PA.entries.delete(id); else PA.add(d[id]); } } catch (e) { /* no drafts */ }
+    /** on top of the files: this browser's local saves (Local test, or ?localart=1), then with ?drafts=1 the drafts */
+    overlay() {
+      const q = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
+      if (PA.source === 'local' || (q && q.has('localart'))) PA.applyStored(LOCAL);
+      if (q && q.has('drafts')) PA.applyStored(DRAFTS);
+    },
+    applyStored(key) {
+      try { const d = JSON.parse(localStorage.getItem(key) || '{}'); for (const id in d) { if (d[id] === null) PA.entries.delete(id); else PA.add(d[id]); } } catch (e) { /* none kept */ }
+    },
+    applyDrafts() { PA.applyStored(DRAFTS); },
+    /** how many drawings are saved locally in this browser (not yet on GitHub) */
+    localCount() { try { return Object.keys(JSON.parse(localStorage.getItem(LOCAL) || '{}')).length; } catch (e) { return 0; } },
+    /** switch where drawings come from ('github' | 'local') straight away: the files again, the local saves on top */
+    useSource(src) {
+      PA.source = src === 'local' ? 'local' : 'github';
+      if (!PA.loaded) return Promise.resolve(false);
+      return PA.loaded.then(() => {
+        PA.entries = new Map(PA.fileEntries); PA.overlay(); PA.apply();
+        if (HB.mapAssets && HB.mapAssets.packName === 'pixel') HB.mapAssets.use('pixel');
+        return true;
+      });
     },
     /** a definition's frames as canvases (cached on the definition); tone 'good' or 'evil' shifts the colours. A layered
      *  drawing is stacked with real transparency (PA.composite), which also gives its wash cut-outs (PA.cuts). */
@@ -222,18 +246,22 @@
     tonedPalette(def, which) { const t = PA.tone(def, which); return (def.palette || []).map(c => PA.shiftHex(c, t)); },
     /** put every sprite and dragon frame into HB.sprites.overrides (map symbols go through mapPack()) */
     apply() {
-      const ov = HB.sprites.overrides, defs = [...PA.entries.values()];
+      const ov = HB.sprites.overrides, meta = HB.sprites.overrideMeta, defs = [...PA.entries.values()];
+      // what the last apply put in goes first (a switch between GitHub and local drawings), then this one is recorded
+      for (const k of PA._ov || []) ov.delete(k); for (const k of PA._meta || []) meta.delete(k);
+      const ovKeys = PA._ov = new Set(), metaKeys = PA._meta = new Set();
+      const put = (k, v) => { ov.set(k, v); ovKeys.add(k); }, setMeta = (k, v) => { meta.set(k, v); metaKeys.add(k); };
       // the normal drawings (with their automatic good and evil tints), then drawn good and evil versions over the tints
       for (const def of defs) {
         const p = PA.parseId(def.id); if (p.tone || p.n > 1) continue;
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
         // a raid sprite: its first frame by its id; every frame as <id>.<k>, which the raid plays when there are several
-        if (def.kind === 'sprite') { ov.set(def.id, Object.assign({ image: fr[0] }, base)); fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c }, base))); HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs }); }
+        if (def.kind === 'sprite') { put(def.id, Object.assign({ image: fr[0] }, base)); fr.forEach((c, k) => put(`${def.id}.${k}`, Object.assign({ image: c }, base))); setMeta(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs }); }
         else if (def.kind === 'dragon' || def.kind === 'anim') {
-          fr.forEach((c, k) => ov.set(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
-          for (const tn of ['good', 'evil']) PA.canvases(def, tn).forEach((c, k) => ov.set(`${def.id}.${k}.${tn}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
-          HB.sprites.overrideMeta.set(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs });
+          fr.forEach((c, k) => put(`${def.id}.${k}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
+          for (const tn of ['good', 'evil']) PA.canvases(def, tn).forEach((c, k) => put(`${def.id}.${k}.${tn}`, Object.assign({ image: c, bodyLength: def.bodyLength }, base)));
+          setMeta(def.id, { frames: fr.length, fps: def.fps, dirs: def.dirs });
         }
       }
       for (const def of defs) {
@@ -241,8 +269,8 @@
         const fr = PA.canvases(def); if (!fr.length) continue;
         const a = def.anchor || [Math.floor(def.w / 2), def.h], base = { x: 0, y: 0, w: def.w, h: def.h, ax: a[0], ay: a[1] };
         const at = PA.idOf(p.base, 1, '', p.dir); // a direction's good or evil version stays with its direction
-        fr.forEach((c, k) => ov.set(`${at}.${k}.${p.tone}`, Object.assign({ image: c, bodyLength: def.bodyLength || (PA.entries.get(p.base) || {}).bodyLength }, base)));
-        HB.sprites.overrideMeta.set(`${at}@${p.tone}`, { frames: fr.length, fps: def.fps });
+        fr.forEach((c, k) => put(`${at}.${k}.${p.tone}`, Object.assign({ image: c, bodyLength: def.bodyLength || (PA.entries.get(p.base) || {}).bodyLength }, base)));
+        setMeta(`${at}@${p.tone}`, { frames: fr.length, fps: def.fps });
       }
       HB.sprites.cache.clear();
     },
