@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.34.0 — 2026-10-15 · Compare sprites side by side
+- **Compare** (top bar of the pixel editor) opens a big panel where you line sprites up on one ground line to check
+  their sizes and proportions. **＋ This sprite** adds the one you have open (a variant, a direction or a version
+  too); type a name to add any other. Each shows your drawing as the game shows it (sepia and brightness included),
+  or the game's own art where you have not drawn yet, marked *game art*.
+- **Size: as in the game** shows each at its size on the 1280×720 screen: raid sprites and dragons 4 screen px per
+  pixel, the lair's pictures 2, map symbols their scale at map zoom 1. **Pixel for pixel** makes every pixel the same
+  size. A zoom slider, a height grid numbered in screen px (or pixels), and under each sprite its drawn size, canvas
+  size and how many screen px tall it stands.
+- **Stand on** the bottom of what is drawn (feet), the anchor (where the game places it) or the canvas bottom;
+  **animate** plays them all; ◀ ▶ reorder, ✕ removes; tap a sprite to draw it. The line-up is remembered.
+
 ## 0.33.0 — 2026-10-15 · Brightness, and when lights and smoke show
 - **Brightness** next to **sepia** in the Version row: lighter (up to +60%) or darker (down to −60%), applied after the
   sepia lean (which can darken a drawing). Like sepia, Normal, Good and Evil each keep their own.

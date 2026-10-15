@@ -1569,6 +1569,7 @@
   const keys = { space: false };
   window.addEventListener('keydown', (e) => {
     if (e.target.matches('input, select, textarea') && e.key !== 'Escape') return;
+    if (document.querySelector('dialog[open]')) return; // a dialog (Compare, GitHub…) is open: its own keys
     const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
     if (e.code === 'Space') { keys.space = true; e.preventDefault(); return; }
     if (mod && k === 'z') { e.preventDefault(); if (e.shiftKey) redo(); else undo(); return; }
@@ -1592,6 +1593,114 @@
   window.addEventListener('beforeunload', (e) => { if (dirtyIds().length || deleted.size || palDirty()) { saveDrafts(); e.preventDefault(); e.returnValue = ''; } });
 
   // =====================================================================================================
+  // =====================================================================================================
+  // Compare: several sprites side by side on one ground line, to check sizes and proportions. Each is your drawing
+  // as the game shows it (else the game's own art), at its size on the 1280×720 screen (raid sprites and dragons 4
+  // screen px per pixel, the lair's pictures 2, map symbols their scale at map zoom 1) or pixel for pixel.
+  // =====================================================================================================
+  const CMP_KEY = 'hb.editor.compare', cmpCache = new Map();
+  const CMP = Object.assign({ ids: [], mode: 'game', zoom: 1, align: 'feet', anim: false, bg: 'parchment' }, (() => { try { return JSON.parse(localStorage.getItem(CMP_KEY) || '{}'); } catch (e) { return {}; } })());
+  const cmpSave = () => { try { localStorage.setItem(CMP_KEY, JSON.stringify(CMP)); } catch (e) { /* private mode */ } };
+  /** screen px (of 1280×720) per pixel of a sprite in the game */
+  const gameScale = (id, kind, d) => (kind === 'map' ? (d && d.scale) || 1 : /^lair\./.test(id) ? 2 : 4);
+  const cmpContext = (id, kind) => (kind === 'map' ? 'map' : /^lair\./.test(id) ? 'lair' : 'raid');
+  /** the item for any id (a variant, direction or version of a catalog entry), or null */
+  function itemOf(id) { const p = pid(id), base = catalog.find(c => c.id === p.base) || catalog.find(c => c.id === id); return base ? (id === base.id ? base : itemFor(base, p.n, p.tone, p.dir)) : null; }
+  /** a sprite to compare: { label, kind, w, h, n, fps, scale, drawn, frame(k) → { canvas, box } }, or null */
+  function cmpSource(id) {
+    const it = itemOf(id), d = docs.get(id) || docFor(id), label = it ? `${it.group} · ${it.label}` : id;
+    const boxOf = (c) => { const x = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1; for (let y = 0; y < c.height; y++) for (let X = 0; X < c.width; X++) if (x[(y * c.width + X) * 4 + 3] > 8) { if (X < x0) x0 = X; if (X > x1) x1 = X; if (y < y0) y0 = y; if (y > y1) y1 = y; } return x1 < 0 ? { x0: 0, y0: 0, x1: c.width - 1, y1: c.height - 1 } : { x0, y0, x1, y1 }; };
+    const cached = (key, make) => { let v = cmpCache.get(key); if (!v) { const c = make(); v = { canvas: c, box: boxOf(c) }; cmpCache.set(key, v); if (cmpCache.size > 400) cmpCache.delete(cmpCache.keys().next().value); } return v; };
+    if (d && !isEmpty(d)) return { id, label, kind: d.kind, w: d.w, h: d.h, n: d.frames.length, fps: d.fps || 2, anchor: d.anchor, scale: gameScale(id, d.kind, d), drawn: true,
+      frame: (k) => { k %= d.frames.length; return cached(`${id}|${d._rev || 0}|${k}`, () => composeFrame(d, k, PA.shownPalette(d, '')).canvas); } };
+    const art = it && it.entry && it.entry.gen ? gameArt(it, null) : it && it.kind === 'map' && it.rec ? gameArt(it, null) : null;
+    if (!art || !art.canvases.length) return null;
+    return { id, label, kind: it.kind, w: art.w, h: art.h, n: art.canvases.length, fps: it.fps || 2, anchor: art.anchor, scale: gameScale(id, it.kind, null), drawn: false,
+      frame: (k) => { k %= art.canvases.length; return cached(`${id}|game|${k}`, () => art.canvases[k]); } };
+  }
+  const cmpSources = new Map(); // id -> source, while the dialog is open (the game's art is made once)
+  function renderCompareList() {
+    const box = $('cmp-list'); box.innerHTML = '';
+    CMP.ids.forEach((id, i) => {
+      const s = cmpSources.get(id), el = document.createElement('span'); el.className = 'chip';
+      el.innerHTML = `<span>${s ? s.label : id}${s && !s.drawn ? ' <i>(game art)</i>' : ''}</span>`;
+      const btn = (t, title, fn) => { const b = document.createElement('button'); b.textContent = t; b.title = title; b.onclick = fn; el.appendChild(b); };
+      btn('◀', 'Move left', () => { if (i > 0) { [CMP.ids[i - 1], CMP.ids[i]] = [CMP.ids[i], CMP.ids[i - 1]]; cmpChanged(); } });
+      btn('▶', 'Move right', () => { if (i < CMP.ids.length - 1) { [CMP.ids[i + 1], CMP.ids[i]] = [CMP.ids[i], CMP.ids[i + 1]]; cmpChanged(); } });
+      btn('✕', 'Take it off', () => { CMP.ids.splice(i, 1); cmpChanged(); });
+      box.appendChild(el);
+    });
+    $('cmp-empty').hidden = CMP.ids.length > 0;
+  }
+  function cmpAdd(id) {
+    if (!id) return; if (CMP.ids.includes(id)) { toast('Already in the comparison'); return; }
+    const s = cmpSource(id); if (!s) { toast('Nothing to show for that one yet (no drawing and no game art)'); return; }
+    cmpSources.set(id, s); CMP.ids.push(id); cmpChanged();
+  }
+  function cmpChanged() { cmpSave(); renderCompareList(); drawCompare(); }
+  let cmpHits = [], cmpRaf = 0;
+  function drawCompare() {
+    const cv = $('cmp-canvas'), wrap = $('cmp-wrap'), g = cv.getContext('2d'), t = performance.now() / 1000, dpr = window.devicePixelRatio || 1;
+    const items = CMP.ids.map(id => cmpSources.get(id) || (cmpSources.set(id, cmpSource(id)), cmpSources.get(id))).filter(Boolean);
+    const unit = (s) => (CMP.mode === 'game' ? s.scale : 4) * CMP.zoom, LBL = 52, GUT = 50, GAP = 22;
+    // the three label lines under each sprite (they set its column's width too)
+    const lines = (s, b) => { const bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1; return [s.label.length > 34 ? '…' + s.label.slice(-33) : s.label, `${bw}×${bh} px drawn · canvas ${s.w}×${s.h}`, `${cmpContext(s.id, s.kind)} ×${+s.scale.toFixed(2)}${s.drawn ? '' : ' · game art'}${CMP.mode === 'game' ? ` · ${Math.round(bh * s.scale)} screen px tall` : ''}`]; };
+    g.font = '12px system-ui'; const tw = (txt, f) => { g.font = f; return g.measureText(txt).width; };
+    // each sprite's frame, drawn box and how far it reaches above and below the ground line
+    const lay = items.map(s => {
+      const k = CMP.anim ? Math.floor(t * s.fps) % s.n : 0, f = s.frame(k), u = unit(s), b = f.box;
+      const ground = CMP.align === 'anchor' ? s.anchor[1] : CMP.align === 'canvas' ? s.h : b.y1 + 1; // the pixel row that stands on the line
+      const L = lines(s, b), textW = Math.max(tw(L[0], '12px system-ui'), tw(L[1], '11px system-ui'), tw(L[2], '11px system-ui'));
+      return { s, f, u, ground, L, above: (ground - (CMP.align === 'canvas' || CMP.align === 'anchor' ? 0 : b.y0)) * u, below: Math.max(0, (CMP.align === 'canvas' ? s.h : b.y1 + 1) - ground) * u, w: Math.max(s.w * u, textW + 8) };
+    });
+    const top = Math.max(60, ...lay.map(l => l.above)) + 24, H = Math.max(wrap.clientHeight - 4, top + Math.max(0, ...lay.map(l => l.below)) + LBL + 10);
+    const W = Math.max(wrap.clientWidth - 4, GUT + lay.reduce((a, l) => a + l.w + GAP, 0) + 20);
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + 'px'; cv.style.height = H + 'px'; }
+    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = false;
+    g.fillStyle = { parchment: '#e6d5ad', raid: '#cfe3ee', dark: '#2a1c22', checker: '#f3ead6' }[CMP.bg] || '#e6d5ad'; g.fillRect(0, 0, W, H);
+    const ink = CMP.bg === 'dark' ? 'rgba(240,228,200,' : 'rgba(43,26,14,';
+    // the height grid: a line every 16 screen px (pixel for pixel: every 4 px), numbered at the left
+    const gy = top, step = (CMP.mode === 'game' ? 16 : 16) * CMP.zoom, per = CMP.mode === 'game' ? 16 : 4;
+    g.font = '11px system-ui'; g.textAlign = 'right';
+    for (let i = 1, y = gy - step; y > 4; i++, y -= step) { g.fillStyle = ink + (i % 4 ? '0.10)' : '0.22)'); g.fillRect(GUT, Math.round(y), W - GUT, 1); if (i % (CMP.zoom < 0.75 ? 4 : 2) === 0) { g.fillStyle = ink + '0.55)'; g.fillText(String(i * per), GUT - 6, y + 4); } }
+    g.fillStyle = ink + '0.55)'; g.font = '10px system-ui'; g.fillText(CMP.mode === 'game' ? 'screen' : 'pixels', GUT - 6, gy + 13); if (CMP.mode === 'game') g.fillText('px', GUT - 6, gy + 25);
+    g.fillStyle = ink + '0.75)'; g.fillRect(GUT, gy, W - GUT, 1); // the ground line
+    cmpHits = []; let x = GUT + 16; g.textAlign = 'center';
+    for (const l of lay) {
+      const s = l.s, cx = x + l.w / 2, dx = Math.round(cx - s.w * l.u / 2), dy = Math.round(gy - l.ground * l.u);
+      if (CMP.bg === 'checker') { g.fillStyle = '#e6dcc6'; for (let yy = 0; yy < s.h; yy += 2) for (let xx = (yy / 2) % 2 ? 2 : 0; xx < s.w; xx += 4) g.fillRect(dx + xx * l.u, dy + yy * l.u, 2 * l.u, 2 * l.u); }
+      g.drawImage(l.f.canvas, dx, dy, s.w * l.u, s.h * l.u);
+      const b = l.f.box, bw = b.x1 - b.x0 + 1, bh = b.y1 - b.y0 + 1;
+      g.strokeStyle = ink + '0.25)'; g.setLineDash([3, 3]); g.strokeRect(dx + b.x0 * l.u - 0.5, dy + b.y0 * l.u - 0.5, bw * l.u + 1, bh * l.u + 1); g.setLineDash([]);
+      g.fillStyle = ink + '0.9)'; g.font = '12px system-ui'; const ly = gy + l.below + 16; g.fillText(l.L[0], cx, ly);
+      g.fillStyle = ink + '0.6)'; g.font = '11px system-ui'; g.fillText(l.L[1], cx, ly + 15); g.fillText(l.L[2], cx, ly + 29);
+      cmpHits.push({ x: x, y: 0, w: l.w, h: H, id: s.id }); x += l.w + GAP;
+    }
+    if (CMP.anim && $('dlg-compare').open) { cancelAnimationFrame(cmpRaf); cmpRaf = requestAnimationFrame(drawCompare); }
+  }
+  function openCompare() {
+    commitFloat(); cmpSources.clear(); cmpCache.clear();
+    if (!CMP.ids.length && S.item) CMP.ids.push(S.item.id);
+    CMP.ids = CMP.ids.filter(id => itemOf(id) || docs.has(id) || saved.has(id));
+    const dl = $('cmp-options'); dl.innerHTML = ''; for (const it of catalog) { const o = document.createElement('option'); o.value = `${it.group} · ${it.label}`; dl.appendChild(o); }
+    $('cmp-mode').value = CMP.mode; $('cmp-zoom').value = String(CMP.zoom); $('cmp-zoom-v').textContent = Math.round(CMP.zoom * 100) + '%'; $('cmp-align').value = CMP.align; $('cmp-anim').checked = CMP.anim; $('cmp-bg').value = CMP.bg;
+    $('dlg-compare').showModal(); renderCompareList(); drawCompare();
+  }
+  $('btn-compare').onclick = openCompare;
+  $('cmp-close').onclick = () => $('dlg-compare').close();
+  $('dlg-compare').addEventListener('close', () => cancelAnimationFrame(cmpRaf));
+  $('cmp-here').onclick = () => { if (S.item) cmpAdd(S.item.id); };
+  const cmpFromSearch = () => { const v = $('cmp-search').value.trim().toLowerCase(); if (!v) return; const it = catalog.find(c => `${c.group} · ${c.label}`.toLowerCase() === v) || catalog.find(c => c.id.toLowerCase() === v) || catalog.find(c => `${c.group} · ${c.label}`.toLowerCase().includes(v) || c.id.toLowerCase().includes(v)); if (!it) { toast('No sprite by that name'); return; } $('cmp-search').value = ''; cmpAdd(it.id); };
+  $('cmp-add').onclick = cmpFromSearch; $('cmp-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); cmpFromSearch(); } });
+  $('cmp-clear').onclick = () => { CMP.ids = []; cmpChanged(); };
+  $('cmp-mode').onchange = (e) => { CMP.mode = e.target.value; cmpChanged(); };
+  $('cmp-zoom').oninput = (e) => { CMP.zoom = +e.target.value; $('cmp-zoom-v').textContent = Math.round(CMP.zoom * 100) + '%'; cmpSave(); drawCompare(); };
+  $('cmp-align').onchange = (e) => { CMP.align = e.target.value; cmpChanged(); };
+  $('cmp-anim').onchange = (e) => { CMP.anim = e.target.checked; cmpChanged(); };
+  $('cmp-bg').onchange = (e) => { CMP.bg = e.target.value; cmpChanged(); };
+  // tap a sprite to draw it
+  $('cmp-canvas').addEventListener('click', (e) => { const r = $('cmp-canvas').getBoundingClientRect(), x = e.clientX - r.left, hit = cmpHits.find(h => x >= h.x && x < h.x + h.w); if (!hit) return; const it = itemOf(hit.id); if (!it) return; $('dlg-compare').close(); S.tone = ''; open(it); });
+
   // Start: the art on this site, then your unsaved drafts from this browser, then (with a token) newer art on GitHub
   // =====================================================================================================
   (async function start() {

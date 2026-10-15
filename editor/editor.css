@@ -91,3 +91,12 @@ dialog::backdrop { background: rgba(30, 20, 10, 0.35); }
 .dirgrid .dc.mid { border-color: transparent; background: none; cursor: default; color: #b9a67f; }
 .dirgrid .dc .lb { position: absolute; left: 2px; bottom: 0; font-size: 9px; color: #6e5c43; }
 #dir-mode button.on { background: #2b1d10; color: #fff6e8; }
+
+/* Compare: sprites side by side */
+#dlg-compare { max-width: none; width: 96vw; height: 92vh; padding: 10px; }
+#dlg-compare > .col { height: 100%; gap: 8px; margin: 0; }
+#cmp-wrap { flex: 1; min-height: 200px; overflow: auto; border: 1px solid var(--line); border-radius: 6px; background: #e6d5ad; }
+#cmp-canvas { display: block; cursor: pointer; }
+#cmp-list .chip { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line); border-radius: 14px; padding: 1px 4px 1px 10px; background: #fffaf0; }
+#cmp-list .chip button { padding: 0 6px; min-height: 0; border: 0; background: none; }
+#cmp-search { width: 260px; flex: 0 0 auto; }

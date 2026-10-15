@@ -16,6 +16,7 @@
   <button id="btn-local" title="Keep every changed drawing in this browser, for the game to show with Settings → Your drawings → Local test. Nothing goes to GitHub, so the site does not redeploy.">Save locally</button>
   <button id="btn-save" class="primary" title="Commit every changed sprite to the GitHub repo (assets/pixelart/) in one commit; the site redeploys">Save to GitHub</button>
   <button id="btn-download" title="Download the current sprite's file (to commit by hand)">Download</button>
+  <button id="btn-compare" title="Put several sprites side by side on one ground line, at their size in the game, to check their proportions">Compare</button>
   <button id="btn-png" title="Download the current sprite's frames as one PNG strip">PNG</button>
   <button id="btn-settings" title="Your GitHub access token and the repository">GitHub…</button>
   <a class="btn" id="btn-game" href="../index.html" target="hb-game" title="Switch to the game's tab (opens it the first time)">Game ↗</a>
@@ -250,6 +251,29 @@
     </div>
   </aside>
 </main>
+<dialog id="dlg-compare">
+  <div class="col">
+    <div class="row wrap small">
+      <b>Compare</b>
+      <button id="cmp-here" class="primary" title="Add the sprite you have open (this variant, direction or version)">＋ This sprite</button>
+      <input id="cmp-search" list="cmp-options" placeholder="Add another: type a name…" autocomplete="off">
+      <datalist id="cmp-options"></datalist>
+      <button id="cmp-add">Add</button>
+      <span class="sep"></span>
+      <label title="As in the game: each at its size on the 1280×720 screen (raid sprites and dragons 4 screen px per pixel, the lair's pictures 2, map symbols their scale at map zoom 1). Pixel for pixel: every pixel the same size.">size <select id="cmp-mode"><option value="game">as in the game</option><option value="pixel">pixel for pixel</option></select></label>
+      <label>zoom <input type="range" id="cmp-zoom" min="0.25" max="4" step="0.25"> <span id="cmp-zoom-v"></span></label>
+      <label title="Which row of each sprite stands on the line: the bottom of what is drawn (feet), the anchor (where the game places it), or the bottom of the canvas">stand on <select id="cmp-align"><option value="feet">feet (drawn bottom)</option><option value="anchor">anchor</option><option value="canvas">canvas bottom</option></select></label>
+      <label><input type="checkbox" id="cmp-anim"> animate</label>
+      <select id="cmp-bg"><option value="parchment">parchment</option><option value="raid">sky</option><option value="dark">dark</option><option value="checker">checker</option></select>
+      <button id="cmp-clear" title="Take every sprite off">Clear</button>
+      <span class="grow"></span>
+      <button id="cmp-close">Close</button>
+    </div>
+    <div id="cmp-list" class="row wrap small"></div>
+    <div id="cmp-empty" class="muted small">Add sprites to see them side by side: your drawing as the game shows it, or the game's own art where you have not drawn yet. Tap one to draw it.</div>
+    <div id="cmp-wrap"><canvas id="cmp-canvas"></canvas></div>
+  </div>
+</dialog>
 <dialog id="dlg-settings">
   <form method="dialog">
     <h3>Save to GitHub</h3>

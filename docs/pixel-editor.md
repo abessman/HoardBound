@@ -124,6 +124,10 @@ commit by hand.
     hidden without touching the colours. Under the lines the colour layer carries on the neighbouring colours, so it
     has no gaps on its own. Or put it all in one new layer, or replace this layer's frame. Touch it up by hand, or undo
     and try other settings. ⇆ moves the panel to the other side.
+- **Compare** (0.34, top bar): sprites side by side on one ground line, to check proportions. **＋ This sprite** or
+  type a name; your drawing as the game shows it, else the game's art. **As in the game** = size on the 1280×720
+  screen (raid sprites and dragons ×4, the lair ×2, map symbols their scale), or **pixel for pixel**; zoom, a height
+  grid, sizes under each; stand on feet, anchor or canvas bottom; animate; tap one to draw it.
 - **Preview:** ▶ Play runs the animation at its game speed (**speed … fps** is saved with the sprite: Save locally or
   Save to GitHub to keep it), at 1–4× over a raid,
   parchment, dark or checker background. **Sample map** shows your map symbols scattered over parchment at map zoom.
