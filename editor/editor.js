@@ -1590,6 +1590,7 @@
   });
   window.addEventListener('keyup', (e) => { if (e.code === 'Space') keys.space = false; });
   window.addEventListener('resize', () => { draw(); drawWheel(); });
+  if (window.ResizeObserver) new ResizeObserver(() => draw()).observe(stage); // the canvas area changes size as the toolbars above it wrap
   window.addEventListener('beforeunload', (e) => { if (dirtyIds().length || deleted.size || palDirty()) { saveDrafts(); e.preventDefault(); e.returnValue = ''; } });
 
   // =====================================================================================================

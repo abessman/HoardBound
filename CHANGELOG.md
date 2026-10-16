@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.35.1 — 2026-10-16 · The editor's middle column scrolls
+- **Fix:** with a large text size or a short window, the pixel editor's toolbars wrapped onto so many rows that they
+  pushed the canvas out of sight, and the middle column could not scroll. It scrolls now (mouse wheel or finger over
+  the toolbars), and the canvas always keeps a usable height (at least about two thirds of the window) below them.
+
 ## 0.35.0 — 2026-10-15 · Map look test
 - **Map look test** in the pixel editor (preview panel, next to Sample map): one small patch of map (a mountain chain,
   hills, a wood, roads and five named places) drawn three ways side by side, to choose a direction for the map:

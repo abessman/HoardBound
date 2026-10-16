@@ -2,7 +2,7 @@
 
 Start a new session with: **"Read next_chat_kickoff.md and continue."** (CLAUDE.md loads by itself.)
 
-Updated 2026-10-15 · **Version 0.35.0** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
+Updated 2026-10-16 · **Version 0.35.1** · Branch `claude/laughing-mayer-npu2ei` (also the repo's default branch) ·
 The owner plays at hoardbound.netlify.app on an iPad.
 
 ## State in five lines
