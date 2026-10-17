@@ -75,7 +75,7 @@ The owner plays at hoardbound.netlify.app on an iPad.
 5. Owner review of Illuminated and the 0.13 wash; castle politics after the ideas-doc questions.
 
 ## Open questions for the owner
-- Map look: quiet sepia terrain drawn bigger, thin roads, places with one accent colour? (editor's Map look test, 0.35)
+- Map look: is the illustrated style of `docs/ideas/map-style-sample.html` (ink, watercolour, cliffs, 3D, lantern wagon) the way?
 - Are the automatic good and evil tints right? Should raid sprites (villagers, knights) take tones too, and from what?
 - Is the lair dragon big enough? Should it sit (folded wings, curled tail) rather than stand on the pile?
 - With a sleeping chamber built, should the dragon sleep there instead of on the hoard?
