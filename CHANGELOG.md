@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.35.2 — 2026-10-17 · Map style study
+- **A sample of the illustrated map style** (an idea page, not part of the game): `docs/ideas/map-style-sample.html`,
+  also published as the private page "HoardBound Map Study". One region drawn entirely in code in the style of the
+  reference maps: parchment, ink and hatching, watercolour colours, snowy ranges, forests, rivers with bridges,
+  lakes, towns, castles, farms, towers and a dark tower. The land stands on sea cliffs with surf and waterfalls.
+  It has a map view and a 3D view (turn and tilt, sea to the horizon), Day / Dusk / Night, a covered wagon whose
+  lantern lights its surroundings at night (Follow the wagon), and New map for a fresh region. The game is unchanged.
+
 ## 0.35.1 — 2026-10-16 · The editor's middle column scrolls
 - **Fix:** with a large text size or a short window, the pixel editor's toolbars wrapped onto so many rows that they
   pushed the canvas out of sight, and the middle column could not scroll. It scrolls now (mouse wheel or finger over
